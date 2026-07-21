@@ -9,6 +9,8 @@
 2. In the dashboard, open **SQL Editor** and run, in order:
    - `migrations/001_init.sql` (schema, security, storage buckets)
    - `migrations/002_seed.sql` (generic foods seed)
+   - `migrations/003_profiles_nickname.sql` (nickname, full name, login by email/nickname)
+   - `migrations/004_drop_display_name.sql` (remove legacy `display_name` column)
 3. Disable email confirmation (so testing is smooth):
    - **Authentication → Sign In / Up → Email** → turn **Confirm email** OFF.
 4. Get your keys: **Project Settings → API**:

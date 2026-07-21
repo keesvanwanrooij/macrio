@@ -24,6 +24,7 @@ Open-source (AGPL-3.0) food & fitness tracker. **v1.0 = food logging + EU-14 all
 2. **Respect the user's manual edits**: read files before changing; never revert intentional founder changes.
 3. `project-context/` = founder testing scratchpad → triage into `docs/product/ROADMAP_MINOR.md`.
 4. Patch fixes → `ROADMAP_MINOR.md`. Major features → `ROADMAP.md`.
+5. **`ROADMAP_MINOR.md` ordering:** **Planned** patches are listed in **ship order** (next patch first). Reorder freely when priorities change; no need to ask. Keep version numbers sequential; rename headings if you insert or merge patches.
 
 ---
 

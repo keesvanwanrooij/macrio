@@ -9,6 +9,7 @@ import {
   View,
   type TextInputProps,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -52,16 +53,64 @@ export function Button({
 
 export function Field({
   label,
+  trimOnBlur,
+  onChangeText,
+  onBlur,
+  value,
   ...props
-}: TextInputProps & { label?: string }) {
+}: TextInputProps & { label?: string; trimOnBlur?: boolean }) {
   return (
     <View style={{ marginBottom: spacing.m }}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         placeholderTextColor={colors.faint}
+        value={value}
+        onChangeText={onChangeText}
+        onBlur={(e) => {
+          if (trimOnBlur && onChangeText && typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed !== value) onChangeText(trimmed);
+          }
+          onBlur?.(e);
+        }}
         {...props}
         style={[styles.input, props.style]}
       />
+    </View>
+  );
+}
+
+export function PasswordField({
+  label,
+  value,
+  onChangeText,
+  autoComplete,
+  ...props
+}: Omit<TextInputProps, 'secureTextEntry'> & { label?: string }) {
+  const { t } = useTranslation();
+  const [visible, setVisible] = React.useState(false);
+  return (
+    <View style={{ marginBottom: spacing.m }}>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
+      <View style={styles.passwordWrap}>
+        <TextInput
+          placeholderTextColor={colors.faint}
+          value={value}
+          onChangeText={onChangeText}
+          autoComplete={autoComplete}
+          secureTextEntry={!visible}
+          {...props}
+          style={[styles.input, styles.passwordInput, props.style]}
+        />
+        <Pressable
+          onPress={() => setVisible((v) => !v)}
+          style={styles.passwordToggle}
+          accessibilityRole="button"
+          accessibilityLabel={visible ? t('auth.hidePassword') : t('auth.showPassword')}
+        >
+          <Text style={styles.passwordToggleText}>{visible ? '🙈' : '👁'}</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -131,6 +180,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
+  passwordWrap: { position: 'relative' },
+  passwordInput: { paddingRight: 48 },
+  passwordToggle: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  passwordToggleText: { fontSize: 18 },
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.l,

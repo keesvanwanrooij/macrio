@@ -6,7 +6,6 @@
 -- ============================================================
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  display_name text,
   language text not null default 'nl' check (language in ('nl','en')),
   count_direction text not null default 'up' check (count_direction in ('up','down')),
   macro_display text not null default 'overview' check (macro_display in ('overview','focus')),
@@ -33,8 +32,7 @@ returns trigger
 language plpgsql security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, display_name)
-  values (new.id, coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1)));
+  insert into public.profiles (id) values (new.id);
   return new;
 end;
 $$;

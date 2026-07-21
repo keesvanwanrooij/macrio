@@ -20,12 +20,15 @@ product_versions ── allergen fields (EU-14)
 | column | type | notes |
 |---|---|---|
 | id | uuid | = auth.users.id |
-| display_name | text | |
+| nickname | text | unique (case-insensitive); public; no spaces |
+| full_name | text | private, optional; set in Settings |
 | language | text | 'nl' \| 'en', default from device |
 | count_direction | text | 'up' (default) \| 'down' |
 | macro_display | text | 'overview' (default) \| 'focus' |
 | goal_kcal / goal_carbs / goal_protein / goal_fat | numeric null | optional targets |
 | allergens | text[] | subset of EU-14 keys |
+
+Email addresses are unique per account via **Supabase Auth** (`auth.users.email`).
 
 ### products
 | column | type | notes |

@@ -20,9 +20,13 @@ export default function Settings() {
   const router = useRouter();
   const { profile, updateProfile } = useSession();
   const [goalDraft, setGoalDraft] = useState<{ [k: string]: string } | null>(null);
+  const [fullNameDraft, setFullNameDraft] = useState<string | null>(null);
 
   if (!profile) return <Loading />;
 
+  const savedFullName = profile.full_name ?? '';
+  const fullName = fullNameDraft ?? savedFullName;
+  const fullNameDirty = fullNameDraft !== null && fullName.trim() !== savedFullName;
   const goals = goalDraft ?? {
     kcal: profile.goal_kcal ? String(profile.goal_kcal) : '',
     carbs: profile.goal_carbs ? String(profile.goal_carbs) : '',
@@ -32,6 +36,12 @@ export default function Settings() {
 
   function setGoal(key: string, value: string) {
     setGoalDraft({ ...goals, [key]: value });
+  }
+
+  async function saveFullName() {
+    const trimmed = fullName.trim();
+    await updateProfile({ full_name: trimmed || null });
+    setFullNameDraft(null);
   }
 
   async function saveGoals() {
@@ -68,6 +78,21 @@ export default function Settings() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.l, paddingBottom: spacing.xxl }}>
+      <SectionTitle>{t('settings.profile')}</SectionTitle>
+      <Text style={styles.prefLabel}>{t('settings.nickname')}</Text>
+      <Text style={styles.profileValue}>{profile.nickname}</Text>
+      <Field
+        label={t('settings.fullName')}
+        value={fullName}
+        onChangeText={setFullNameDraft}
+        trimOnBlur
+        autoCapitalize="words"
+        autoComplete="name"
+        textContentType="name"
+        placeholder={t('settings.fullNameOptional')}
+      />
+      {fullNameDirty && <Button title={t('common.save')} onPress={saveFullName} />}
+
       <SectionTitle>{t('settings.language')}</SectionTitle>
       <View style={styles.row}>
         <Chip label={t('settings.dutch')} active={profile.language === 'nl'} onPress={() => updateProfile({ language: 'nl' })} />
@@ -126,6 +151,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   row: { flexDirection: 'row', flexWrap: 'wrap' },
   prefLabel: { fontSize: 13, color: colors.muted, fontWeight: '600', marginBottom: spacing.s, marginTop: spacing.s },
+  profileValue: { fontSize: 16, color: colors.text, fontWeight: '600', marginBottom: spacing.m },
   disclaimer: { fontSize: 12, color: colors.faint, lineHeight: 17, marginTop: spacing.xs },
   aboutText: { fontSize: 13, color: colors.muted, lineHeight: 19 },
   aboutVersion: { fontSize: 12, color: colors.faint, marginTop: spacing.s },

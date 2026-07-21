@@ -11,6 +11,7 @@ Scope locked in `MVP_SCOPE.md`: diary with flexible meals/snacks, barcode scan, 
 ## v1.0.x — food logging polish (patches)
 
 - **v1.0.1:** Portion units g/ml (display + seed) — see `ROADMAP_MINOR.md`.
+- **v1.0.2:** Email confirmation for production + Macrio-branded confirm emails — see `ROADMAP_MINOR.md`. (Confirm email is **off** during founder testing in `SETUP.md`; turn **on** before public release.)
 - **Later patch:** Full unit model — product-level reference unit, nutrition per 100 g *or* 100 ml, unit picker in create-product, Open Food Facts per-100ml import (needed for oils and accurate liquid macros).
 
 ## v1.1 — workout builder & tracker

@@ -4,7 +4,8 @@ export type Portion = { name: string; grams: number };
 
 export type Profile = {
   id: string;
-  display_name: string | null;
+  nickname: string;
+  full_name: string | null;
   language: 'nl' | 'en';
   count_direction: 'up' | 'down';
   macro_display: 'overview' | 'focus';
