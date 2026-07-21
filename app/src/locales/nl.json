@@ -40,8 +40,8 @@
     "addFood": "+ voeg eten toe"
   },
   "auth": {
-    "welcomeTitle": "Welkom bij Macrio",
-    "welcomeSubtitle": "Open-source calorieën, macro's en allergenen — van de community, voor de community.",
+    "welcomeTitle": "Macrio",
+    "welcomeSubtitle": "Voor mensen zoals ik die het zat waren om tussen drie apps te wisselen voor\ncalorieën, training en allergieën",
     "signIn": "Inloggen",
     "signUp": "Account aanmaken",
     "email": "E-mailadres",

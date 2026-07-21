@@ -1,5 +1,5 @@
 ---
-description: Macrio — project context, how to work, code comments, and conventions
+description: Macrio - project context, how to work, code comments, and conventions
 alwaysApply: true
 ---
 
@@ -9,10 +9,19 @@ Open-source (AGPL-3.0) food & fitness tracker. **v1.0 = food logging + EU-14 all
 
 ---
 
+## Writing style
+
+- **Never use em dashes (—).** They read as AI-generated. Use `-`, `|`, `:`, or `.` instead.
+  - Bad: `Food logging — fast and honest`
+  - Good: `Food logging: fast and honest` | `Food logging - fast and honest`
+- Applies to: chat replies, commit messages, docs, comments, and UI copy suggestions.
+
+---
+
 ## Before coding
 
 1. Read relevant `docs/` first (`docs/product/MVP_SCOPE.md`, `docs/architecture/DATA_MODEL.md`, feature specs in `docs/product/features/`).
-2. **Respect the user's manual edits** — read files before changing; never revert intentional founder changes.
+2. **Respect the user's manual edits**: read files before changing; never revert intentional founder changes.
 3. `project-context/` = founder testing scratchpad → triage into `docs/product/ROADMAP_MINOR.md`.
 4. Patch fixes → `ROADMAP_MINOR.md`. Major features → `ROADMAP.md`.
 
@@ -20,14 +29,14 @@ Open-source (AGPL-3.0) food & fitness tracker. **v1.0 = food logging + EU-14 all
 
 ## How to work
 
-- **Be proactive (same area only):** When building a feature, suggest and implement sensible improvements *in that same feature/screen/flow*. Stay focused — no unrelated refactors.
-- **Prefer DRY:** Refactor duplicated logic into shared functions/components when it improves clarity — do not copy-paste the same pattern three times.
+- **Be proactive (same area only):** When building a feature, suggest and implement sensible improvements *in that same feature/screen/flow*. Stay focused; no unrelated refactors.
+- **Prefer DRY:** Refactor duplicated logic into shared functions/components when it improves clarity. Do not copy-paste the same pattern three times.
 - **Match existing conventions** in `app/src/` before introducing new patterns (expo-router, i18next, Supabase client, `components/ui.tsx`).
 - **Run and verify** commands yourself (`tsc`, `npm start`, SQL migrations); do not give up after one failure. Project folder: `Macrio` (no `&` in path).
 - **Ask only when blocked** on decisions the user must make (business, legal, pricing, brand, license, major scope changes).
-- **Minimal diffs** — solve the problem with the smallest correct change.
+- **Minimal diffs**: solve the problem with the smallest correct change.
 - **Do not commit** `.env`, secrets, or personal `.cursorrules`.
-- **Only commit when the user asks** — unless a user rule explicitly says otherwise.
+- **Only commit when the user asks**, unless a user rule explicitly says otherwise.
 
 ---
 
@@ -71,14 +80,14 @@ Run: no migration. Requires network.
 
 ### Rules
 
-- One logical change per commit — do not mix unrelated refactors with features.
+- One logical change per commit. Do not mix unrelated refactors with features.
 - Mention Supabase migration files in the body when SQL changes (`Run 002_seed.sql` etc.).
 - Never commit `.env`, credentials, or secrets.
 - Match the tone of existing Macrio commits: clear, complete sentences, focus on *why*.
 
 
 - **UI strings:** i18next only (`app/src/locales/nl.json`, `en.json`). No hardcoded user-facing text.
-- **Diary integrity:** log entries snapshot macros at log time — history never changes when product versions update.
+- **Diary integrity:** log entries snapshot macros at log time. History never changes when product versions update.
 - **Allergen honesty:** missing data = `unknown`, never `free`. Show disclaimers per `docs/product/LEGAL.md`.
 - **Security:** Supabase RLS is the real boundary; also validate in RPCs (`backend/supabase/migrations/`).
 - **Portions:** natural defaults ("1 portie – 100 g"), never 1 gram.
@@ -115,7 +124,7 @@ Each block explains:
 Add **one-line comments** on important steps (what, why, how). Do not comment every obvious line.
 
 ```typescript
-// Step 1: Check our database first — fastest path for community + seed products
+// Step 1: Check our database first (fastest path for community + seed products)
 const { data } = await supabase.from('current_product_versions').select('*').eq('barcode', barcode).maybeSingle();
 
 // Step 2: Fall back to Open Food Facts (ODbL) when we have no local match

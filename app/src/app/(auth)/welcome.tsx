@@ -1,3 +1,10 @@
+/*
+ * SECTION: Welcome (unauthenticated landing)
+ * WHAT: First screen before sign-up / sign-in; states Macrio's value proposition.
+ * HOW: Title, subtitle, then primary/secondary CTAs.
+ * INPUT: i18n strings under auth.welcome*
+ * OUTPUT: Navigation to sign-up or sign-in.
+ */
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -30,13 +37,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, padding: spacing.xl },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logo: { fontSize: 72, marginBottom: spacing.l },
-  title: { fontSize: 28, fontWeight: '900', color: colors.text, textAlign: 'center' },
+  title: { fontSize: 32, fontWeight: '900', color: colors.text, textAlign: 'center' },
   subtitle: {
     fontSize: 16,
     color: colors.muted,
     textAlign: 'center',
-    marginTop: spacing.m,
-    lineHeight: 22,
+    marginTop: spacing.l,
+    lineHeight: 24,
+    maxWidth: 340,
+    paddingHorizontal: spacing.s,
   },
   actions: { paddingBottom: spacing.xl },
 });

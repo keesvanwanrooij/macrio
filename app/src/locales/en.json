@@ -40,8 +40,8 @@
     "addFood": "+ add food"
   },
   "auth": {
-    "welcomeTitle": "Welcome to Macrio",
-    "welcomeSubtitle": "Open-source calories, macros and allergens — by the community, for the community.",
+    "welcomeTitle": "Macrio",
+    "welcomeSubtitle": "For people like me who were tired of switching between three apps for\ncalorie tracking, gym workouts, and allergen checks",
     "signIn": "Sign in",
     "signUp": "Create account",
     "email": "Email address",
