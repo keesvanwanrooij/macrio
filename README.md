@@ -2,7 +2,7 @@
 
 > Bilingual (Dutch/English), community-governed calorie & macro tracking with allergen safety (gluten-free first) and a full workout planner. One app, use either half or both.
 
-**Status:** documentation complete, MVP (v1.0, food logging) ready to build.
+**Status:** v1.0 MVP built — in founder testing. Want to run it? See [`SETUP.md`](SETUP.md).
 
 **Funding:** Macrio is free and open source, funded by donations. Core features will never be paywalled.
 

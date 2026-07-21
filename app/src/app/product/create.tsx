@@ -1,0 +1,278 @@
+// Create a product (from an unknown barcode, empty search, or as a new version
+// of an existing product). Natural portion prefill — never a 1-gram default.
+import { decode } from 'base64-arraybuffer';
+import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+import { stateColor } from '../../components/AllergenBadges';
+import { Button, Field } from '../../components/ui';
+import { EU_ALLERGENS } from '../../lib/allergens';
+import { parseNum } from '../../lib/nutrition';
+import { supabase } from '../../lib/supabase';
+import { colors, radius, spacing } from '../../lib/theme';
+import type { AllergenState, ProductVersion } from '../../lib/types';
+
+const CYCLE: AllergenState[] = ['unknown', 'contains', 'free'];
+
+export default function CreateProduct() {
+  const { t, i18n } = useTranslation();
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    barcode?: string;
+    name?: string;
+    slot?: string;
+    date?: string;
+    editProductId?: string; // set → creates a new version of that product
+  }>();
+  const isNewVersion = !!params.editProductId;
+
+  const [name, setName] = useState(params.name ?? '');
+  const [brand, setBrand] = useState('');
+  const [kcal, setKcal] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [protein, setProtein] = useState('');
+  const [fat, setFat] = useState('');
+  const [portionName, setPortionName] = useState('1 portie');
+  const [portionGrams, setPortionGrams] = useState('100');
+  const [allergens, setAllergens] = useState<Record<string, AllergenState>>({});
+  const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Prefill when suggesting a new version of an existing product.
+  useEffect(() => {
+    if (!params.editProductId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('current_product_versions')
+        .select('*')
+        .eq('product_id', params.editProductId)
+        .maybeSingle();
+      if (data) {
+        const v = data as ProductVersion;
+        setName((i18n.language === 'nl' ? v.name_nl : v.name_en) ?? v.name_nl ?? v.name_en ?? '');
+        setBrand(v.brand ?? '');
+        setKcal(String(v.kcal_100g));
+        setCarbs(String(v.carbs_100g));
+        setProtein(String(v.protein_100g));
+        setFat(String(v.fat_100g));
+        setAllergens(v.allergens ?? {});
+        if (v.portions[0]) {
+          setPortionName(v.portions[0].name);
+          setPortionGrams(String(v.portions[0].grams));
+        }
+      }
+    })();
+  }, [params.editProductId, i18n.language]);
+
+  function cycleAllergen(key: string) {
+    setAllergens((cur) => {
+      const state = cur[key] ?? 'unknown';
+      const next = CYCLE[(CYCLE.indexOf(state) + 1) % CYCLE.length];
+      const copy = { ...cur };
+      if (next === 'unknown') delete copy[key];
+      else copy[key] = next;
+      return copy;
+    });
+  }
+
+  async function pickPhoto() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.5,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]?.base64) {
+      setPhoto({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
+    }
+  }
+
+  async function save() {
+    setBusy(true);
+    try {
+      let photoUrl: string | null = null;
+      if (photo) {
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+        const { error: upErr } = await supabase.storage
+          .from('product-photos')
+          .upload(path, decode(photo.base64), { contentType: 'image/jpeg' });
+        if (!upErr) {
+          photoUrl = supabase.storage.from('product-photos').getPublicUrl(path).data.publicUrl;
+        }
+      }
+
+      const portions =
+        parseNum(portionGrams) > 0 && portionName.trim()
+          ? [{ name: portionName.trim(), grams: parseNum(portionGrams) }]
+          : [];
+
+      const common = {
+        p_name_nl: i18n.language === 'nl' ? name.trim() : name.trim(),
+        p_name_en: name.trim(),
+        p_brand: brand.trim() || null,
+        p_photo_url: photoUrl,
+        p_kcal: parseNum(kcal),
+        p_carbs: parseNum(carbs),
+        p_protein: parseNum(protein),
+        p_fat: parseNum(fat),
+        p_allergens: allergens,
+        p_portions: portions,
+      };
+
+      let versionId: string | null = null;
+      if (isNewVersion) {
+        const { data, error } = await supabase.rpc('create_product_version', {
+          p_product_id: params.editProductId,
+          ...common,
+        });
+        if (error) throw error;
+        versionId = data as string;
+        router.back();
+        return;
+      }
+
+      const { data, error } = await supabase.rpc('create_product_full', {
+        p_barcode: params.barcode || null,
+        p_source: 'community',
+        p_is_generic: false,
+        ...common,
+      });
+      if (error) throw error;
+      versionId = data as string;
+
+      // Straight to the portion screen so creating = logging in one flow.
+      router.replace({
+        pathname: '/log-entry',
+        params: { versionId, slot: params.slot ?? '0', date: params.date },
+      });
+    } catch (e: unknown) {
+      Alert.alert(t('common.error'), e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const valid = name.trim().length > 0 && parseNum(kcal) >= 0 && kcal.trim() !== '';
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.l, paddingBottom: spacing.xxl }}>
+      {isNewVersion && <Text style={styles.editBanner}>{t('product.editTitle')}</Text>}
+
+      <Field label={`${t('product.name')} *`} value={name} onChangeText={setName} />
+      <Field label={t('product.brand')} value={brand} onChangeText={setBrand} />
+      {params.barcode ? (
+        <Text style={styles.barcode}>
+          {t('product.barcode')}: {params.barcode}
+        </Text>
+      ) : null}
+
+      <Text style={styles.section}>{t('product.per100g')} *</Text>
+      <View style={styles.macroGrid}>
+        <View style={styles.macroCell}>
+          <Field label={t('macros.kcalShort')} value={kcal} onChangeText={setKcal} keyboardType="numeric" />
+        </View>
+        <View style={styles.macroCell}>
+          <Field label={`${t('macros.carbsShort')} (g)`} value={carbs} onChangeText={setCarbs} keyboardType="numeric" />
+        </View>
+        <View style={styles.macroCell}>
+          <Field label={`${t('macros.proteinShort')} (g)`} value={protein} onChangeText={setProtein} keyboardType="numeric" />
+        </View>
+        <View style={styles.macroCell}>
+          <Field label={`${t('macros.fatShort')} (g)`} value={fat} onChangeText={setFat} keyboardType="numeric" />
+        </View>
+      </View>
+
+      <Text style={styles.section}>{t('product.portionLabel')}</Text>
+      <View style={{ flexDirection: 'row', gap: spacing.m }}>
+        <View style={{ flex: 2 }}>
+          <Field label={t('product.portionName')} value={portionName} onChangeText={setPortionName} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Field label={t('product.portionGrams')} value={portionGrams} onChangeText={setPortionGrams} keyboardType="numeric" />
+        </View>
+      </View>
+
+      <Text style={styles.section}>{t('product.photo')}</Text>
+      {photo ? (
+        <Pressable onPress={pickPhoto}>
+          <Image source={{ uri: photo.uri }} style={styles.photo} />
+        </Pressable>
+      ) : (
+        <Pressable style={styles.photoPlaceholder} onPress={pickPhoto}>
+          <Text style={{ color: colors.primaryDark, fontWeight: '700' }}>{t('product.addPhoto')}</Text>
+        </Pressable>
+      )}
+
+      <Text style={styles.section}>{t('product.allergensLabel')}</Text>
+      <Text style={styles.hint}>{t('product.allergenHint')}</Text>
+      <View style={styles.allergenWrap}>
+        {EU_ALLERGENS.map((key) => {
+          const state = allergens[key] ?? 'unknown';
+          const c = stateColor(state);
+          return (
+            <Pressable
+              key={key}
+              style={[styles.allergenChip, { backgroundColor: c.bg }]}
+              onPress={() => cycleAllergen(key)}
+            >
+              <Text style={{ color: c.fg, fontWeight: '600', fontSize: 13 }}>{t(`allergens.${key}`)}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={{ height: spacing.l }} />
+      <Button
+        title={isNewVersion ? t('product.saveVersion') : t('product.saveAndLog')}
+        onPress={save}
+        loading={busy}
+        disabled={!valid}
+      />
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  editBanner: {
+    backgroundColor: colors.warnSoft,
+    color: colors.warn,
+    fontWeight: '700',
+    padding: spacing.m,
+    borderRadius: radius.m,
+    marginBottom: spacing.l,
+    overflow: 'hidden',
+  },
+  section: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: spacing.l,
+    marginBottom: spacing.s,
+  },
+  hint: { fontSize: 12, color: colors.faint, marginBottom: spacing.s },
+  barcode: { color: colors.muted, marginBottom: spacing.s, fontSize: 13 },
+  macroGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.m },
+  macroCell: { flexBasis: '47%', flexGrow: 1 },
+  photo: { width: 120, height: 120, borderRadius: radius.m },
+  photoPlaceholder: {
+    height: 80,
+    borderRadius: radius.m,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primarySoft,
+  },
+  allergenWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.s },
+  allergenChip: {
+    borderRadius: radius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+});
