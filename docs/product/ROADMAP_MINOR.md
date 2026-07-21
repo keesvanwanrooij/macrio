@@ -117,6 +117,8 @@ _Ship order: v1.0.1 → v1.0.2 → … → v1.0.8 (then public)_
 - [x] Goal calculator (Mifflin-St Jeor) in onboarding + Settings
 - [x] Username sign-up / login; profile grants fix (migration 009)
 - [x] Add barcode later (type/scan, migration 010)
+- [x] Scanner viewfinder + double-read confirm; EAN-13 normalize; edit/delete barcode (migration 011)
+- [x] Barcode check digit + EAN/UPC/GS1-128 help on add/edit (migration 012)
 - [x] Recents: dedupe by product, each user's last-logged version
 - [x] Product report sheet (modal; fixes Android 3-button limit)
 - [x] App version in Settings + feedback metadata

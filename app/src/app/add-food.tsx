@@ -1,5 +1,5 @@
 // Add food modal: Scan | Search | Recents | Quick add.
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -15,7 +15,9 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AllergenBadges } from '../components/AllergenBadges';
+import { BarcodeScannerFrame } from '../components/BarcodeScannerFrame';
 import { Button, Field } from '../components/ui';
+import { lookupKeys, toEan13 } from '../lib/barcode';
 import { fetchFromOpenFoodFacts } from '../lib/off';
 import { fmt, parseNum, versionName } from '../lib/nutrition';
 import { useSession } from '../lib/session';
@@ -70,23 +72,27 @@ function ScanTab({ onFound, slot, date }: { onFound: (versionId: string) => void
       if (busyRef.current) return;
       busyRef.current = true;
       setState('looking');
-      setLastBarcode(barcode);
+      // Canonical EAN-13 for display / create; lookup tries 12- and 13-digit forms.
+      const canonical = toEan13(barcode) ?? barcode;
+      const keys = lookupKeys(barcode);
+      setLastBarcode(canonical);
       try {
-        // 1. Our own database
+        // 1. Our own database (match either stored form)
         const { data } = await supabase
           .from('current_product_versions')
           .select('*')
-          .eq('barcode', barcode)
+          .in('barcode', keys)
+          .limit(1)
           .maybeSingle();
         if (data) {
           onFound(data.id);
           return;
         }
-        // 2. Live Open Food Facts import (ADR-003)
-        const off = await fetchFromOpenFoodFacts(barcode);
+        // 2. Live Open Food Facts import (ADR-003) with canonical 13-digit code
+        const off = await fetchFromOpenFoodFacts(canonical);
         if (off) {
           const { data: versionId, error } = await supabase.rpc('create_product_full', {
-            p_barcode: barcode,
+            p_barcode: canonical,
             p_source: 'openfoodfacts',
             p_is_generic: false,
             p_name_nl: off.name,
@@ -154,14 +160,7 @@ function ScanTab({ onFound, slot, date }: { onFound: (versionId: string) => void
 
   return (
     <View style={{ flex: 1 }}>
-      <CameraView
-        style={{ flex: 1 }}
-        barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e'] }}
-        onBarcodeScanned={({ data }) => handleBarcode(data)}
-      />
-      <View style={styles.scanHintWrap}>
-        <Text style={styles.scanHint}>{t('addFood.scanHint')}</Text>
-      </View>
+      <BarcodeScannerFrame onConfirmed={handleBarcode} enabled={state === 'scanning'} />
     </View>
   );
 }
@@ -407,16 +406,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.m },
   centerText: { color: colors.muted, textAlign: 'center', fontSize: 15, lineHeight: 21 },
   notFoundTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
-  scanHintWrap: { position: 'absolute', bottom: spacing.xl, alignSelf: 'center' },
-  scanHint: {
-    color: '#fff',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: spacing.l,
-    paddingVertical: spacing.s,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-    fontWeight: '600',
-  },
   searchInput: {
     backgroundColor: colors.card,
     borderWidth: 1,

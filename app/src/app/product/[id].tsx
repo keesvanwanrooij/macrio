@@ -3,7 +3,7 @@
  * WHAT: Current version, allergens, version likes, suggest edit, report.
  * HOW: load versions + product meta; report uses a Modal (Android Alert max 3 buttons).
  * INPUT: route product id; session for likes/reports
- * OUTPUT: like/report rows; navigate to create / add-barcode
+ * OUTPUT: like/report rows; navigate to create / add-barcode (add or edit)
  */
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -151,7 +151,19 @@ export default function ProductPage() {
               >
                 <Text style={styles.addBarcodeText}>{t('product.addBarcode')}</Text>
               </Pressable>
-            ) : null}
+            ) : (
+              <Pressable
+                style={styles.addBarcodeBtn}
+                onPress={() =>
+                  router.push({
+                    pathname: '/product/add-barcode',
+                    params: { productId: id, mode: 'edit', currentBarcode: barcode },
+                  })
+                }
+              >
+                <Text style={styles.addBarcodeText}>{t('product.editBarcode')}</Text>
+              </Pressable>
+            )}
           </View>
         </View>
 

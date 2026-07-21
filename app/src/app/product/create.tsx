@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { stateColor } from '../../components/AllergenBadges';
 import { Button, Field } from '../../components/ui';
 import { EU_ALLERGENS } from '../../lib/allergens';
+import { digitsOnly, validateRetailBarcode, barcodeErrorKey } from '../../lib/barcode';
 import { parseNum } from '../../lib/nutrition';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
@@ -85,12 +86,12 @@ export default function CreateProduct() {
   const canEditBarcode = !lockedBarcode && (!isNewVersion || !existingBarcode);
 
   async function attachBarcodeIfNeeded(productId: string, code: string) {
-    const trimmed = code.trim();
-    if (!trimmed) return;
+    const v = validateRetailBarcode(code);
+    if (!v.ok) return;
     if (isNewVersion && existingBarcode) return;
     const { error } = await supabase.rpc('set_product_barcode', {
       p_product_id: productId,
-      p_barcode: trimmed,
+      p_barcode: v.ean13,
     });
     if (error) throw error;
   }
@@ -157,13 +158,27 @@ export default function CreateProduct() {
         if (error) throw error;
         // Attach barcode later if the product still has none
         if (canEditBarcode && barcodeInput.trim()) {
+          const v = validateRetailBarcode(barcodeInput);
+          if (!v.ok) {
+            Alert.alert(t('common.error'), t(`product.${barcodeErrorKey(v.reason)}`));
+            return;
+          }
           await attachBarcodeIfNeeded(params.editProductId!, barcodeInput);
         }
         router.back();
         return;
       }
 
-      const barcodeForCreate = (lockedBarcode || barcodeInput).trim() || null;
+      const rawBarcode = (lockedBarcode || barcodeInput).trim();
+      let barcodeForCreate: string | null = null;
+      if (rawBarcode) {
+        const v = validateRetailBarcode(rawBarcode);
+        if (!v.ok) {
+          Alert.alert(t('common.error'), t(`product.${barcodeErrorKey(v.reason)}`));
+          return;
+        }
+        barcodeForCreate = v.ean13;
+      }
       const { data, error } = await supabase.rpc('create_product_full', {
         p_barcode: barcodeForCreate,
         p_source: 'community',
@@ -207,9 +222,10 @@ export default function CreateProduct() {
           <Field
             label={t('product.barcodeOptional')}
             value={barcodeInput}
-            onChangeText={setBarcodeInput}
+            onChangeText={(text) => setBarcodeInput(digitsOnly(text).slice(0, 13))}
             keyboardType="number-pad"
-            placeholder={t('product.barcodePlaceholder')}
+            maxLength={13}
+            placeholder={t('product.barcodePlaceholderShort')}
           />
           {isNewVersion ? (
             <Pressable
