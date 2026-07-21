@@ -33,7 +33,7 @@ Scope locked in `MVP_SCOPE.md`: diary with flexible meals/snacks, barcode scan, 
 ## v1.3 — planning & personalization
 
 - Meal planning.
-- Optional onboarding questionnaire (Yazio-style) for goal suggestions.
+- Optional onboarding questionnaire (Yazio-style) for goal suggestions. (v1.0 ships a lighter Mifflin-St Jeor calculator in onboarding/settings; full questionnaire stays here.)
 - Custom report periods; muscle-intensity body heatmap for workouts.
 
 

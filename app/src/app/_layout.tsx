@@ -11,7 +11,7 @@ import { colors, spacing } from '../lib/theme';
 import { Button, Loading } from '../components/ui';
 
 function RootNavigator() {
-  const { session, profile, loading, refreshProfile } = useSession();
+  const { session, profile, profileError, loading, refreshProfile } = useSession();
   const segments = useSegments();
   const router = useRouter();
   const { t } = useTranslation();
@@ -39,6 +39,7 @@ function RootNavigator() {
       <View style={styles.repair}>
         <Text style={styles.repairTitle}>{t('auth.profileMissingTitle')}</Text>
         <Text style={styles.repairBody}>{t('auth.profileMissingBody')}</Text>
+        {profileError ? <Text style={styles.repairDetail}>{profileError}</Text> : null}
         <Button
           title={t('common.retry')}
           loading={retrying}
@@ -103,6 +104,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.muted,
     lineHeight: 21,
+    marginBottom: spacing.m,
+  },
+  repairDetail: {
+    fontSize: 12,
+    color: colors.faint,
+    lineHeight: 17,
     marginBottom: spacing.xl,
+    fontFamily: 'monospace',
   },
 });

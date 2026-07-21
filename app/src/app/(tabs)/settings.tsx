@@ -6,8 +6,11 @@ import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native
 import { useTranslation } from 'react-i18next';
 
 import { Button, Card, Chip, Field, Loading, SectionTitle } from '../../components/ui';
+import { GoalCalculator } from '../../components/GoalCalculator';
 import { EU_ALLERGENS } from '../../lib/allergens';
 import { APP_VERSION } from '../../lib/appMeta';
+import type { BodyMetricsDraft } from '../../lib/goalCalculator';
+import { macrosFromKcal } from '../../lib/goalCalculator';
 import { parseNum } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
@@ -15,12 +18,22 @@ import { colors, spacing } from '../../lib/theme';
 
 const SPONSOR_URL = 'https://github.com/sponsors/keesvanwanrooij';
 
+function profileSaveErrorMessage(raw: string, t: (k: string) => string): string {
+  const m = raw.toLowerCase();
+  if (m.includes('date_of_birth') || m.includes('height_cm') || m.includes('weight_kg') || m.includes('weight_goal') || m.includes('schema cache')) {
+    return t('settings.bodyMetricsMigrationHint');
+  }
+  return raw;
+}
+
 export default function Settings() {
   const { t } = useTranslation();
   const router = useRouter();
   const { profile, updateProfile } = useSession();
   const [goalDraft, setGoalDraft] = useState<{ [k: string]: string } | null>(null);
+  const [bodyDraft, setBodyDraft] = useState<BodyMetricsDraft | null>(null);
   const [fullNameDraft, setFullNameDraft] = useState<string | null>(null);
+  const [savingBody, setSavingBody] = useState(false);
 
   if (!profile) return <Loading />;
 
@@ -40,18 +53,71 @@ export default function Settings() {
 
   async function saveFullName() {
     const trimmed = fullName.trim();
-    await updateProfile({ full_name: trimmed || null });
+    const { error } = await updateProfile({ full_name: trimmed || null });
+    if (error) {
+      Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
+      return;
+    }
     setFullNameDraft(null);
   }
 
   async function saveGoals() {
-    await updateProfile({
+    const { error } = await updateProfile({
       goal_kcal: parseNum(goals.kcal) || null,
       goal_carbs: parseNum(goals.carbs) || null,
       goal_protein: parseNum(goals.protein) || null,
       goal_fat: parseNum(goals.fat) || null,
+      ...(bodyDraft
+        ? {
+            date_of_birth: bodyDraft.date_of_birth,
+            height_cm: bodyDraft.height_cm,
+            weight_kg: bodyDraft.weight_kg,
+            gender: bodyDraft.gender,
+            activity_level: bodyDraft.activity_level,
+            weight_goal: bodyDraft.weight_goal,
+          }
+        : {}),
     });
+    if (error) {
+      Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
+      return;
+    }
     setGoalDraft(null);
+    setBodyDraft(null);
+  }
+
+  async function persistBodyMetrics(body: BodyMetricsDraft) {
+    setSavingBody(true);
+    const { error } = await updateProfile({
+      date_of_birth: body.date_of_birth,
+      height_cm: body.height_cm,
+      weight_kg: body.weight_kg,
+      gender: body.gender,
+      activity_level: body.activity_level,
+      weight_goal: body.weight_goal,
+    });
+    setSavingBody(false);
+    if (error) {
+      Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
+      return false;
+    }
+    return true;
+  }
+
+  function setGoalKcal(value: string) {
+    const weightKg = profile!.weight_kg ?? 0;
+    const weightGoal = profile!.weight_goal ?? 'maintain';
+    const macros = macrosFromKcal(parseNum(value), weightKg, weightGoal);
+    if (macros) {
+      setGoalDraft({
+        kcal: value,
+        carbs: String(macros.carbs),
+        protein: String(macros.protein),
+        fat: String(macros.fat),
+      });
+    } else {
+      setGoal('kcal', value);
+    }
   }
 
   function toggleAllergen(key: string) {
@@ -79,8 +145,8 @@ export default function Settings() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.l, paddingBottom: spacing.xxl }}>
       <SectionTitle>{t('settings.profile')}</SectionTitle>
-      <Text style={styles.prefLabel}>{t('settings.nickname')}</Text>
-      <Text style={styles.profileValue}>{profile.nickname}</Text>
+      <Text style={styles.prefLabel}>{t('settings.username')}</Text>
+      <Text style={styles.profileValue}>{profile.username}</Text>
       <Field
         label={t('settings.fullName')}
         value={fullName}
@@ -120,7 +186,25 @@ export default function Settings() {
       <Text style={styles.disclaimer}>{t('allergens.disclaimer')}</Text>
 
       <SectionTitle>{t('settings.goals')}</SectionTitle>
-      <Field label={t('settings.goalKcal')} value={goals.kcal} onChangeText={(v) => setGoal('kcal', v)} keyboardType="numeric" />
+      <GoalCalculator
+        profile={profile}
+        onCalculated={async ({ goals: calcGoals, body }) => {
+          setBodyDraft(body);
+          setGoalDraft({
+            kcal: String(calcGoals.kcal),
+            carbs: String(calcGoals.carbs),
+            protein: String(calcGoals.protein),
+            fat: String(calcGoals.fat),
+          });
+          const ok = await persistBodyMetrics(body);
+          if (ok) {
+            Alert.alert(t('settings.bodySavedTitle'), t('settings.bodySavedBody'));
+          }
+        }}
+      />
+      {savingBody ? <Text style={styles.disclaimer}>{t('common.loading')}</Text> : null}
+      <Field label={t('settings.goalKcal')} value={goals.kcal} onChangeText={setGoalKcal} keyboardType="numeric" />
+      <Text style={styles.disclaimer}>{t('goalsCalc.kcalDrivesMacros')}</Text>
       <Field label={t('settings.goalCarbs')} value={goals.carbs} onChangeText={(v) => setGoal('carbs', v)} keyboardType="numeric" />
       <Field label={t('settings.goalProtein')} value={goals.protein} onChangeText={(v) => setGoal('protein', v)} keyboardType="numeric" />
       <Field label={t('settings.goalFat')} value={goals.fat} onChangeText={(v) => setGoal('fat', v)} keyboardType="numeric" />
@@ -151,7 +235,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   row: { flexDirection: 'row', flexWrap: 'wrap' },
   prefLabel: { fontSize: 13, color: colors.muted, fontWeight: '600', marginBottom: spacing.s, marginTop: spacing.s },
-  profileValue: { fontSize: 16, color: colors.text, fontWeight: '600', marginBottom: spacing.m },
+  profileValue: { fontSize: 20, color: colors.text, fontWeight: '700', marginBottom: spacing.m },
   disclaimer: { fontSize: 12, color: colors.faint, lineHeight: 17, marginTop: spacing.xs },
   aboutText: { fontSize: 13, color: colors.muted, lineHeight: 19 },
   aboutVersion: { fontSize: 12, color: colors.faint, marginTop: spacing.s },

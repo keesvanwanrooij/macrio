@@ -9,9 +9,12 @@
 2. In the dashboard, open **SQL Editor** and run, in order:
    - `migrations/001_init.sql` (schema, security, storage buckets)
    - `migrations/002_seed.sql` (generic foods seed)
-   - `migrations/003_profiles_nickname.sql` (nickname, full name, login by email/nickname)
+   - `migrations/003_profiles_nickname.sql` (username/nickname era + full name; see 008)
    - `migrations/004_drop_display_name.sql` (remove legacy `display_name` column)
-   - `migrations/005_auth_profile_repair.sql` (safe nicknames + repair orphan profiles)
+   - `migrations/005_auth_profile_repair.sql` (safe usernames + repair orphan profiles)
+   - `migrations/006_profile_body_metrics.sql` (DOB, height, weight, gender, activity)
+   - `migrations/007_profile_weight_goal.sql` (lose / maintain / gain)
+   - `migrations/008_rename_nickname_to_username.sql` (`nickname` → `username`)
 3. Disable email confirmation (so testing is smooth):
    - **Authentication → Sign In / Up → Email** → turn **Confirm email** OFF.
 4. Get your keys: **Project Settings → API**:

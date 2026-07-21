@@ -5,40 +5,51 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Field, PasswordField } from '../../components/ui';
 import { classifySignInError, resolveLoginEmail } from '../../lib/auth';
+import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing } from '../../lib/theme';
 
 export default function SignIn() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { applySession } = useSession();
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function handleSignIn() {
     setBusy(true);
-    const resolved = await resolveLoginEmail(loginId);
-    if ('error' in resolved) {
+    try {
+      const resolved = await resolveLoginEmail(loginId);
+      if ('error' in resolved) {
+        Alert.alert(t('auth.signInFailed'), t('auth.loginNotFound'));
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: resolved.email,
+        password,
+      });
+
+      if (error) {
+        const kind = classifySignInError(error.message);
+        const msg =
+          kind === 'invalid_credentials'
+            ? t('auth.invalidCredentials')
+            : kind === 'email_not_confirmed'
+              ? t('auth.emailNotConfirmed')
+              : error.message;
+        Alert.alert(t('auth.signInFailed'), msg);
+        return;
+      }
+
+      // Drive session + profile from the auth response (do not wait only on the listener).
+      if (data.session) {
+        await applySession(data.session);
+      }
+    } finally {
       setBusy(false);
-      Alert.alert(t('auth.signInFailed'), t('auth.loginNotFound'));
-      return;
     }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: resolved.email,
-      password,
-    });
-    setBusy(false);
-    if (!error) return;
-
-    const kind = classifySignInError(error.message);
-    const msg =
-      kind === 'invalid_credentials'
-        ? t('auth.invalidCredentials')
-        : kind === 'email_not_confirmed'
-          ? t('auth.emailNotConfirmed')
-          : error.message;
-    Alert.alert(t('auth.signInFailed'), msg);
   }
 
   return (

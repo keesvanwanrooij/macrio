@@ -4,60 +4,67 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Field, PasswordField } from '../../components/ui';
-import { isValidNickname, sanitizeNicknameInput } from '../../lib/nickname';
+import { isValidUsername, sanitizeUsernameInput } from '../../lib/username';
 import { isDuplicateEmailSignUpError, getAuthRedirectUrl, isValidEmail, normalizeEmail } from '../../lib/auth';
+import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing } from '../../lib/theme';
 
 export default function SignUp() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [nickname, setNickname] = useState('');
+  const { applySession } = useSession();
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const canSubmit = isValidNickname(nickname) && isValidEmail(email) && password.length >= 8;
+  const canSubmit = isValidUsername(username) && isValidEmail(email) && password.length >= 8;
 
   async function handleSignUp() {
     setBusy(true);
-    const normalizedEmail = normalizeEmail(email);
-    const cleanNickname = nickname.trim();
-    const { data, error } = await supabase.auth.signUp({
-      email: normalizedEmail,
-      password,
-      options: {
-        emailRedirectTo: getAuthRedirectUrl(),
-        data: { nickname: cleanNickname },
-      },
-    });
-    setBusy(false);
-    if (error) {
-      const msg = isDuplicateEmailSignUpError(error.message)
-        ? t('auth.emailTaken')
-        : error.message.includes('profiles_nickname_lower_idx') || error.message.toLowerCase().includes('duplicate')
-          ? t('auth.nicknameTaken')
-          : error.message.includes('profiles_nickname_format')
-            ? t('auth.nicknameInvalid')
-            : error.message;
-      Alert.alert(t('auth.signUpFailed'), msg);
-      return;
-    }
-    if (data.user && data.user.identities?.length === 0) {
-      Alert.alert(t('auth.signUpFailed'), t('auth.emailTaken'));
-      return;
-    }
-    if (data.session) {
-      Alert.alert(t('auth.signUpSuccessTitle'), t('auth.signUpSuccessMessage'));
-      // Root layout + session repair send the user to onboarding.
-      return;
-    }
-    if (data.user) {
-      Alert.alert(
-        t('auth.confirmEmailTitle'),
-        t('auth.confirmEmailMessage', { email: normalizedEmail }),
-        [{ text: t('common.done'), onPress: () => router.replace('/(auth)/sign-in') }]
-      );
+    try {
+      const normalizedEmail = normalizeEmail(email);
+      const cleanUsername = username.trim();
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          emailRedirectTo: getAuthRedirectUrl(),
+          data: { username: cleanUsername },
+        },
+      });
+      if (error) {
+        const msg = isDuplicateEmailSignUpError(error.message)
+          ? t('auth.emailTaken')
+          : error.message.includes('profiles_username_lower_idx') ||
+              error.message.includes('profiles_nickname_lower_idx') ||
+              error.message.toLowerCase().includes('duplicate')
+            ? t('auth.usernameTaken')
+            : error.message.includes('profiles_username_format') || error.message.includes('profiles_nickname_format')
+              ? t('auth.usernameInvalid')
+              : error.message;
+        Alert.alert(t('auth.signUpFailed'), msg);
+        return;
+      }
+      if (data.user && data.user.identities?.length === 0) {
+        Alert.alert(t('auth.signUpFailed'), t('auth.emailTaken'));
+        return;
+      }
+      if (data.session) {
+        await applySession(data.session);
+        Alert.alert(t('auth.signUpSuccessTitle'), t('auth.signUpSuccessMessage'));
+        return;
+      }
+      if (data.user) {
+        Alert.alert(
+          t('auth.confirmEmailTitle'),
+          t('auth.confirmEmailMessage', { email: normalizedEmail }),
+          [{ text: t('common.done'), onPress: () => router.replace('/(auth)/sign-in') }]
+        );
+      }
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -65,16 +72,16 @@ export default function SignUp() {
     <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{t('auth.signUp')}</Text>
       <Field
-        label={t('auth.nickname')}
-        value={nickname}
-        onChangeText={(text) => setNickname(sanitizeNicknameInput(text))}
+        label={t('auth.username')}
+        value={username}
+        onChangeText={(text) => setUsername(sanitizeUsernameInput(text))}
         trimOnBlur
         autoCapitalize="none"
-        autoComplete="off"
-        textContentType="none"
-        importantForAutofill="no"
+        autoComplete="username"
+        textContentType="username"
+        importantForAutofill="yes"
       />
-      <Text style={styles.hint}>{t('auth.nicknameHint')}</Text>
+      <Text style={styles.hint}>{t('auth.usernameHint')}</Text>
       <Field
         label={t('auth.email')}
         value={email}

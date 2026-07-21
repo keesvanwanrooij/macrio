@@ -1,0 +1,171 @@
+/*
+ * SECTION: Daily goal calculator (Mifflin-St Jeor + macro heuristics)
+ * WHAT: Estimates target kcal and macros from body stats and weight goal.
+ * HOW:
+ *   1) BMR (Mifflin-St Jeor) × activity factor → TDEE
+ *   2) Adjust for goal: lose (−500), maintain (0), gain muscle (+300)
+ *   3) Protein g/kg by goal; fat 0.9 g/kg; carbs = remaining kcal
+ * INPUT: weight, height, age/DOB, gender, activity, weight goal
+ * OUTPUT: { kcal, carbs, protein, fat } or null if inputs invalid
+ */
+
+export type Gender = 'male' | 'female' | 'other';
+
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+
+/** lose = cut, maintain = TDEE, gain = lean bulk / muscle */
+export type WeightGoal = 'lose' | 'maintain' | 'gain';
+
+export const ACTIVITY_FACTORS: Record<ActivityLevel, number> = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  very_active: 1.9,
+};
+
+/** Daily kcal offset from maintenance TDEE. */
+export const WEIGHT_GOAL_KCAL_DELTA: Record<WeightGoal, number> = {
+  lose: -500,
+  maintain: 0,
+  gain: 300,
+};
+
+/** Protein g/kg: higher on cut/gain to support muscle. */
+export const PROTEIN_G_PER_KG_BY_GOAL: Record<WeightGoal, number> = {
+  lose: 2.0,
+  maintain: 1.6,
+  gain: 2.0,
+};
+
+/** Fat g/kg (common adequate-fat midpoint). */
+export const FAT_G_PER_KG = 0.9;
+
+export const GENDERS: Gender[] = ['male', 'female', 'other'];
+export const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
+export const WEIGHT_GOALS: WeightGoal[] = ['lose', 'maintain', 'gain'];
+
+export type GoalCalcInput = {
+  weightKg: number;
+  heightCm: number;
+  ageYears: number;
+  gender: Gender;
+  activity: ActivityLevel;
+  weightGoal: WeightGoal;
+};
+
+export type GoalCalcResult = {
+  kcal: number;
+  carbs: number;
+  protein: number;
+  fat: number;
+};
+
+export type BodyMetricsDraft = {
+  date_of_birth: string;
+  height_cm: number;
+  weight_kg: number;
+  gender: Gender;
+  activity_level: ActivityLevel;
+  weight_goal: WeightGoal;
+};
+
+/** Age in whole years from YYYY-MM-DD. */
+export function ageFromDateOfBirth(isoDate: string, now = new Date()): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate.trim());
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  let age = now.getFullYear() - year;
+  const hadBirthday =
+    now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() >= day);
+  if (!hadBirthday) age -= 1;
+  return age;
+}
+
+/** Normalize typed DOB to YYYY-MM-DD (accepts DD-MM-YYYY / DD/MM/YYYY). */
+export function normalizeDateOfBirthInput(raw: string): string | null {
+  const s = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const eu = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(s);
+  if (eu) {
+    const d = eu[1].padStart(2, '0');
+    const mo = eu[2].padStart(2, '0');
+    const y = eu[3];
+    return `${y}-${mo}-${d}`;
+  }
+  return null;
+}
+
+export function isGender(v: string | null | undefined): v is Gender {
+  return v === 'male' || v === 'female' || v === 'other';
+}
+
+export function isActivityLevel(v: string | null | undefined): v is ActivityLevel {
+  return v === 'sedentary' || v === 'light' || v === 'moderate' || v === 'active' || v === 'very_active';
+}
+
+export function isWeightGoal(v: string | null | undefined): v is WeightGoal {
+  return v === 'lose' || v === 'maintain' || v === 'gain';
+}
+
+/** Mifflin-St Jeor resting energy (kcal/day). */
+export function estimateBmr(input: Pick<GoalCalcInput, 'weightKg' | 'heightCm' | 'ageYears' | 'gender'>): number {
+  const { weightKg, heightCm, ageYears, gender } = input;
+  const base = 10 * weightKg + 6.25 * heightCm - 5 * ageYears;
+  if (gender === 'male') return base + 5;
+  if (gender === 'female') return base - 161;
+  return base - 78;
+}
+
+/**
+ * Macro split from a kcal target + body weight + goal:
+ * - Protein from goal-specific g/kg
+ * - Fat 0.9 g/kg
+ * - Carbs = leftover energy
+ */
+export function macrosFromKcal(
+  kcal: number,
+  weightKg: number,
+  weightGoal: WeightGoal = 'maintain'
+): Pick<GoalCalcResult, 'carbs' | 'protein' | 'fat'> | null {
+  if (!(kcal > 0) || !(weightKg > 0 && weightKg < 400)) return null;
+
+  const proteinPerKg = PROTEIN_G_PER_KG_BY_GOAL[weightGoal];
+  let protein = Math.round(weightKg * proteinPerKg);
+  let fat = Math.round(weightKg * FAT_G_PER_KG);
+  let leftover = kcal - protein * 4 - fat * 9;
+
+  if (leftover < 0) {
+    const denom = protein * 4 + fat * 9;
+    if (denom <= 0) return { protein: 0, fat: 0, carbs: 0 };
+    const scale = kcal / denom;
+    protein = Math.max(0, Math.round(protein * scale));
+    fat = Math.max(0, Math.round(fat * scale));
+    leftover = kcal - protein * 4 - fat * 9;
+  }
+
+  const carbs = Math.max(0, Math.round(leftover / 4));
+  return { protein, fat, carbs };
+}
+
+export function calculateDailyGoals(input: GoalCalcInput): GoalCalcResult | null {
+  const { weightKg, heightCm, ageYears, gender, activity, weightGoal } = input;
+  if (
+    !(weightKg > 0 && weightKg < 400) ||
+    !(heightCm > 0 && heightCm < 300) ||
+    !(ageYears >= 12 && ageYears < 120)
+  ) {
+    return null;
+  }
+
+  const bmr = estimateBmr({ weightKg, heightCm, ageYears, gender });
+  const tdee = Math.round(bmr * ACTIVITY_FACTORS[activity]);
+  const kcal = Math.max(1200, tdee + WEIGHT_GOAL_KCAL_DELTA[weightGoal]);
+  const macros = macrosFromKcal(kcal, weightKg, weightGoal);
+  if (!macros) return null;
+  return { kcal, ...macros };
+}

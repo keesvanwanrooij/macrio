@@ -4,7 +4,7 @@ export type Portion = { name: string; grams: number };
 
 export type Profile = {
   id: string;
-  nickname: string;
+  username: string;
   full_name: string | null;
   language: 'nl' | 'en';
   count_direction: 'up' | 'down';
@@ -13,6 +13,12 @@ export type Profile = {
   goal_carbs: number | null;
   goal_protein: number | null;
   goal_fat: number | null;
+  date_of_birth: string | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  gender: 'male' | 'female' | 'other' | null;
+  activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active' | null;
+  weight_goal: 'lose' | 'maintain' | 'gain' | null;
   allergens: string[];
   onboarded: boolean;
 };

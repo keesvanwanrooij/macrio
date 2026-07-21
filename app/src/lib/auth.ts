@@ -46,8 +46,8 @@ export function classifySignInError(message: string): SignInFailure {
 
 /*
  * SECTION: Login identifier → email
- * WHAT: Resolves nickname or email to the auth email for sign-in.
- * HOW: Email is resolved locally (no RPC). Nickname uses resolve_login_email RPC.
+ * WHAT: Resolves username or email to the auth email for sign-in.
+ * HOW: Email is resolved locally (no RPC). Username uses resolve_login_email RPC.
  * INPUT: user-typed login string
  * OUTPUT: email string, or not_found
  */
@@ -57,7 +57,7 @@ export async function resolveLoginEmail(
   const trimmed = identifier.trim();
   if (!trimmed) return { error: 'not_found' };
 
-  // Email login must work even if the nickname RPC was never migrated.
+  // Email login must work even if the username RPC was never migrated.
   if (looksLikeEmail(trimmed)) {
     return { email: normalizeEmail(trimmed) };
   }
