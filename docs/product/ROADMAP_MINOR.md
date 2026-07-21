@@ -10,6 +10,8 @@
 
 **Ordering:** Patches under **Planned** are listed in **ship order** (next patch first). Reorder freely when priorities change — no need to ask. Keep version numbers sequential; rename headings if you insert or merge patches.
 
+**Working plans:** one file per patch in [`plans/`](plans/README.md). Roadmap stays the index; plans hold scope, acceptance, and impl notes.
+
 **Pre-public goal:** Finish food-logging polish (v1.0.1 → v1.0.8) to founder needs, then go public and iterate on community feedback. Workouts stay in `ROADMAP.md` (v1.1+).
 
 ## Inbox (untriaged)
@@ -22,6 +24,8 @@ _Ship order: v1.0.1 → v1.0.2 → … → v1.0.8 (then public)_
 
 ### v1.0.1 — portion units (g / ml) + default 100 g
 
+**Plan:** [`plans/v1.0.1-portion-units.md`](plans/v1.0.1-portion-units.md)
+
 **Found during:** Supabase seed review; founder diary testing.
 
 **Problem:** Liquids show as grams. Custom amount often starts from an awkward default instead of a natural 100 g / 100 ml.
@@ -32,10 +36,13 @@ _Ship order: v1.0.1 → v1.0.2 → … → v1.0.8 (then public)_
 - UI: portion picker, product page, and create-product show ml where `unit === 'ml'`.
 - Macro math: keep per-100g internally for now; for water-like liquids 1 ml ≈ 1 g (acceptable for v1.0.1).
 - When the user picks custom grams/ml, **default the amount to 100** (g now; ml when the product/portion unit is ml).
+- **Fractional portions:** named-portion count may be fractional (stepper ±0.5, editable e.g. 0,5 × pack). Raw grams/ml already accept decimals.
 
 **Affected seed items:** halfvolle/volle melk, havermelk, cola, sinaasappelsap, bier, rode wijn.
 
 ### v1.0.2 — auth emails + forgot password
+
+**Plan:** [`plans/v1.0.2-auth-emails.md`](plans/v1.0.2-auth-emails.md)
 
 **Found during:** founder auth testing (confirm email turned off for faster iteration).
 
@@ -51,6 +58,8 @@ _Ship order: v1.0.1 → v1.0.2 → … → v1.0.8 (then public)_
 
 ### v1.0.3 — Settings identity & dates
 
+**Plan:** [`plans/v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.md)
+
 **Found during:** founder onboarding / profile testing.
 
 **Problem:** Username typos are stuck; DOB is awkward to type; no app version visible for support; date format should be a preference.
@@ -62,6 +71,8 @@ _Ship order: v1.0.1 → v1.0.2 → … → v1.0.8 (then public)_
 - **Date format setting** (e.g. DD-MM-YYYY vs other common formats) applied wherever dates are shown/entered.
 
 ### v1.0.4 — onboarding & daily goals UX
+
+**Plan:** [`plans/v1.0.4-onboarding-goals.md`](plans/v1.0.4-onboarding-goals.md)
 
 **Found during:** founder goal-calculator and allergen onboarding testing.
 
@@ -75,6 +86,8 @@ _Ship order: v1.0.1 → v1.0.2 → … → v1.0.8 (then public)_
 
 ### v1.0.5 — diary meal totals & daily progress
 
+**Plan:** [`plans/v1.0.5-diary-progress.md`](plans/v1.0.5-diary-progress.md)
+
 **Found during:** founder diary testing.
 
 **Problem:** Only day-level totals; hard to see progress toward goals while logging.
@@ -85,6 +98,8 @@ _Ship order: v1.0.1 → v1.0.2 → … → v1.0.8 (then public)_
 
 ### v1.0.6 — named portions (S / M / L)
 
+**Plan:** [`plans/v1.0.6-named-portions.md`](plans/v1.0.6-named-portions.md)
+
 **Found during:** founder product/portion testing. Depends on v1.0.1 units landing first.
 
 **Problem:** One product often needs several natural sizes (e.g. small / medium / large apple), not only a single default portion.
@@ -94,6 +109,8 @@ _Ship order: v1.0.1 → v1.0.2 → … → v1.0.8 (then public)_
 - Picker UX when logging; seed a few Dutch staples with S/M/L where it helps.
 
 ### v1.0.7 — cooked / uncooked / not applicable
+
+**Plan:** [`plans/v1.0.7-cook-state.md`](plans/v1.0.7-cook-state.md)
 
 **Found during:** founder logging (rice, meat, pasta/spaghetti and similar).
 
@@ -107,7 +124,9 @@ _Ship order: v1.0.1 → v1.0.2 → … → v1.0.8 (then public)_
 
 ### v1.0.8 — parent food catalog + Dutch ~80% base seed (pre-launch)
 
-**Found during:** founder catalog strategy. Pitch / working brief: `project-context/parent-food-catalog-pitch.md`.
+**Plan:** [`plans/v1.0.8-parent-catalog.md`](plans/v1.0.8-parent-catalog.md) · Pitch: [`project-context/parent-food-catalog-pitch.md`](../../project-context/parent-food-catalog-pitch.md)
+
+**Found during:** founder catalog strategy.
 
 **Problem:** If the community creates free-floating products with no shared parents, the DB becomes a mess before launch. Need locked parent foods + a strong Dutch staple base covering ~80% of everyday eating.
 

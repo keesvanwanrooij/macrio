@@ -37,7 +37,7 @@
 
 ## Explicitly out (v1.0)
 
-Workouts, body metrics, trust-graph weighting, community posts/groups/chat, meal planning, AI photo logging, health-platform sync, NEVO import, kJ/imperial units, offline-first sync (basic online-required is acceptable for MVP), web version.
+Workouts, body metrics, trust-graph weighting, community posts/groups/chat, meal planning, AI photo logging, health-platform sync, kJ/imperial units, offline-first sync (basic online-required is acceptable for MVP), web version.
 
 ## Definition of done for v1.0
 

@@ -157,6 +157,7 @@
   "portion": {
     "title": "Portion",
     "grams": "Grams",
+    "count": "Number of portions",
     "addTo": "Add to {{meal}}",
     "saveChanges": "Save changes",
     "viewProduct": "View product"
@@ -193,6 +194,18 @@
     "sourceOff": "Open Food Facts",
     "sourceSeed": "staple food",
     "barcode": "Barcode",
+    "barcodeOptional": "Barcode (optional)",
+    "barcodePlaceholder": "Type digits, or add later from the product page",
+    "addBarcode": "+ Add barcode",
+    "addBarcodeTitle": "Add barcode",
+    "addBarcodeHint": "You created this without a pack code. Type the digits or scan the barcode now so future scans find this product.",
+    "barcodeType": "Type",
+    "barcodeScan": "Scan",
+    "barcodeScanInstead": "Scan barcode with camera instead",
+    "saveBarcode": "Save barcode",
+    "barcodeAlreadySet": "This product already has a barcode.",
+    "barcodeTaken": "That barcode is already used by another product.",
+    "barcodeInvalid": "Enter a valid barcode (8–14 digits).",
     "likes": "{{count}} likes",
     "perPortion": "per {{name}}"
   },

@@ -157,6 +157,7 @@
   "portion": {
     "title": "Portie",
     "grams": "Gram",
+    "count": "Aantal porties",
     "addTo": "Toevoegen aan {{meal}}",
     "saveChanges": "Wijzigingen opslaan",
     "viewProduct": "Bekijk product"
@@ -193,6 +194,18 @@
     "sourceOff": "Open Food Facts",
     "sourceSeed": "basisproduct",
     "barcode": "Barcode",
+    "barcodeOptional": "Barcode (optioneel)",
+    "barcodePlaceholder": "Typ de cijfers, of voeg later toe via de productpagina",
+    "addBarcode": "+ Barcode toevoegen",
+    "addBarcodeTitle": "Barcode toevoegen",
+    "addBarcodeHint": "Je hebt dit product zonder barcode aangemaakt. Typ de cijfers of scan de barcode zodat latere scans dit product vinden.",
+    "barcodeType": "Typen",
+    "barcodeScan": "Scannen",
+    "barcodeScanInstead": "Scan barcode met de camera",
+    "saveBarcode": "Barcode opslaan",
+    "barcodeAlreadySet": "Dit product heeft al een barcode.",
+    "barcodeTaken": "Die barcode hoort al bij een ander product.",
+    "barcodeInvalid": "Voer een geldige barcode in (8–14 cijfers).",
     "likes": "{{count}} likes",
     "perPortion": "per {{name}}"
   },

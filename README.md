@@ -67,6 +67,9 @@ Every donation goes directly into keeping Macrio free, open, and ad-free for eve
 | Product requirements | [`docs/product/PRD.md`](docs/product/PRD.md) |
 | MVP scope | [`docs/product/MVP_SCOPE.md`](docs/product/MVP_SCOPE.md) |
 | Roadmap | [`docs/product/ROADMAP.md`](docs/product/ROADMAP.md) |
+| Patch board | [`docs/product/ROADMAP_MINOR.md`](docs/product/ROADMAP_MINOR.md) |
+| Working plans | [`docs/product/plans/`](docs/product/plans/README.md) |
+| Product naming | [`docs/product/NAMING.md`](docs/product/NAMING.md) |
 | Architecture | [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) |
 | Data model | [`docs/architecture/DATA_MODEL.md`](docs/architecture/DATA_MODEL.md) |
 
@@ -78,6 +81,7 @@ backend/supabase/     Supabase: schema, migrations, edge functions, seed scripts
 design/               Branding, UI assets
 docs/
   product/            PRD, scope, stories, flows, roadmap, feature specs, research
+    plans/            Working plan md files per patch/feature (see plans/README.md)
   design/             Principles, information architecture, wireframes
   architecture/       System design, data model, API, security, ADRs
   process/            Versioning, branching, testing, releases, feedback loop

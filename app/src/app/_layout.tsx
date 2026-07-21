@@ -73,6 +73,7 @@ function RootNavigator() {
       <Stack.Screen name="log-entry" options={{ title: t('portion.title') }} />
       <Stack.Screen name="product/[id]" options={{ title: t('product.title') }} />
       <Stack.Screen name="product/create" options={{ title: t('product.createTitle') }} />
+      <Stack.Screen name="product/add-barcode" options={{ title: t('product.addBarcodeTitle') }} />
       <Stack.Screen name="feedback" options={{ title: t('feedback.title'), presentation: 'modal' }} />
     </Stack>
   );

@@ -19,6 +19,19 @@
 | diary | diary | dagboek |
 | goal | goal | doel |
 | recents | recent | recent |
+| staple | staple | standaard |
+| product | product | product |
+| under_staple | Under: {{name}} | Onder: {{name}} |
+
+## Catalog structure (docs/DB vs UI)
+
+| Docs / DB | UI EN | UI NL |
+|---|---|---|
+| parent | Staple | Standaard |
+| child | Product (linked to a staple) | Product (gekoppeld aan een standaard) |
+| orphan | Product (no staple) | Product (geen standaard) |
+
+Full rules + AH beenham example: [`docs/product/NAMING.md`](../product/NAMING.md).
 
 ## EU-14 allergens (db keys)
 

@@ -149,4 +149,4 @@ Same WHAT/HOW/INPUT/OUTPUT blocks on migrations, RPCs, and triggers. Explain RLS
 |---|---|
 | Food diary, scan, search, recents, product create/versions | Workouts → v1.1 |
 | EU-14 allergen display, reports, feedback, settings | Trust graph → v1.2 |
-| Email auth, Open Food Facts import, seed data | Google/Apple OAuth, offline-first, NEVO |
+| Email auth, Open Food Facts import, seed data | Google/Apple OAuth, offline-first |

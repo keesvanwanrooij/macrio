@@ -55,5 +55,5 @@
 
 ## Data sources to evaluate
 
-- **Open Food Facts** — open license, barcodes, allergen tags incl. gluten. Primary seed.
-- **NEVO** (RIVM Dutch national food database) — authoritative Dutch generic foods. Check license terms for redistribution.
+- **Open Food Facts** — open license, barcodes, allergen tags incl. gluten. Primary external seed.
+- Dutch generics: Macrio **parent/staple seed** + community (NEVO import is **not** a product goal).

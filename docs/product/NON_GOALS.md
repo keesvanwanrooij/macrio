@@ -14,7 +14,7 @@
 | Profiles with XP/levels/badges, life-wheel | v2.0 | Ships with community |
 | Muscle-intensity body heatmap | v2.0 | Ships after workouts mature |
 | AI photo meal logging | v2.x, paid | Real infra cost; needs security work; the only planned paid feature |
-| NEVO import | When license verified | Open Food Facts covers launch |
+| NEVO (RIVM) import | Never (not a goal) | OFF + curated parent seed + community; avoid second DB/license pipeline |
 | kJ / imperial units | On demand | Metric+kcal fits NL/EU launch |
 | Web app | Community-driven later | React Native for Web keeps the door open |
 | Medical advice of any kind | Never | We are a tracking tool, not a medical device (see LEGAL.md) |

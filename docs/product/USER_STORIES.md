@@ -41,6 +41,7 @@ As a user, I want breakfast/lunch/dinner fixed plus unlimited snacks between and
 **US-15 — Adjust portions naturally**
 As a user, I want to log "1 burger" or "150 g" interchangeably.
 - AC: portion picker offers product portions and raw grams; conversion is automatic.
+- AC: portion count may be **fractional** (e.g. 0.5 × "1 schaal – 600 g"); macros scale with grams.
 
 ## Overview & reports
 

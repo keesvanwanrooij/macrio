@@ -15,11 +15,12 @@ Three steps, ~15 minutes total. You only do steps 1–2 once.
 8. Same way, run `backend/supabase/migrations/007_profile_weight_goal.sql` (lose / maintain / gain intent).
 9. Same way, run `backend/supabase/migrations/008_rename_nickname_to_username.sql` (column `nickname` → `username`).
 10. Same way, run `backend/supabase/migrations/009_grant_authenticated_table_privs.sql` (fixes "permission denied for table profiles").
-11. **Authentication → URL Configuration** (fixes broken confirm-email links):
+11. Same way, run `backend/supabase/migrations/010_set_product_barcode.sql` (add barcode later to products created without one).
+12. **Authentication → URL Configuration** (fixes broken confirm-email links):
    - **Site URL:** `http://localhost:3000` (do **not** use your `*.supabase.co` project URL here)
    - **Redirect URLs:** add `http://localhost:3000` (and keep it in `app/.env` as `EXPO_PUBLIC_AUTH_REDIRECT_URL`)
-12. **Authentication → Providers → Email** → **Confirm email** may be **OFF** while founder-testing (faster sign-up). Turn it **ON** before public release — see `docs/product/ROADMAP_MINOR.md` (v1.0.2). Set **minimum password length** to **8**.
-13. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
+13. **Authentication → Providers → Email** → **Confirm email** may be **OFF** while founder-testing (faster sign-up). Turn it **ON** before public release — see `docs/product/ROADMAP_MINOR.md` (v1.0.2). Set **minimum password length** to **8**.
+14. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
 
 
 

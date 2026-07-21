@@ -1,5 +1,13 @@
-// Portion screen: log a product version to a meal, or edit an existing diary entry.
-// Portions are natural ("1 burger – 150 g") with a raw-grams fallback.
+/*
+ * SECTION: Log / edit diary portion
+ * WHAT: Pick a named portion (with optional fractional count) or raw grams, then save macros.
+ * HOW: 1) load version (+ entry if edit) 2) grams = portion.grams * count OR parseNum(gramsText)
+ *      3) macrosForGrams → insert/update diary_entries
+ * INPUT: route versionId | entryId, meal slot, date; session
+ * OUTPUT: diary row; navigate back
+ *
+ * Fractional counts: stepper uses 0.5 steps (½ pack); count field accepts 0.25 etc.
+ */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -12,6 +20,19 @@ import { useSession } from '../lib/session';
 import { supabase } from '../lib/supabase';
 import { colors, radius, spacing } from '../lib/theme';
 import type { DiaryEntry, ProductVersion } from '../lib/types';
+
+/** Half-portion steps for packs (e.g. 0.5 × 600 g ovenschotel). Typed counts may be finer. */
+const COUNT_STEP = 0.5;
+const COUNT_MIN_TYPED = 0.01;
+
+function roundCount(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function fmtAmount(n: number): string {
+  const digits = Math.abs(n % 1) < 1e-9 ? 0 : 1;
+  return fmt(n, digits);
+}
 
 export default function LogEntry() {
   const { t, i18n } = useTranslation();
@@ -28,8 +49,16 @@ export default function LogEntry() {
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
   const [portionIdx, setPortionIdx] = useState<number | null>(null); // null = raw grams
   const [count, setCount] = useState(1);
+  const [countText, setCountText] = useState('1');
   const [gramsText, setGramsText] = useState('100');
   const [busy, setBusy] = useState(false);
+
+  function applyCount(n: number, fromStepper = false) {
+    const min = fromStepper ? COUNT_STEP : COUNT_MIN_TYPED;
+    const next = roundCount(Math.max(min, n));
+    setCount(next);
+    setCountText(String(next).replace('.', ','));
+  }
 
   const isEdit = !!params.entryId;
 
@@ -131,7 +160,7 @@ export default function LogEntry() {
             active={portionIdx === i}
             onPress={() => {
               setPortionIdx(i);
-              setCount(1);
+              applyCount(1);
             }}
           />
         ))}
@@ -139,22 +168,42 @@ export default function LogEntry() {
       </View>
 
       {portionIdx !== null ? (
-        <View style={styles.stepper}>
-          <Pressable style={styles.stepBtn} onPress={() => setCount(Math.max(1, count - 1))}>
-            <Text style={styles.stepBtnText}>−</Text>
-          </Pressable>
-          <Text style={styles.stepValue}>{count}</Text>
-          <Pressable style={styles.stepBtn} onPress={() => setCount(count + 1)}>
-            <Text style={styles.stepBtnText}>+</Text>
-          </Pressable>
-          <Text style={styles.stepGrams}>= {fmt(grams)} g</Text>
+        <View>
+          <View style={styles.stepper}>
+            {/* Step by half portions; type a finer fraction in the field below if needed */}
+            <Pressable
+              style={styles.stepBtn}
+              onPress={() => applyCount(count - COUNT_STEP, true)}
+            >
+              <Text style={styles.stepBtnText}>−</Text>
+            </Pressable>
+            <Text style={styles.stepValue}>{fmtAmount(count)}</Text>
+            <Pressable style={styles.stepBtn} onPress={() => applyCount(count + COUNT_STEP, true)}>
+              <Text style={styles.stepBtnText}>+</Text>
+            </Pressable>
+            <Text style={styles.stepGrams}>= {fmtAmount(grams)} g</Text>
+          </View>
+          <Field
+            label={t('portion.count')}
+            value={countText}
+            onChangeText={(s) => {
+              setCountText(s);
+              const n = parseNum(s);
+              if (n >= COUNT_MIN_TYPED) setCount(roundCount(n));
+            }}
+            onBlur={() => {
+              const n = parseNum(countText);
+              applyCount(n > 0 ? n : COUNT_STEP);
+            }}
+            keyboardType="decimal-pad"
+          />
         </View>
       ) : (
         <Field
           label={t('portion.grams')}
           value={gramsText}
           onChangeText={setGramsText}
-          keyboardType="numeric"
+          keyboardType="decimal-pad"
         />
       )}
 

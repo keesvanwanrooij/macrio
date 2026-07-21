@@ -1,20 +1,20 @@
 # ADR-003: Open Food Facts as seed database
 
-- Status: accepted · 2026-07-21
+- Status: accepted · 2026-07-21 (amended: NEVO dropped as a database goal)
 
 ## Context
 
-Options: start empty (pure community), Open Food Facts (OFF), and/or NEVO (Dutch national food database).
+Options considered: start empty (pure community), Open Food Facts (OFF), and/or NEVO (Dutch national food database).
 
 ## Decision
 
-Seed v1.0 from **Open Food Facts only**. Evaluate NEVO later, only after its license terms for redistribution are verified.
+Seed and grow the food database from **Open Food Facts** plus **community contributions** and Macrio’s own **parent/staple seed** (see `ROADMAP_MINOR.md` v1.0.8). **NEVO is not a planned import or database goal.**
 
 ## Reasons
 
 1. OFF is openly licensed (ODbL), has barcodes (our core flow), allergen tags (our core USP), and NL+EN product coverage.
 2. Starting empty makes the first-week experience terrible ("not found" on every scan) — the market research shows tiny databases are the #1 gluten-app complaint.
-3. NEVO is authoritative for Dutch generic foods but its redistribution license needs checking; deferring avoids legal risk in the one-session MVP.
+3. NEVO redistribution license risk and maintenance cost are not worth a second national DB pipeline; Dutch generics are covered by curated parent seed + community versions instead.
 
 ## Implementation notes
 
@@ -25,4 +25,4 @@ Seed v1.0 from **Open Food Facts only**. Evaluate NEVO later, only after its lic
 
 ## Consequences
 
-- Generic Dutch staples ("aardappel, gekookt") may be underrepresented until NEVO or community fills the gap; the create-product flow is the pressure valve.
+- Generic Dutch staples ("aardappel, gekookt") rely on Macrio parent seed and community create-product — not a third-party national DB import.

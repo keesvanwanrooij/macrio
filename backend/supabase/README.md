@@ -16,6 +16,7 @@
    - `migrations/007_profile_weight_goal.sql` (lose / maintain / gain)
    - `migrations/008_rename_nickname_to_username.sql` (`nickname` → `username`)
    - `migrations/009_grant_authenticated_table_privs.sql` (GRANT for authenticated role)
+   - `migrations/010_set_product_barcode.sql` (attach barcode to product that had none)
 3. Disable email confirmation (so testing is smooth):
    - **Authentication → Sign In / Up → Email** → turn **Confirm email** OFF.
 4. Get your keys: **Project Settings → API**:

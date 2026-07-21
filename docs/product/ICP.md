@@ -23,7 +23,7 @@
 
 ## Geography & language
 
-- Launch: Netherlands (Dutch + English UI, NEVO + Open Food Facts seed data).
+- Launch: Netherlands (Dutch + English UI, Open Food Facts + Macrio parent/staple seed).
 - Expansion: EU / English-speaking markets; the allergen problem is universal.
 
 ## Devices

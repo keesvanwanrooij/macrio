@@ -16,12 +16,15 @@ Ship **locked parent foods** (system-owned) that cover ~**80% of everyday Dutch 
 
 ## Product rules (draft — refine with premium model)
 
-1. **Parents** are created only by Macrio (seed / admin). Users cannot invent new parents in v1.0.
-2. Users **can** create product versions (and child products) **linked to a parent**, e.g. parent `Apple` → `Appel (AH)`, `Elstar`, `Jonagold`.
+Canonical naming (UI + docs): [`docs/product/NAMING.md`](../docs/product/NAMING.md).
+
+1. **Parents** are created only by Macrio (seed / admin). Users cannot invent new parents in v1.0. In the **UI** call them **Staple / Standaard**, not “parent”.
+2. Users **can** create product versions (and child products) **linked to a parent**, e.g. parent `Beenham` → `AH Ovenschotel beenham honing mosterd`. Brand SKUs are never parents.
 3. Users **may** create items **without** a parent when nothing fits (edge cases, restaurant dishes, weird brands) — do not force bad links.
-4. Parents should be **generic staples** (appel, kipfilet, zilvervliesrijst), not supermarket SKUs.
+4. Parents should be **generic staples** (appel, kipfilet, beenham, zilvervliesrijst), not supermarket SKUs.
 5. Each parent needs **complete, honest data**: kcal + macros per 100 g (or ml), EU-14 allergens (`contains` / `free` / `unknown` — never guess `free`), sensible default portions (and later S/M/L from v1.0.6), and **cook_state** (`cooked` | `uncooked` | `not_applicable`) from v1.0.7 — critical for rice, pasta, meat, etc. Prefer separate parents or clear child versions when both raw and cooked references are common.
 6. Diary entries keep **snapshots** of the version used; parent links are for discovery and governance, not rewriting history.
+7. **Price** is not part of the parent seed MVP; community prices-per-country are a later optional feature (`ROADMAP.md` v1.4).
 
 ## Success = ~80% coverage (Dutch first)
 
@@ -57,8 +60,6 @@ Use this file as the system/user brief. Ask it to:
 - Trust graph / weighted likes (v1.2) — parents ship earlier; governance layers later.
 - Auto-trimming old versions (also v1.2).
 - AI photo logging (v2.x paid).
-- Full NEVO import (license-dependent, v1.2+).
-
 ## Pointers in-repo
 
 - Patch home: `docs/product/ROADMAP_MINOR.md` → v1.0.8 (after v1.0.7 cook state)

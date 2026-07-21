@@ -33,7 +33,7 @@ See `ICP.md`. Primary: the Allergy-Aware Tracker (gluten-free, gym 2–4x/week, 
 | MVP scope | Food logging + allergen display only |
 | Accounts | Required at startup (email + Google/Apple sign-in) |
 | Allergens | All 14 EU allergens in data model and UI from v1.0 |
-| Seed data | Open Food Facts only (NEVO later, pending license check) |
+| Seed data | Open Food Facts + Macrio parent/staple seed; community versions on top |
 | Community data | Simple in v1.0: product versions + likes + report button |
 | Language | Follows phone language (nl/en), switchable in settings |
 | Units | Metric (g, ml, kg) + kcal only |

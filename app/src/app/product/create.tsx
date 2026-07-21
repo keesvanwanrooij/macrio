@@ -1,5 +1,11 @@
-// Create a product (from an unknown barcode, empty search, or as a new version
-// of an existing product). Natural portion prefill — never a 1-gram default.
+/*
+ * SECTION: Create product or suggest new version
+ * WHAT: New product (+ optional barcode) or new version of an existing product.
+ * HOW: form → photo upload → create_product_full | create_product_version
+ *      (+ set_product_barcode when attaching a code to a product that had none)
+ * INPUT: route barcode?, editProductId?, slot?, date?; session
+ * OUTPUT: version id → log-entry (new) or back (edit)
+ */
 import { decode } from 'base64-arraybuffer';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -28,9 +34,12 @@ export default function CreateProduct() {
     editProductId?: string; // set → creates a new version of that product
   }>();
   const isNewVersion = !!params.editProductId;
+  const lockedBarcode = params.barcode?.trim() || '';
 
   const [name, setName] = useState(params.name ?? '');
   const [brand, setBrand] = useState('');
+  const [barcodeInput, setBarcodeInput] = useState(lockedBarcode);
+  const [existingBarcode, setExistingBarcode] = useState<string | null>(null);
   const [kcal, setKcal] = useState('');
   const [carbs, setCarbs] = useState('');
   const [protein, setProtein] = useState('');
@@ -45,11 +54,14 @@ export default function CreateProduct() {
   useEffect(() => {
     if (!params.editProductId) return;
     (async () => {
-      const { data } = await supabase
-        .from('current_product_versions')
-        .select('*')
-        .eq('product_id', params.editProductId)
-        .maybeSingle();
+      const [{ data }, { data: prod }] = await Promise.all([
+        supabase
+          .from('current_product_versions')
+          .select('*')
+          .eq('product_id', params.editProductId)
+          .maybeSingle(),
+        supabase.from('products').select('barcode').eq('id', params.editProductId).maybeSingle(),
+      ]);
       if (data) {
         const v = data as ProductVersion;
         setName((i18n.language === 'nl' ? v.name_nl : v.name_en) ?? v.name_nl ?? v.name_en ?? '');
@@ -64,8 +76,24 @@ export default function CreateProduct() {
           setPortionGrams(String(v.portions[0].grams));
         }
       }
+      const code = prod?.barcode?.trim() || null;
+      setExistingBarcode(code);
+      if (code) setBarcodeInput(code);
     })();
   }, [params.editProductId, i18n.language]);
+
+  const canEditBarcode = !lockedBarcode && (!isNewVersion || !existingBarcode);
+
+  async function attachBarcodeIfNeeded(productId: string, code: string) {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    if (isNewVersion && existingBarcode) return;
+    const { error } = await supabase.rpc('set_product_barcode', {
+      p_product_id: productId,
+      p_barcode: trimmed,
+    });
+    if (error) throw error;
+  }
 
   function cycleAllergen(key: string) {
     setAllergens((cur) => {
@@ -121,26 +149,29 @@ export default function CreateProduct() {
         p_portions: portions,
       };
 
-      let versionId: string | null = null;
       if (isNewVersion) {
-        const { data, error } = await supabase.rpc('create_product_version', {
+        const { error } = await supabase.rpc('create_product_version', {
           p_product_id: params.editProductId,
           ...common,
         });
         if (error) throw error;
-        versionId = data as string;
+        // Attach barcode later if the product still has none
+        if (canEditBarcode && barcodeInput.trim()) {
+          await attachBarcodeIfNeeded(params.editProductId!, barcodeInput);
+        }
         router.back();
         return;
       }
 
+      const barcodeForCreate = (lockedBarcode || barcodeInput).trim() || null;
       const { data, error } = await supabase.rpc('create_product_full', {
-        p_barcode: params.barcode || null,
+        p_barcode: barcodeForCreate,
         p_source: 'community',
         p_is_generic: false,
         ...common,
       });
       if (error) throw error;
-      versionId = data as string;
+      const versionId = data as string;
 
       // Straight to the portion screen so creating = logging in one flow.
       router.replace({
@@ -162,10 +193,37 @@ export default function CreateProduct() {
 
       <Field label={`${t('product.name')} *`} value={name} onChangeText={setName} />
       <Field label={t('product.brand')} value={brand} onChangeText={setBrand} />
-      {params.barcode ? (
+
+      {lockedBarcode ? (
         <Text style={styles.barcode}>
-          {t('product.barcode')}: {params.barcode}
+          {t('product.barcode')}: {lockedBarcode}
         </Text>
+      ) : existingBarcode ? (
+        <Text style={styles.barcode}>
+          {t('product.barcode')}: {existingBarcode}
+        </Text>
+      ) : canEditBarcode ? (
+        <View>
+          <Field
+            label={t('product.barcodeOptional')}
+            value={barcodeInput}
+            onChangeText={setBarcodeInput}
+            keyboardType="number-pad"
+            placeholder={t('product.barcodePlaceholder')}
+          />
+          {isNewVersion ? (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/product/add-barcode',
+                  params: { productId: params.editProductId! },
+                })
+              }
+            >
+              <Text style={styles.scanLink}>{t('product.barcodeScanInstead')}</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
 
       <Text style={styles.section}>{t('product.per100g')} *</Text>
@@ -190,7 +248,7 @@ export default function CreateProduct() {
           <Field label={t('product.portionName')} value={portionName} onChangeText={setPortionName} />
         </View>
         <View style={{ flex: 1 }}>
-          <Field label={t('product.portionGrams')} value={portionGrams} onChangeText={setPortionGrams} keyboardType="numeric" />
+          <Field label={t('product.portionGrams')} value={portionGrams} onChangeText={setPortionGrams} keyboardType="decimal-pad" />
         </View>
       </View>
 
@@ -256,6 +314,13 @@ const styles = StyleSheet.create({
   },
   hint: { fontSize: 12, color: colors.faint, marginBottom: spacing.s },
   barcode: { color: colors.muted, marginBottom: spacing.s, fontSize: 13 },
+  scanLink: {
+    color: colors.primaryDark,
+    fontWeight: '700',
+    fontSize: 14,
+    marginTop: -spacing.s,
+    marginBottom: spacing.m,
+  },
   macroGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.m },
   macroCell: { flexBasis: '47%', flexGrow: 1 },
   photo: { width: 120, height: 120, borderRadius: radius.m },

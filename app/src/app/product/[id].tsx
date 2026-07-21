@@ -129,6 +129,16 @@ export default function ProductPage() {
             {t('product.source')}: {t(sourceKey)}
             {barcode ? ` · ${barcode}` : ''}
           </Text>
+          {!barcode ? (
+            <Pressable
+              style={styles.addBarcodeBtn}
+              onPress={() =>
+                router.push({ pathname: '/product/add-barcode', params: { productId: id } })
+              }
+            >
+              <Text style={styles.addBarcodeText}>{t('product.addBarcode')}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
@@ -221,6 +231,15 @@ const styles = StyleSheet.create({
   name: { fontSize: 22, fontWeight: '900', color: colors.text },
   brand: { fontSize: 15, color: colors.muted, marginTop: 2 },
   source: { fontSize: 12, color: colors.faint, marginTop: 4 },
+  addBarcodeBtn: {
+    marginTop: spacing.s,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: radius.s,
+    backgroundColor: colors.primarySoft,
+  },
+  addBarcodeText: { color: colors.primaryDark, fontWeight: '700', fontSize: 13 },
   macroRow: { flexDirection: 'row', marginBottom: spacing.s },
   macroValue: { fontSize: 17, fontWeight: '800', color: colors.text },
   macroLabel: { fontSize: 12, color: colors.muted, marginTop: 2 },

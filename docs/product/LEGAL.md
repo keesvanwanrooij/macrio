@@ -26,7 +26,6 @@ Macrio shows community- and Open-Food-Facts-sourced allergen data. It can be wro
 - Code: AGPL-3.0.
 - Seed data: Open Food Facts — Open Database License (ODbL). Attribution required in-app ("Powered in part by Open Food Facts"); share-alike applies to database redistribution.
 - Community-created product data: contributors agree (in ToS) to release under ODbL-compatible terms so the database stays open.
-- NEVO (future): license must be verified before import.
 
 ## App stores
 

@@ -13,7 +13,7 @@
 3. **Community-governed truth.** A trust graph weights contributions: reliable users count more, trolls converge to zero. Product entries are versioned; users browse and like versions. Reports are resolved by community majority vote — the app runs without developer interference.
 4. **Free and open source (AGPL-3.0).** No paywall creep, ever. Barcode scanning, unlimited workouts, macro goals: free. Only future AI photo-logging (with real infra cost) may be paid.
 5. **Frictionless logging.** Scan → not found → one tap to create a product with sensible portions ("1 burger = 150 g", not 1 gram). Recent foods across all meals. Count up or down — your choice. Flexible meal structure with unlimited snacks.
-6. **Bilingual from day one.** Dutch and English, seeded with NEVO (Dutch national food database) and Open Food Facts.
+6. **Bilingual from day one.** Dutch and English, seeded with Open Food Facts and Macrio’s curated parent staples (community fills the rest).
 
 ## Positioning vs. competitors
 

@@ -246,6 +246,18 @@ function SearchTab({
 }
 
 // ---------- Recents (global across meals) ----------
+/*
+ * SECTION: Recents list
+ * WHAT: Shows foods this user logged recently, for one-tap re-add.
+ * HOW: 1) load own diary rows (newest first) 2) resolve product_versions
+ *      3) dedupe by product_id, keeping the version from the newest log
+ * INPUT: authenticated diary_entries (RLS = own rows only)
+ * OUTPUT: up to 20 ProductVersion rows → onSelect(versionId)
+ *
+ * Why product_id (not version_id): if you later log v2 (e.g. gluten free),
+ * your recents show v2. Another user who still prefers v1 keeps seeing v1.
+ * Past diary rows are never rewritten (macro snapshots stay honest).
+ */
 function RecentsTab({
   onSelect,
   userAllergens,
@@ -258,29 +270,47 @@ function RecentsTab({
 
   useEffect(() => {
     (async () => {
+      // Pull enough rows that after per-product dedupe we still fill ~20 slots
       const { data: entries } = await supabase
         .from('diary_entries')
         .select('product_version_id, logged_at')
         .not('product_version_id', 'is', null)
         .order('logged_at', { ascending: false })
-        .limit(100);
-      const seen = new Set<string>();
-      const ids: string[] = [];
+        .limit(150);
+
+      const versionIdsOrdered: string[] = [];
+      const versionIdSet = new Set<string>();
       for (const e of entries ?? []) {
         const id = e.product_version_id as string;
-        if (!seen.has(id)) {
-          seen.add(id);
-          ids.push(id);
+        if (!versionIdSet.has(id)) {
+          versionIdSet.add(id);
+          versionIdsOrdered.push(id);
         }
-        if (ids.length >= 20) break;
       }
-      if (ids.length === 0) {
+      if (versionIdsOrdered.length === 0) {
         setItems([]);
         return;
       }
-      const { data: versions } = await supabase.from('product_versions').select('*').in('id', ids);
-      const byId = new Map((versions ?? []).map((v) => [v.id, v]));
-      setItems(ids.map((id) => byId.get(id)).filter(Boolean) as ProductVersion[]);
+
+      const { data: versions } = await supabase
+        .from('product_versions')
+        .select('*')
+        .in('id', versionIdsOrdered);
+      const byVersionId = new Map((versions ?? []).map((v) => [v.id, v as ProductVersion]));
+
+      // Walk diary order (newest first): first time we see a product_id wins
+      const seenProducts = new Set<string>();
+      const recentVersions: ProductVersion[] = [];
+      for (const e of entries ?? []) {
+        const versionId = e.product_version_id as string;
+        const v = byVersionId.get(versionId);
+        if (!v) continue;
+        if (seenProducts.has(v.product_id)) continue;
+        seenProducts.add(v.product_id);
+        recentVersions.push(v);
+        if (recentVersions.length >= 20) break;
+      }
+      setItems(recentVersions);
     })();
   }, []);
 

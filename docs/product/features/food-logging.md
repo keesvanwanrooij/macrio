@@ -14,13 +14,13 @@ Priority order in the add screen (tabs): **Scan · Search · Recents · Quick ad
 
 - **Scan:** EAN-8/EAN-13/UPC via camera. Found → portion sheet. Not found → create-product flow (see product spec).
 - **Search:** debounced, matches nl + en names, generic entries boosted above brands. Inline allergen badges.
-- **Recents:** global across meals, most recent first, deduplicated by product.
+- **Recents:** global across meals, most recent first, **deduplicated by product** (not by version). For each product, the version shown is the one **this user** logged most recently. Other users keep their own last-used version. Creating a better version does not rewrite old diary rows (macro snapshots stay).
 - **Quick add:** raw kcal/macros without a product (for restaurant guesses).
 
 ## Portions
 
 - Every product: macros per 100 g + zero or more named portions (e.g. "1 burger – 150 g").
-- Portion sheet: stepper for count, toggle to raw grams, live macro preview.
+- Portion sheet: stepper for count (including **fractions**, ±0.5 and free-typed), toggle to raw grams, live macro preview.
 - Last-used portion per product is remembered.
 
 ## Summaries
