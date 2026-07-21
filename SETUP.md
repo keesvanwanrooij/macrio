@@ -14,11 +14,12 @@ Three steps, ~15 minutes total. You only do steps 1–2 once.
 7. Same way, run `backend/supabase/migrations/006_profile_body_metrics.sql` (DOB, height, weight, gender, activity for goal calculator).
 8. Same way, run `backend/supabase/migrations/007_profile_weight_goal.sql` (lose / maintain / gain intent).
 9. Same way, run `backend/supabase/migrations/008_rename_nickname_to_username.sql` (column `nickname` → `username`).
-10. **Authentication → URL Configuration** (fixes broken confirm-email links):
+10. Same way, run `backend/supabase/migrations/009_grant_authenticated_table_privs.sql` (fixes "permission denied for table profiles").
+11. **Authentication → URL Configuration** (fixes broken confirm-email links):
    - **Site URL:** `http://localhost:3000` (do **not** use your `*.supabase.co` project URL here)
    - **Redirect URLs:** add `http://localhost:3000` (and keep it in `app/.env` as `EXPO_PUBLIC_AUTH_REDIRECT_URL`)
-11. **Authentication → Providers → Email** → **Confirm email** may be **OFF** while founder-testing (faster sign-up). Turn it **ON** before public release — see `docs/product/ROADMAP_MINOR.md` (v1.0.2). Set **minimum password length** to **8**.
-12. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
+12. **Authentication → Providers → Email** → **Confirm email** may be **OFF** while founder-testing (faster sign-up). Turn it **ON** before public release — see `docs/product/ROADMAP_MINOR.md` (v1.0.2). Set **minimum password length** to **8**.
+13. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
 
 
 
@@ -32,13 +33,17 @@ Three steps, ~15 minutes total. You only do steps 1–2 once.
 
 ## 3. Start & test (~2 min)
 
+See also **Run the app** in [`README.md`](README.md).
+
+From the repo root:
+
 ```powershell
-cd "C:\Users\ceesv\OneDrive\Opslag\Coding Projects\Macrio\app"
+cd app
 npm install
-npm start
+npm start -- --clear
 ```
 
-Run `npm install` only the first time (or after dependencies change).
+Run `npm install` only the first time (or after dependencies change). Off the same Wi-Fi, use `npm start -- --clear --tunnel`.
 
 **Folder name:** clone or rename the repo folder to **`Macrio`** (matches the app brand; avoids `&` in paths on Windows).
 
@@ -55,7 +60,8 @@ Run `npm install` only the first time (or after dependencies change).
 | --------------------------------- | --------------------------------------------------------------------------------------------- |
 | "Missing Supabase config" error   | `.env` missing or not filled in — restart `npm start` after editing                           |
 | Sign-up succeeds but app stays on welcome | Confirm email is on — open the link in your inbox, then use **Sign in** |
-| Sign-in button finishes but nothing happens | Reload app (`start.bat`). Prefer **email + password** (not username). Email confirmation is **not** in `profiles` — check **Authentication → Users** → your user → **Confirm email** / Email Confirmed. |
+| Sign-in button finishes but nothing happens | Reload with `npm start -- --clear` from `app/`. Prefer **email + password** (not username). Email confirmation is **not** in `profiles` — check **Authentication → Users** → your user → **Confirm email** / Email Confirmed. |
+| “permission denied for table profiles” after onboarding | Run `009_grant_authenticated_table_privs.sql` in Supabase SQL Editor, then finish onboarding / save goals again. |
 | “Almost there” / profile missing after login | Run `005_auth_profile_repair.sql`, then Retry. Check Table Editor → `profiles` has a row with the same `id` as the auth user and a `username`. |
 | Wrong password / username not found | Use your full email address. Username login needs migration `003`/`005`/`008` (`resolve_login_email`). |
 | Confirmation email not received | Check spam; wait a few minutes; in Supabase → Authentication → Users, resend or delete user and try again |

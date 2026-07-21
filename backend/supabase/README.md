@@ -15,6 +15,7 @@
    - `migrations/006_profile_body_metrics.sql` (DOB, height, weight, gender, activity)
    - `migrations/007_profile_weight_goal.sql` (lose / maintain / gain)
    - `migrations/008_rename_nickname_to_username.sql` (`nickname` → `username`)
+   - `migrations/009_grant_authenticated_table_privs.sql` (GRANT for authenticated role)
 3. Disable email confirmation (so testing is smooth):
    - **Authentication → Sign In / Up → Email** → turn **Confirm email** OFF.
 4. Get your keys: **Project Settings → API**:

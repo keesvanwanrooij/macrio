@@ -26,6 +26,9 @@ create policy "profiles own read" on public.profiles
 create policy "profiles own update" on public.profiles
   for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 
+-- Table privileges (RLS alone is not enough for the authenticated role)
+grant select, insert, update on table public.profiles to authenticated;
+
 -- Auto-create profile on signup
 create function public.handle_new_user()
 returns trigger
@@ -94,6 +97,9 @@ create policy "versions authenticated insert" on public.product_versions
   for insert to authenticated with check (edited_by = auth.uid() or edited_by is null);
 -- versions are immutable: no update/delete policies.
 
+grant select, insert on table public.products to authenticated;
+grant select, insert on table public.product_versions to authenticated;
+
 -- Current (default) version per product = most likes, ties newest
 create view public.current_product_versions
 with (security_invoker = on) as
@@ -122,6 +128,8 @@ create policy "likes own insert" on public.version_likes
   for insert to authenticated with check (user_id = auth.uid());
 create policy "likes own delete" on public.version_likes
   for delete to authenticated using (user_id = auth.uid());
+
+grant select, insert, delete on table public.version_likes to authenticated;
 
 create function public.sync_like_count()
 returns trigger
@@ -158,6 +166,8 @@ create policy "reports own read" on public.reports
 create policy "reports own insert" on public.reports
   for insert to authenticated with check (reporter_id = auth.uid());
 
+grant select, insert on table public.reports to authenticated;
+
 -- ============================================================
 -- DIARY
 -- ============================================================
@@ -184,6 +194,8 @@ alter table public.diary_entries enable row level security;
 create policy "diary own all" on public.diary_entries
   for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+grant select, insert, update, delete on table public.diary_entries to authenticated;
+
 -- ============================================================
 -- FEEDBACK
 -- ============================================================
@@ -203,6 +215,8 @@ create policy "feedback own read" on public.feedback
   for select to authenticated using (user_id = auth.uid());
 create policy "feedback own insert" on public.feedback
   for insert to authenticated with check (user_id = auth.uid());
+
+grant select, insert on table public.feedback to authenticated;
 
 -- ============================================================
 -- RPCS

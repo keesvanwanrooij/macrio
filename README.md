@@ -2,9 +2,46 @@
 
 > Bilingual (Dutch/English), community-governed calorie & macro tracking with allergen safety (gluten-free first) and a full workout planner. One app, use either half or both.
 
-**Status:** v1.0 MVP built — in founder testing. Want to run it? See [`SETUP.md`](SETUP.md).
+**Status:** v1.0 MVP built — in founder testing. First-time setup (Supabase + `.env`): [`SETUP.md`](SETUP.md).
 
 **Funding:** Macrio is free and open source, funded by donations. Core features will never be paywalled.
+
+## Run the app (Windows)
+
+After setup ([`SETUP.md`](SETUP.md)), run npm **inside `app/`** (there is no `package.json` in the Macrio root). From the repo root:
+
+```powershell
+cd app
+```
+
+First time only (or after dependencies change):
+
+```powershell
+npm install
+```
+
+Same Wi-Fi as your phone:
+
+```powershell
+npm start -- --clear
+```
+
+Off the same Wi-Fi (tunnel; slower, needs Ngrok):
+
+```powershell
+npm start -- --clear --tunnel
+```
+
+Then open **Expo Go** (SDK **54**) on your phone and scan the QR code.
+
+If you see `ENOENT ... package.json`, you are still in the Macrio root - run `cd app` first.
+
+### Tips
+
+- Prefer `npm start -- --clear` for daily testing. Tunnel is only needed off-network.
+- If the QR code does nothing: same Wi-Fi, or try tunnel; firewall may block LAN.
+- `localhost:8081` is Metro (the app). `localhost:3000` in Supabase is only for auth email redirects - they are unrelated.
+- Full backend setup and troubleshooting: [`SETUP.md`](SETUP.md).
 
 ## ❤️ Support Macrio
 
