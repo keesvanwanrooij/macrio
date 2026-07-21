@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Field, PasswordField } from '../../components/ui';
-import { resolveLoginEmail } from '../../lib/auth';
+import { classifySignInError, resolveLoginEmail } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing } from '../../lib/theme';
 
@@ -29,11 +29,20 @@ export default function SignIn() {
       password,
     });
     setBusy(false);
-    if (error) Alert.alert(t('auth.signInFailed'), error.message);
+    if (!error) return;
+
+    const kind = classifySignInError(error.message);
+    const msg =
+      kind === 'invalid_credentials'
+        ? t('auth.invalidCredentials')
+        : kind === 'email_not_confirmed'
+          ? t('auth.emailNotConfirmed')
+          : error.message;
+    Alert.alert(t('auth.signInFailed'), msg);
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.xl }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{t('auth.signIn')}</Text>
       <Field
         label={t('auth.loginIdentifier')}

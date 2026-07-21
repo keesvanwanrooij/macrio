@@ -10,11 +10,12 @@ Three steps, ~15 minutes total. You only do steps 1–2 once.
 3. Same way, run `backend/supabase/migrations/002_seed.sql`.
 4. Same way, run `backend/supabase/migrations/003_profiles_nickname.sql` (nickname, full name, login by email/nickname).
 5. Same way, run `backend/supabase/migrations/004_drop_display_name.sql` (removes legacy `display_name` column).
-6. **Authentication → URL Configuration** (fixes broken confirm-email links):
+6. Same way, run `backend/supabase/migrations/005_auth_profile_repair.sql` (safe nicknames + repair orphan profiles).
+7. **Authentication → URL Configuration** (fixes broken confirm-email links):
    - **Site URL:** `http://localhost:3000` (do **not** use your `*.supabase.co` project URL here)
    - **Redirect URLs:** add `http://localhost:3000` (and keep it in `app/.env` as `EXPO_PUBLIC_AUTH_REDIRECT_URL`)
-7. **Authentication → Providers → Email** → **Confirm email** may be **OFF** while founder-testing (faster sign-up). Turn it **ON** before public release — see `docs/product/ROADMAP_MINOR.md` (v1.0.2). Set **minimum password length** to **8**.
-8. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
+8. **Authentication → Providers → Email** → **Confirm email** may be **OFF** while founder-testing (faster sign-up). Turn it **ON** before public release — see `docs/product/ROADMAP_MINOR.md` (v1.0.2). Set **minimum password length** to **8**.
+9. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
 
 
 

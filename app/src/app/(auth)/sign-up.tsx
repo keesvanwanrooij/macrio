@@ -22,19 +22,20 @@ export default function SignUp() {
   async function handleSignUp() {
     setBusy(true);
     const normalizedEmail = normalizeEmail(email);
+    const cleanNickname = nickname.trim();
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
         emailRedirectTo: getAuthRedirectUrl(),
-        data: { nickname: nickname.trim() },
+        data: { nickname: cleanNickname },
       },
     });
     setBusy(false);
     if (error) {
       const msg = isDuplicateEmailSignUpError(error.message)
         ? t('auth.emailTaken')
-        : error.message.includes('profiles_nickname_lower_idx')
+        : error.message.includes('profiles_nickname_lower_idx') || error.message.toLowerCase().includes('duplicate')
           ? t('auth.nicknameTaken')
           : error.message.includes('profiles_nickname_format')
             ? t('auth.nicknameInvalid')
@@ -46,7 +47,12 @@ export default function SignUp() {
       Alert.alert(t('auth.signUpFailed'), t('auth.emailTaken'));
       return;
     }
-    if (data.user && !data.session) {
+    if (data.session) {
+      Alert.alert(t('auth.signUpSuccessTitle'), t('auth.signUpSuccessMessage'));
+      // Root layout + session repair send the user to onboarding.
+      return;
+    }
+    if (data.user) {
       Alert.alert(
         t('auth.confirmEmailTitle'),
         t('auth.confirmEmailMessage', { email: normalizedEmail }),
@@ -56,7 +62,7 @@ export default function SignUp() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.xl }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{t('auth.signUp')}</Text>
       <Field
         label={t('auth.nickname')}
@@ -68,6 +74,7 @@ export default function SignUp() {
         textContentType="none"
         importantForAutofill="no"
       />
+      <Text style={styles.hint}>{t('auth.nicknameHint')}</Text>
       <Field
         label={t('auth.email')}
         value={email}
@@ -87,6 +94,7 @@ export default function SignUp() {
         textContentType="newPassword"
         importantForAutofill="yes"
       />
+      <Text style={styles.hint}>{t('auth.passwordHint')}</Text>
       <Button title={t('auth.signUp')} onPress={handleSignUp} loading={busy} disabled={!canSubmit} />
       <Text style={styles.switch} onPress={() => router.replace('/(auth)/sign-in')}>
         {t('auth.haveAccount')}
@@ -98,5 +106,12 @@ export default function SignUp() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   title: { fontSize: 26, fontWeight: '900', color: colors.text, marginBottom: spacing.xl },
+  hint: {
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: -spacing.s,
+    marginBottom: spacing.m,
+    lineHeight: 16,
+  },
   switch: { color: colors.primaryDark, textAlign: 'center', marginTop: spacing.xl, fontWeight: '600' },
 });

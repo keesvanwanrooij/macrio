@@ -1,6 +1,7 @@
 // Two-step onboarding: allergens (multi-select) → optional daily goals.
+// Both steps are skippable so founders can reach the diary quickly.
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -25,23 +26,28 @@ export default function Onboarding() {
     setSelected((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
   }
 
-  async function finish() {
+  async function finish(withGoals: boolean) {
     setBusy(true);
-    await updateProfile({
-      allergens: selected,
-      goal_kcal: parseNum(kcal) || null,
-      goal_carbs: parseNum(carbs) || null,
-      goal_protein: parseNum(protein) || null,
-      goal_fat: parseNum(fat) || null,
-      onboarded: true,
-    });
-    setBusy(false);
+    try {
+      await updateProfile({
+        allergens: selected,
+        goal_kcal: withGoals ? parseNum(kcal) || null : null,
+        goal_carbs: withGoals ? parseNum(carbs) || null : null,
+        goal_protein: withGoals ? parseNum(protein) || null : null,
+        goal_fat: withGoals ? parseNum(fat) || null : null,
+        onboarded: true,
+      });
+    } catch (e) {
+      Alert.alert(t('common.error'), e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
     // Root layout redirects to (tabs) once onboarded=true.
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
         {step === 0 ? (
           <>
             <Text style={styles.title}>{t('onboarding.allergensTitle')}</Text>
@@ -58,6 +64,9 @@ export default function Onboarding() {
             </View>
             <Text style={styles.disclaimer}>{t('allergens.disclaimer')}</Text>
             <Button title={t('common.next')} onPress={() => setStep(1)} />
+            <Text style={styles.skip} onPress={() => finish(false)}>
+              {t('common.skip')}
+            </Text>
           </>
         ) : (
           <>
@@ -67,8 +76,8 @@ export default function Onboarding() {
             <Field label={t('settings.goalCarbs')} value={carbs} onChangeText={setCarbs} keyboardType="numeric" />
             <Field label={t('settings.goalProtein')} value={protein} onChangeText={setProtein} keyboardType="numeric" />
             <Field label={t('settings.goalFat')} value={fat} onChangeText={setFat} keyboardType="numeric" />
-            <Button title={t('onboarding.start')} onPress={finish} loading={busy} />
-            <Text style={styles.skip} onPress={finish}>
+            <Button title={t('onboarding.start')} onPress={() => finish(true)} loading={busy} />
+            <Text style={styles.skip} onPress={() => finish(false)}>
               {t('common.skip')}
             </Text>
           </>

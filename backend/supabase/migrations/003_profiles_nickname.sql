@@ -45,14 +45,23 @@ as $$
 declare
   v_nickname text := nullif(trim(new.raw_user_meta_data->>'nickname'), '');
   v_full_name text := nullif(trim(new.raw_user_meta_data->>'full_name'), '');
+  v_fallback text := 'user_' || left(replace(new.id::text, '-', ''), 8);
 begin
   if v_nickname is null then
-    v_nickname := split_part(new.email, '@', 1);
+    v_nickname := split_part(coalesce(new.email, ''), '@', 1);
   end if;
-  v_nickname := regexp_replace(v_nickname, '\s+', '', 'g');
+  -- Strip chars that fail profiles_nickname_format (e.g. dots in email local-parts).
+  v_nickname := regexp_replace(coalesce(v_nickname, ''), '[^a-zA-Z0-9_-]', '', 'g');
+  if v_nickname is null or char_length(v_nickname) < 2 then
+    v_nickname := v_fallback;
+  end if;
+  if exists (select 1 from public.profiles where lower(nickname) = lower(v_nickname)) then
+    v_nickname := v_fallback;
+  end if;
 
   insert into public.profiles (id, nickname, full_name)
-  values (new.id, v_nickname, v_full_name);
+  values (new.id, v_nickname, v_full_name)
+  on conflict (id) do nothing;
 
   return new;
 end;
@@ -76,7 +85,7 @@ declare
   v_email text;
 begin
   if v_id = '' then
-    raise exception 'not_found';
+    return null;
   end if;
 
   if position('@' in v_id) > 0 then
@@ -89,11 +98,7 @@ begin
   where lower(p.nickname) = lower(v_id)
   limit 1;
 
-  if v_email is not null then
-    return v_email;
-  end if;
-
-  raise exception 'not_found';
+  return v_email;
 end;
 $$;
 
