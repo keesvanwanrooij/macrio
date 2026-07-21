@@ -1,23 +1,35 @@
 # Roadmap
 
-> Status: stub. Major.minor versions driven by community feedback (in-app feedback with screenshots, session time, time-since-install).
+> Major.minor versions planned per community feedback cycle (`docs/process/FEEDBACK_LOOP.md`). Order below is the plan; feedback can reshuffle minors.
 
-## v1.0 — MVP (one build session)
-- Food logging: barcode scan, search, quick product creation (natural portions), count-up/count-down setting, flexible meals + unlimited snacks, global recents, macro view toggle (1 focus / all 4).
-- Allergen data (gluten-free first) surfaced on scan/search.
-- Bilingual UI (nl/en).
-- Seed database: Open Food Facts (+ NEVO evaluation).
+## v1.0 — MVP (one build session) — food logging
 
-## v1.x — planned (order TBD by feedback)
-- Workout builder & tracker (unlimited, Hevy-style logging screen, PRs).
-- Body metrics: weight, fat %, muscle kg, progress photos.
-- Muscle-intensity body heatmap per workout.
-- Trust graph + product versioning + community voting/reports.
-- In-app feedback module (screenshots, usage metadata).
-- Health sync: Health Connect / Samsung Health / Apple Health.
-- Community: posts, groups, chat channels, democratic moderation.
-- Profiles: progress, goals, XP/levels/badges, trust stats.
-- Meal planning; optional onboarding questionnaire; life-wheel.
+Scope locked in `MVP_SCOPE.md`: diary with flexible meals/snacks, barcode scan, painless product creation, EU-14 allergen display, product versions + likes + reports, nl/en, count up/down, macro focus/overview, day/week reports, in-app feedback, Open Food Facts seed.
 
-## v2.x — future
-- AI photo meal logging (paid, extra security).
+## v1.1 — workouts & body
+
+- Workout builder & tracker: unlimited workouts, Hevy-style logging (sets, previous, kg, reps, check), PR detection & celebration.
+- Pre-filled popular exercises; custom exercises shared with community (likes).
+- Body metrics standalone menu: weight, fat %, muscle kg, progress photos.
+
+## v1.2 — trust & connections
+
+- Weighted trust graph replaces raw likes; community voting resolves reports (data governance live).
+- Health sync: Google Health Connect, Apple HealthKit, Samsung Health (requires dev-client builds).
+- NEVO import if license verified.
+
+## v1.3 — planning & personalization
+
+- Meal planning.
+- Optional onboarding questionnaire (Yazio-style) for goal suggestions.
+- Custom report periods; muscle-intensity body heatmap for workouts.
+
+## v2.0 — community
+
+- Public posts + reactions; groups with admins; chat channels.
+- Democratic moderation (progressive mutes/timeouts, monthly weight recalibration, permanent record).
+- Profiles: progress, goals, trust stats, XP/levels/badges; community-pinned YouTube tutorials per exercise; life-wheel.
+
+## v2.x — intelligence (paid)
+
+- AI photo meal logging (portion + macro estimation) — the only planned paid feature, funding infrastructure costs.

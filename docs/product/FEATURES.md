@@ -1,15 +1,19 @@
-# Feature Specifications
+# Feature Specifications — Index
 
-> Status: stub — detailed specs per feature to be written before each version's build session.
+Detailed specs live in `features/`, one file per feature, written before the version that builds them.
 
-## Index
-- Food logging & barcode scanning — _TBD_
-- Product creation & versioning — _TBD_
-- Allergen filtering (gluten-free first) — _TBD_
-- Meal structure (breakfast/lunch/dinner + unlimited snacks) — _TBD_
-- Workout builder & tracker — _TBD_
-- Body metrics & progress photos — _TBD_
-- Community & moderation — _TBD_
-- Profiles, XP, badges — _TBD_
-- Meal planning — _TBD_
-- In-app feedback — _TBD_
+## v1.0 (specs complete)
+
+- [`features/food-logging.md`](features/food-logging.md) — diary, meals/snacks, portions, summaries, reports
+- [`features/products-and-community.md`](features/products-and-community.md) — product model, versions, likes, reports, OFF seed
+- [`features/allergen-filter.md`](features/allergen-filter.md) — EU-14 display rules, honesty rule
+
+## Later (spec before build)
+
+- Workout builder & tracker — v1.1
+- Body metrics & progress photos — v1.1
+- Trust graph & voting — v1.2 (design notes: `../architecture/TRUST_GRAPH.md`)
+- Health sync — v1.2 (design notes: `../architecture/INTEGRATIONS.md`)
+- Meal planning, questionnaire — v1.3
+- Community posts/groups/chat, profiles & XP — v2.0
+- AI photo logging — v2.x

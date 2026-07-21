@@ -1,3 +1,92 @@
-# Data Model
+# Data Model — v1.0
 
-> Status: stub — ERD and table definitions TBD.
+> Postgres (Supabase). Naming: snake_case, plural tables. All tables have `id uuid pk`, `created_at`, `updated_at`.
+
+## ERD (v1.0)
+
+```
+profiles ──< diary_entries >── product_versions >── products
+profiles ──< products (created_by)
+profiles ──< version_likes >── product_versions
+profiles ──< reports >── product_versions
+profiles ──< feedback
+products ──< product_versions ──< portions
+product_versions ── allergen fields (EU-14)
+```
+
+## Tables
+
+### profiles (extends Supabase auth.users)
+| column | type | notes |
+|---|---|---|
+| id | uuid | = auth.users.id |
+| display_name | text | |
+| language | text | 'nl' \| 'en', default from device |
+| count_direction | text | 'up' (default) \| 'down' |
+| macro_display | text | 'overview' (default) \| 'focus' |
+| goal_kcal / goal_carbs / goal_protein / goal_fat | numeric null | optional targets |
+| allergens | text[] | subset of EU-14 keys |
+
+### products
+| column | type | notes |
+|---|---|---|
+| barcode | text unique null | EAN-8/13/UPC; null for generic foods |
+| source | text | 'openfoodfacts' \| 'community' |
+| created_by | uuid null | profile; null for seeds |
+| is_generic | boolean | boosts search ranking |
+
+### product_versions (immutable)
+| column | type | notes |
+|---|---|---|
+| product_id | uuid fk | |
+| version_number | int | per product |
+| name_nl / name_en | text | at least one required |
+| brand | text null | |
+| photo_url | text null | Supabase Storage |
+| kcal_100g / carbs_100g / protein_100g / fat_100g | numeric | required |
+| allergen_gluten … allergen_molluscs | text | 14 columns: 'contains' \| 'free' \| 'unknown' (default) |
+| edited_by | uuid null | |
+| like_count | int | denormalized via trigger |
+
+Default display version = max(like_count), tie → newest. (View: `current_product_versions`.)
+
+### portions
+| column | type | notes |
+|---|---|---|
+| product_version_id | uuid fk | |
+| name_nl / name_en | text | e.g. "1 burger" |
+| grams | numeric | > 0 |
+
+### diary_entries
+| column | type | notes |
+|---|---|---|
+| user_id | uuid fk | |
+| date | date | diary day |
+| meal_type | text | 'breakfast' \| 'lunch' \| 'dinner' \| 'snack' |
+| meal_position | int | orders snacks between mains |
+| product_version_id | uuid fk null | null for quick-add |
+| grams | numeric | |
+| kcal / carbs / protein / fat | numeric | **snapshot at log time** (history never changes) |
+| logged_at | timestamptz | feeds global recents |
+
+Recents = latest distinct products from user's diary_entries.
+
+### version_likes
+| user_id + product_version_id | unique pair | trigger maintains like_count |
+
+### reports
+| reporter_id, product_version_id, reason ('wrong_macros' \| 'wrong_allergens' \| 'spam' \| 'duplicate' \| 'other'), note, status ('open' default) |
+v1.0: queue only. v1.2: community voting resolves.
+
+### feedback
+| user_id, message, screenshot_url null, app_version, session_seconds, days_since_install |
+
+## Row Level Security (summary — details in SECURITY.md)
+
+- profiles / diary_entries / feedback: owner-only read+write.
+- products / product_versions / portions: public read; authenticated insert; versions immutable (no update/delete).
+- version_likes / reports: owner insert; public read of aggregates.
+
+## v1.1+ (reserved, not built)
+
+workouts, exercises, workout_logs, body_metrics, progress_photos → see ROADMAP. Trust-graph tables → `TRUST_GRAPH.md`.
