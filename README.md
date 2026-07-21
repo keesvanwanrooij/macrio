@@ -4,7 +4,17 @@
 
 **Status:** documentation complete, MVP (v1.0, food logging) ready to build.
 
-**Funding:** Macrio is free and open source, funded by [GitHub Sponsors](https://github.com/sponsors/keesvanwanrooij) donations. Core features will never be paywalled.
+**Funding:** Macrio is free and open source, funded by donations. Core features will never be paywalled.
+
+## ❤️ Support Macrio
+
+Macrio is built and maintained in personal time, with real out-of-pocket costs: AI-assisted coding tools, domain registration (macrio.nl / macrio.app), backend hosting, and app store developer fees — plus many hours of development.
+
+If Macrio helps you, please consider supporting the project:
+
+**[→ Donate via GitHub Sponsors](https://github.com/sponsors/keesvanwanrooij)**
+
+Every donation goes directly into keeping Macrio free, open, and ad-free for everyone.
 
 ## Why Macrio?
 
