@@ -1,32 +1,20 @@
-# Name Ideas
+# Name
 
-> Derived from ICP.md and USP.md.
-> Brand values to express: trust, community, allergen safety, food + fitness wholeness, open source.
+## Chosen: Macrio
 
-## Candidates considered
-
-| Name | Rationale |
-|---|---|
-| **Fudo** ✅ | Food + judo/discipline; short, app-store friendly, easy to pronounce in Dutch and English |
-| Voro | Latin *vorare* (to eat) + "voor ons" (Dutch: for us) |
-| Eetkracht | Dutch "eat-power"; strongly NL-flavored |
-| Macrio | Macro + community suffix |
-| Openbite / OpenVoed | Leads with open-source identity |
-| Trufel | Trust + fuel |
-| FuelUp, MacroFit, Vitalog, PlateWise, TrackStack | First round — all already taken |
-
-## Decision
-
-- **Chosen name:** Fudo
 - **Date:** 2026-07-21
-- **Reasoning:** Founder preference for the sound; short and bilingual (nl/en); verified available.
+- **Meaning:** macro + community
+- **EUIPO:** no conflicts (checked)
+- **Domains:** `macrio.nl` + `macrio.app` (€25/yr bundle, first 12 months). `macrio.com` taken — skip for now.
 
-## Domains
+## Shortlist
 
-- Primary: `fudo.app` (target)
-- Defensive/redirect: `getfudo.com`, `fudo.fit`
-- Email/website can live on the primary domain.
-
-## Monetization note
-
-Primary monetization for now: **GitHub donations (GitHub Sponsors)**. The app itself stays free and open source (AGPL-3.0); only future AI photo-logging with real infra costs may become paid.
+| Name | Status | Why rejected / not chosen |
+|---|---|---|
+| **Macrio** | ✅ chosen | — |
+| Fudo | ❌ | EUIPO: registered in software, food & fitness classes |
+| Voro | — | Backup; not picked |
+| Eetkracht | — | Too Dutch-only |
+| Trufel | — | Backup; not picked |
+| FuelUp, MacroFit, Vitalog, PlateWise, TrackStack | ❌ | Already taken |
+| Fudon, Fudra, Nutrido, Macrudo | — | Fudo-adjacent alternatives; not needed after Macrio cleared |
