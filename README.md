@@ -1,8 +1,10 @@
-# (App name TBD) — Open-source food & fitness tracker
+# Fudo — Open-source food & fitness tracker
 
 > Bilingual (Dutch/English), community-governed calorie & macro tracking with allergen safety (gluten-free first) and a full workout planner. One app, use either half or both.
 
-**Status:** pre-MVP scaffolding. Name pending — see `docs/product/NAME_IDEAS.md`.
+**Status:** pre-MVP scaffolding.
+
+**Funding:** Fudo is free and open source, funded by [GitHub Sponsors](https://github.com/sponsors) donations.
 
 ## Repository layout
 
