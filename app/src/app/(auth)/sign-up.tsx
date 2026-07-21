@@ -17,7 +17,7 @@ export default function SignUp() {
 
   async function handleSignUp() {
     setBusy(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: { data: { display_name: name.trim() } },
@@ -25,8 +25,16 @@ export default function SignUp() {
     setBusy(false);
     if (error) {
       Alert.alert(t('auth.signUpFailed'), error.message);
+      return;
     }
-    // Session listener in SessionProvider handles navigation.
+    // Confirm email ON: Supabase returns no session until the link is clicked.
+    if (data.user && !data.session) {
+      Alert.alert(
+        t('auth.confirmEmailTitle'),
+        t('auth.confirmEmailMessage', { email: email.trim() }),
+        [{ text: t('common.done'), onPress: () => router.replace('/(auth)/sign-in') }]
+      );
+    }
   }
 
   return (

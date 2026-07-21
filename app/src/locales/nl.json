@@ -50,7 +50,9 @@
     "noAccount": "Nog geen account? Maak er een aan",
     "haveAccount": "Al een account? Log in",
     "signUpFailed": "Aanmelden mislukt",
-    "signInFailed": "Inloggen mislukt"
+    "signInFailed": "Inloggen mislukt",
+    "confirmEmailTitle": "Bevestig je e-mail",
+    "confirmEmailMessage": "We hebben een bevestigingslink gestuurd naar {{email}}. Klik de link en log daarna in."
   },
   "onboarding": {
     "allergensTitle": "Waar ben je allergisch voor?",

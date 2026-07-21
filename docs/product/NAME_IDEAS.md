@@ -6,6 +6,7 @@
 - **Meaning:** macro + community
 - **EUIPO:** no conflicts (checked)
 - **Domains:** `macrio.nl` + `macrio.app` (€25/yr bundle, first 12 months). `macrio.com` taken — skip for now.
+- **Local folder:** `Macrio` (rename from old `Calorieen & Fitness app` workspace)
 
 ## Shortlist
 

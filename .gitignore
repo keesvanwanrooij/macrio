@@ -25,3 +25,9 @@ backend/supabase/.temp/
 Thumbs.db
 .idea/
 .vscode/
+
+# Cursor — commit shared rules in .cursor/rules/, ignore personal/local files
+.cursorrules
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**

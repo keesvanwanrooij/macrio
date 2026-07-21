@@ -14,8 +14,19 @@ _—_
 
 ## Planned
 
-### v1.0.1
-_—_
+### v1.0.1 — portion units (g / ml)
+
+**Found during:** Supabase seed review (founder testing setup).
+
+**Problem:** All products and portions use grams only. Liquids (melk, cola, sap, bier, wijn) should show **ml** (e.g. "1 glas – 250 ml"), not "250 g". Nutrition labels for drinks are per 100 ml, not 100 g.
+
+**Quick fix (this patch):**
+- Add `unit: 'g' | 'ml'` on portion objects in JSONB (no SQL migration — `portions` is already flexible).
+- Update seed data (`002_seed.sql`) for liquid staples.
+- UI: portion picker, product page, and create-product show ml where `unit === 'ml'`.
+- Macro math: keep per-100g internally for now; for water-like liquids 1 ml ≈ 1 g (acceptable for v1.0.1).
+
+**Affected seed items:** halfvolle/volle melk, havermelk, cola, sinaasappelsap, bier, rode wijn.
 
 ### v1.0.2
 _—_

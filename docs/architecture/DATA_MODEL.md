@@ -44,18 +44,20 @@ product_versions ── allergen fields (EU-14)
 | brand | text null | |
 | photo_url | text null | Supabase Storage |
 | kcal_100g / carbs_100g / protein_100g / fat_100g | numeric | required |
-| allergen_gluten … allergen_molluscs | text | 14 columns: 'contains' \| 'free' \| 'unknown' (default) |
+| allergens | jsonb | EU-14 keys → `contains` \| `free` \| `unknown` |
+| portions | jsonb | `[{ "name": "1 glas", "grams": 250, "unit": "ml" }]` — v1.0: `unit` omitted (defaults to g). **v1.0.1:** add `unit: 'g' \| 'ml'`. Future: per-100ml nutrition for liquids (`ROADMAP.md`). |
 | edited_by | uuid null | |
 | like_count | int | denormalized via trigger |
 
 Default display version = max(like_count), tie → newest. (View: `current_product_versions`.)
 
-### portions
-| column | type | notes |
+### portions (legacy doc — stored in `product_versions.portions` JSONB)
+
+| field | type | notes |
 |---|---|---|
-| product_version_id | uuid fk | |
-| name_nl / name_en | text | e.g. "1 burger" |
-| grams | numeric | > 0 |
+| name | text | e.g. "1 burger", "1 glas" |
+| grams | number | amount (mass); for ml portions, v1.0.1 uses same field as ml count (1 ml ≈ 1 g for water-like liquids) |
+| unit | `'g' \| 'ml'` | **planned v1.0.1** — display only until per-100ml nutrition ships |
 
 ### diary_entries
 | column | type | notes |
