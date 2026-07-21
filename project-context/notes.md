@@ -1,6 +1,8 @@
 # Founder notes (temporary scratchpad)
 
-> Raw usage notes while testing the app. Triage into `docs/product/ROADMAP_MINOR.md` / `ROADMAP.md` / `docs/product/plans/`, then clear from **New notes**. **Old notes** stay until you decide to triage or drop them. Files in this folder are temporary and may be deleted.
+> Raw usage notes while testing the app. Triage into `docs/product/ROADMAP_MINOR.md` / `ROADMAP.md` / `docs/product/plans/`, then clear from **New notes**. **Old notes** stay until you decide to triage or drop them.
+
+Supabase/GitHub feedback goes straight to **ROADMAP_MINOR Inbox**, **ROADMAP.md**, or another file in `project-context/` — not a separate inbox file.
 
 ## New notes
 
@@ -12,7 +14,10 @@
 - add a swipe animation for deleting ingredients from the food log
 - add a star functionality to star / save favorite ingredients to the food log and quickly fitler them from the zoeken / search view
 - add to save, load and modify complete meals with ingredients. this could be integrated in a community feature and or meal planner.
-- add at the bottom of the ingredient screen where you set your portion size a selector to select the version. it defaults to the version with the most likes followed by newest. also add to the roadmap to remember the last used one by the s
+- add at the bottom of the ingredient screen where you set your portion size a selector to select the version. it defaults to the version with the most likes followed by newest. also add to the roadmap to remember the last used one by the user to select that version if possible.
+- When adding products mannually users should be able to also set the translation themselves. make this an optional field. for now only dutch and english. in dutch user start with dutch. in english user start with english.
+- add analytics integration t the roadmap so we can anakyze the succes metrics and make plans if we are not reaching them.
+- 
 
 
 

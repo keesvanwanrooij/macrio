@@ -1,6 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-export const APP_VERSION = '1.0.0';
+/*
+ * SECTION: App metadata for feedback + Settings
+ * WHAT: App version string shown in Settings and sent with feedback rows.
+ * HOW: Read from app.json via expo-constants (single source of truth).
+ * INPUT: app/app.json → expo.version
+ * OUTPUT: APP_VERSION string (fallback 1.0.0 if config missing)
+ */
+export const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 const sessionStart = Date.now();
 

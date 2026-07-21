@@ -13,10 +13,11 @@
 
 ## Workflow
 
-1. Triage notes → `ROADMAP_MINOR.md` / `ROADMAP.md`.
-2. Open or create `plans/vX.Y.Z-slug.md` (copy `_TEMPLATE.md`).
-3. Fill **Problem / Scope / Acceptance** before coding; add **Impl notes** while building.
-4. When shipped: mark plan status **Done**, move the patch block to **Released** in `ROADMAP_MINOR.md`, update `CHANGELOG.md`.
+1. Triage notes or feedback → assign to a patch release or reject (with reason).
+2. Tick `[x]` on progress items in `ROADMAP_MINOR.md` / `ROADMAP.md` as you ship.
+3. When a **full patch** is done: bump version, tag git, move block to **Released**, update `CHANGELOG.md`.
+
+**Feedback:** triage into [`ROADMAP_MINOR.md`](ROADMAP_MINOR.md) **Inbox** or [`notes.md`](../../project-context/notes.md)
 
 ## Naming
 

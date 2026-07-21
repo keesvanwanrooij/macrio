@@ -1,8 +1,22 @@
-// Product page: current version, full allergen table (user's pinned on top),
-// version history with likes, report, suggest-edit. Honest disclaimer footer.
+/*
+ * SECTION: Product page
+ * WHAT: Current version, allergens, version likes, suggest edit, report.
+ * HOW: load versions + product meta; report uses a Modal (Android Alert max 3 buttons).
+ * INPUT: route product id; session for likes/reports
+ * OUTPUT: like/report rows; navigate to create / add-barcode
+ */
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { stateColor } from '../../components/AllergenBadges';
@@ -15,7 +29,8 @@ import { colors, radius, spacing } from '../../lib/theme';
 import type { AllergenState, ProductVersion } from '../../lib/types';
 
 const REPORT_REASONS = ['wrong_macros', 'wrong_allergens', 'spam', 'duplicate', 'other'] as const;
-const REASON_KEYS: Record<string, string> = {
+type ReportReason = (typeof REPORT_REASONS)[number];
+const REASON_KEYS: Record<ReportReason, string> = {
   wrong_macros: 'product.reportWrongMacros',
   wrong_allergens: 'product.reportWrongAllergens',
   spam: 'product.reportSpam',
@@ -34,6 +49,8 @@ export default function ProductPage() {
   const [source, setSource] = useState<string>('community');
   const [barcode, setBarcode] = useState<string | null>(null);
   const [myLikes, setMyLikes] = useState<Set<string>>(new Set());
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
 
   const load = useCallback(async () => {
     const [{ data: vs }, { data: prod }] = await Promise.all([
@@ -84,26 +101,21 @@ export default function ProductPage() {
     load();
   }
 
-  function report() {
-    Alert.alert(
-      t('product.reportTitle'),
-      undefined,
-      [
-        ...REPORT_REASONS.map((reason) => ({
-          text: t(REASON_KEYS[reason]),
-          onPress: async () => {
-            if (!session || !current) return;
-            await supabase.from('reports').insert({
-              reporter_id: session.user.id,
-              version_id: current.id,
-              reason,
-            });
-            Alert.alert(t('product.reportThanks'));
-          },
-        })),
-        { text: t('common.cancel'), style: 'cancel' as const },
-      ]
-    );
+  async function submitReport(reason: ReportReason) {
+    if (!session || !current || reportBusy) return;
+    setReportBusy(true);
+    try {
+      const { error } = await supabase.from('reports').insert({
+        reporter_id: session.user.id,
+        version_id: current.id,
+        reason,
+      });
+      setReportOpen(false);
+      if (error) Alert.alert(t('common.error'), error.message);
+      else Alert.alert(t('product.reportThanks'));
+    } finally {
+      setReportBusy(false);
+    }
   }
 
   if (!current || versions === null) return <Loading />;
@@ -117,102 +129,135 @@ export default function ProductPage() {
     source === 'openfoodfacts' ? 'product.sourceOff' : source === 'seed' ? 'product.sourceSeed' : 'product.sourceCommunity';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.l, paddingBottom: spacing.xxl }}>
-      <View style={{ flexDirection: 'row', gap: spacing.l }}>
-        {current.photo_url ? (
-          <Image source={{ uri: current.photo_url }} style={styles.photo} />
-        ) : null}
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{versionName(current, i18n.language)}</Text>
-          {current.brand ? <Text style={styles.brand}>{current.brand}</Text> : null}
-          <Text style={styles.source}>
-            {t('product.source')}: {t(sourceKey)}
-            {barcode ? ` · ${barcode}` : ''}
-          </Text>
-          {!barcode ? (
-            <Pressable
-              style={styles.addBarcodeBtn}
-              onPress={() =>
-                router.push({ pathname: '/product/add-barcode', params: { productId: id } })
-              }
-            >
-              <Text style={styles.addBarcodeText}>{t('product.addBarcode')}</Text>
-            </Pressable>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={{ padding: spacing.l, paddingBottom: spacing.xxl }}>
+        <View style={{ flexDirection: 'row', gap: spacing.l }}>
+          {current.photo_url ? (
+            <Image source={{ uri: current.photo_url }} style={styles.photo} />
           ) : null}
-        </View>
-      </View>
-
-      <SectionTitle>{t('product.per100g')}</SectionTitle>
-      <Card>
-        <View style={styles.macroRow}>
-          <MacroCell label={t('macros.kcalShort')} value={fmt(current.kcal_100g)} highlight />
-          <MacroCell label={t('macros.carbsShort')} value={`${fmt(current.carbs_100g, 1)} g`} />
-          <MacroCell label={t('macros.proteinShort')} value={`${fmt(current.protein_100g, 1)} g`} />
-          <MacroCell label={t('macros.fatShort')} value={`${fmt(current.fat_100g, 1)} g`} />
-        </View>
-        {current.portions.map((p, i) => (
-          <Text key={i} style={styles.portionLine}>
-            {t('product.perPortion', { name: `${p.name} (${fmt(p.grams)} g)` })}:{' '}
-            {fmt((current.kcal_100g * p.grams) / 100)} {t('common.kcal')}
-          </Text>
-        ))}
-      </Card>
-
-      <SectionTitle>{t('settings.myAllergens')}</SectionTitle>
-      <Card>
-        {sortedAllergens.map((key) => {
-          const state: AllergenState = current.allergens?.[key] ?? 'unknown';
-          const c = stateColor(state);
-          const mine = userAllergens.includes(key);
-          return (
-            <View key={key} style={styles.allergenRow}>
-              <Text style={[styles.allergenName, mine && { fontWeight: '800' }]}>
-                {mine ? '★ ' : ''}
-                {t(`allergens.${key}`)}
-              </Text>
-              <View style={[styles.allergenState, { backgroundColor: c.bg }]}>
-                <Text style={{ color: c.fg, fontWeight: '700', fontSize: 12 }}>{t(`allergens.${state}`)}</Text>
-              </View>
-            </View>
-          );
-        })}
-      </Card>
-
-      <SectionTitle>
-        {t('product.versions')} ({versions.length})
-      </SectionTitle>
-      <Card>
-        {versions.map((v) => (
-          <View key={v.id} style={styles.versionRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.versionTitle}>
-                {t('product.version')} {v.version_number}
-                {v.id === current.id ? ' ✓' : ''}
-              </Text>
-              <Text style={styles.versionMeta}>
-                {fmt(v.kcal_100g)} {t('common.kcal')} · {t('macros.carbsShort')} {fmt(v.carbs_100g, 1)} · {t('macros.proteinShort')} {fmt(v.protein_100g, 1)} · {t('macros.fatShort')} {fmt(v.fat_100g, 1)}
-              </Text>
-            </View>
-            <Pressable style={styles.likeBtn} onPress={() => toggleLike(v)}>
-              <Text style={{ color: myLikes.has(v.id) ? colors.danger : colors.faint, fontSize: 16 }}>
-                {myLikes.has(v.id) ? '♥' : '♡'} {v.like_count}
-              </Text>
-            </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.name}>{versionName(current, i18n.language)}</Text>
+            {current.brand ? <Text style={styles.brand}>{current.brand}</Text> : null}
+            <Text style={styles.source}>
+              {t('product.source')}: {t(sourceKey)}
+              {barcode ? ` · ${barcode}` : ''}
+            </Text>
+            {!barcode ? (
+              <Pressable
+                style={styles.addBarcodeBtn}
+                onPress={() =>
+                  router.push({ pathname: '/product/add-barcode', params: { productId: id } })
+                }
+              >
+                <Text style={styles.addBarcodeText}>{t('product.addBarcode')}</Text>
+              </Pressable>
+            ) : null}
           </View>
-        ))}
-      </Card>
+        </View>
 
-      <View style={{ height: spacing.l }} />
-      <Button
-        title={t('product.suggestEdit')}
-        variant="secondary"
-        onPress={() => router.push({ pathname: '/product/create', params: { editProductId: id } })}
-      />
-      <View style={{ height: spacing.s }} />
-      <Button title={`⚑ ${t('product.report')}`} variant="ghost" onPress={report} />
+        <SectionTitle>{t('product.per100g')}</SectionTitle>
+        <Card>
+          <View style={styles.macroRow}>
+            <MacroCell label={t('macros.kcalShort')} value={fmt(current.kcal_100g)} highlight />
+            <MacroCell label={t('macros.carbsShort')} value={`${fmt(current.carbs_100g, 1)} g`} />
+            <MacroCell label={t('macros.proteinShort')} value={`${fmt(current.protein_100g, 1)} g`} />
+            <MacroCell label={t('macros.fatShort')} value={`${fmt(current.fat_100g, 1)} g`} />
+          </View>
+          {current.portions.map((p, i) => (
+            <Text key={i} style={styles.portionLine}>
+              {t('product.perPortion', { name: `${p.name} (${fmt(p.grams)} g)` })}:{' '}
+              {fmt((current.kcal_100g * p.grams) / 100)} {t('common.kcal')}
+            </Text>
+          ))}
+        </Card>
 
-      <Text style={styles.disclaimer}>ⓘ {t('allergens.disclaimer')}</Text>
-    </ScrollView>
+        <SectionTitle>{t('settings.myAllergens')}</SectionTitle>
+        <Card>
+          {sortedAllergens.map((key) => {
+            const state: AllergenState = current.allergens?.[key] ?? 'unknown';
+            const c = stateColor(state);
+            const mine = userAllergens.includes(key);
+            return (
+              <View key={key} style={styles.allergenRow}>
+                <Text style={[styles.allergenName, mine && { fontWeight: '800' }]}>
+                  {mine ? '★ ' : ''}
+                  {t(`allergens.${key}`)}
+                </Text>
+                <View style={[styles.allergenState, { backgroundColor: c.bg }]}>
+                  <Text style={{ color: c.fg, fontWeight: '700', fontSize: 12 }}>{t(`allergens.${state}`)}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </Card>
+
+        <SectionTitle>
+          {t('product.versions')} ({versions.length})
+        </SectionTitle>
+        <Card>
+          {versions.map((v) => (
+            <View key={v.id} style={styles.versionRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.versionTitle}>
+                  {t('product.version')} {v.version_number}
+                  {v.id === current.id ? ' ✓' : ''}
+                </Text>
+                <Text style={styles.versionMeta}>
+                  {fmt(v.kcal_100g)} {t('common.kcal')} · {t('macros.carbsShort')} {fmt(v.carbs_100g, 1)} · {t('macros.proteinShort')} {fmt(v.protein_100g, 1)} · {t('macros.fatShort')} {fmt(v.fat_100g, 1)}
+                </Text>
+              </View>
+              <Pressable style={styles.likeBtn} onPress={() => toggleLike(v)}>
+                <Text style={{ color: myLikes.has(v.id) ? colors.danger : colors.faint, fontSize: 16 }}>
+                  {myLikes.has(v.id) ? '♥' : '♡'} {v.like_count}
+                </Text>
+              </Pressable>
+            </View>
+          ))}
+        </Card>
+
+        <View style={{ height: spacing.l }} />
+        <Button
+          title={t('product.suggestEdit')}
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/product/create', params: { editProductId: id } })}
+        />
+        <View style={{ height: spacing.s }} />
+        <Button title={`⚑ ${t('product.report')}`} variant="ghost" onPress={() => setReportOpen(true)} />
+
+        <Text style={styles.disclaimer}>ⓘ {t('allergens.disclaimer')}</Text>
+      </ScrollView>
+
+      {/* Android Alert only shows ~3 buttons; use a modal so Cancel + all reasons work */}
+      <Modal
+        visible={reportOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReportOpen(false)}
+      >
+        <Pressable style={styles.reportBackdrop} onPress={() => setReportOpen(false)}>
+          <Pressable style={styles.reportSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.reportTitle}>{t('product.reportTitle')}</Text>
+            {REPORT_REASONS.map((reason) => (
+              <Pressable
+                key={reason}
+                style={styles.reportOption}
+                disabled={reportBusy}
+                onPress={() => submitReport(reason)}
+              >
+                <Text style={styles.reportOptionText}>{t(REASON_KEYS[reason])}</Text>
+              </Pressable>
+            ))}
+            <Pressable
+              style={[styles.reportOption, styles.reportCancel]}
+              onPress={() => setReportOpen(false)}
+              disabled={reportBusy}
+            >
+              <Text style={styles.reportCancelText}>{t('common.cancel')}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
   );
 }
 
@@ -263,4 +308,31 @@ const styles = StyleSheet.create({
   versionMeta: { fontSize: 12, color: colors.faint, marginTop: 1 },
   likeBtn: { padding: spacing.s },
   disclaimer: { fontSize: 12, color: colors.faint, marginTop: spacing.xl, lineHeight: 17, textAlign: 'center' },
+  reportBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  reportSheet: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: radius.l,
+    borderTopRightRadius: radius.l,
+    padding: spacing.l,
+    paddingBottom: spacing.xxl,
+  },
+  reportTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: spacing.m,
+    textAlign: 'center',
+  },
+  reportOption: {
+    paddingVertical: spacing.m,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  reportOptionText: { fontSize: 16, color: colors.text, textAlign: 'center', fontWeight: '600' },
+  reportCancel: { borderBottomWidth: 0, marginTop: spacing.s },
+  reportCancelText: { fontSize: 16, color: colors.muted, textAlign: 'center', fontWeight: '700' },
 });

@@ -69,7 +69,9 @@ Every donation goes directly into keeping Macrio free, open, and ad-free for eve
 | Roadmap | [`docs/product/ROADMAP.md`](docs/product/ROADMAP.md) |
 | Patch board | [`docs/product/ROADMAP_MINOR.md`](docs/product/ROADMAP_MINOR.md) |
 | Working plans | [`docs/product/plans/`](docs/product/plans/README.md) |
+| Founder notes | [`project-context/notes.md`](project-context/notes.md) |
 | Product naming | [`docs/product/NAMING.md`](docs/product/NAMING.md) |
+| App version | [`VERSION`](VERSION) (mirrors `app/app.json`; bump on patch release only) |
 | Architecture | [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) |
 | Data model | [`docs/architecture/DATA_MODEL.md`](docs/architecture/DATA_MODEL.md) |
 
