@@ -1,14 +1,14 @@
 # Roadmap
 
-> Major.minor versions planned per community feedback cycle (`docs/process/FEEDBACK_LOOP.md`). Order below is the plan; feedback can reshuffle minors.
+> **Major versions only.** Patch ship order and checkboxes live in [`ROADMAP_MINOR.md`](ROADMAP_MINOR.md) (reorder freely as priorities change). Feedback cycle: [`docs/process/FEEDBACK_LOOP.md`](../process/FEEDBACK_LOOP.md).
 
-**App version:** **1.0.0** (founder testing). Patch numbers below are **planned releases** — see checkboxes in [`ROADMAP_MINOR.md`](ROADMAP_MINOR.md). Bump version only when a patch ships (`docs/process/VERSIONING.md`).
+**App version:** **1.0.0** (founder testing). Bump only when a full patch ships (`docs/process/VERSIONING.md`).
 
-## v1.0 — MVP (one build session) — food logging
+## v1.0 — MVP — food logging
 
-Scope locked in `MVP_SCOPE.md`. Triage incoming feedback into [`ROADMAP_MINOR.md`](ROADMAP_MINOR.md) **Inbox**, [`notes.md`](../project-context/notes.md), or other `project-context/` files.
+Scope locked in `MVP_SCOPE.md`. Triage founder notes → [`ROADMAP_MINOR.md`](ROADMAP_MINOR.md) or [`notes.md`](../../project-context/notes.md).
 
-**Progress (shipped in 1.0.0, founder testing):**
+**Shipped in 1.0.0 (founder testing):**
 
 - [x] Diary: meals/snacks, date nav, edit/delete entries
 - [x] Scan → DB → Open Food Facts → create product
@@ -20,21 +20,9 @@ Scope locked in `MVP_SCOPE.md`. Triage incoming feedback into [`ROADMAP_MINOR.md
 - [x] In-app feedback + Settings
 - [x] Supabase schema, RLS, seed data
 
-**Pre-public polish:** patches **v1.0.1 → v1.0.8** in `ROADMAP_MINOR.md`, then public launch.
+**Pre-public polish:** finish planned patches in `ROADMAP_MINOR.md` (currently through **v1.0.10**), then public launch. Detail and order change there, not in this file.
 
-## v1.0.x — food logging polish (patches)
-
-Ship order and detail: `ROADMAP_MINOR.md`. Working plans: [`plans/`](plans/README.md).
-
-- [ ] **v1.0.1:** Portion units g/ml + default 100 g; fractional counts. [plan](plans/v1.0.1-portion-units.md)
-- [ ] **v1.0.2:** Auth emails + forgot password. [plan](plans/v1.0.2-auth-emails.md)
-- [ ] **v1.0.3:** Settings identity & dates (username, DOB, date format). [plan](plans/v1.0.3-settings-identity.md)
-- [ ] **v1.0.4:** Onboarding/goals UX. [plan](plans/v1.0.4-onboarding-goals.md)
-- [ ] **v1.0.5:** Diary meal totals + daily progress. [plan](plans/v1.0.5-diary-progress.md)
-- [ ] **v1.0.6:** Named portions S/M/L. [plan](plans/v1.0.6-named-portions.md)
-- [ ] **v1.0.7:** Cook state cooked/uncooked/n/a. [plan](plans/v1.0.7-cook-state.md)
-- [ ] **v1.0.8:** Parent catalog + Dutch seed (pre-launch). [plan](plans/v1.0.8-parent-catalog.md)
-- [ ] **Later (post-launch OK):** Full unit model per 100 g or 100 ml
+**Post-launch OK:** full unit model per 100 g or 100 ml (beyond simple g/ml portion labels).
 
 ## v1.1 — workout builder & tracker
 
@@ -43,15 +31,21 @@ Ship order and detail: `ROADMAP_MINOR.md`. Working plans: [`plans/`](plans/READM
 - [ ] Pre-filled + custom exercises (community likes)
 - [ ] Body metrics menu (weight, fat %, photos)
 
-## v1.2 — trust & connections
+## v1.2 — trust, versions & governance
 
 - [ ] Weighted trust graph; community report voting
 - [ ] Version hygiene (trim/archive low-like old versions)
+- [ ] **Version ownership:** each version has an owner; owner may edit in place for **30 days** after creation; after 30 days an edit forks a **new version** that **copies likes** so both stay; users can unlike the new one and the old top version can rise again
+- [ ] **Duplicate from any version:** pick e.g. v2 as base while current is v5 → create v6 (not only prefill from most-liked)
+- [ ] Product page: show **owner name and/or date** instead of bare “version N”, respecting profile privacy / visibility
+- [ ] **Community visibility slider** (private → balanced → public): e.g. show username + profile link on versions / meals as incentive for good contributions
+- [ ] **Product merge (admin governance):** duplicate catalog entries are common; **admin** role; merge when a **majority of admins** agree (founder should not need a part-time job moderating merges alone)
 - [ ] Health sync (Health Connect, HealthKit, Samsung)
 
 ## v1.3 — planning & personalization
 
 - [ ] Meal planning
+- [ ] Save / load / modify **personal** complete meals (templates for the user; planner integration)
 - [ ] Optional onboarding questionnaire
 - [ ] Quick-log restaurant % macro sliders
 - [ ] Personal add-food tab order
@@ -60,8 +54,16 @@ Ship order and detail: `ROADMAP_MINOR.md`. Working plans: [`plans/`](plans/READM
 ## v1.4 — community
 
 - [ ] Posts, groups, chat, moderation
-- [ ] Profiles (XP, badges, life-wheel)
+- [ ] Profiles (XP, badges, life-wheel); reputation for good product/version contributions
+- [ ] **Recipes** (community): likes and profile popularity matter; creators visible on version / recipe lists
+- [ ] **Duplicate / share meals** in the community (copy someone else’s meal into your diary or templates)
+- [ ] **Salt and other micronutrients** in DB + tracker (seed + verify after community integrations are in place)
 - [ ] Prices per country (community, optional)
+
+## v1.5 — analytics
+
+- [ ] Analytics integration to measure success metrics (`SUCCESS_METRICS.md`) and spot when targets are missed
+- [ ] Founder/ops dashboards or exports as needed (privacy-aware; no PII in public docs)
 
 ## v2.x — intelligence (paid)
 
