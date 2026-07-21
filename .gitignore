@@ -1,0 +1,27 @@
+# Node / React Native (Expo)
+node_modules/
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+
+# Native
+ios/Pods/
+android/.gradle/
+android/app/build/
+*.keystore
+!debug.keystore
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Supabase local
+backend/supabase/.temp/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
