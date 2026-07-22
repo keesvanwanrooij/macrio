@@ -94,6 +94,7 @@
 - [ ] When `both`: primary + alt macro columns (or jsonb); UI toggle cooked ↔ uncooked on product + log-entry
 - [ ] Create/edit/search badges; seed staples; OFF default
 - [ ] Version edits copy both macro blocks; **30-day owner fork** same as other foods (`ROADMAP.md` v1.2 - not in this patch)
+- [ ] Feed **cook completeness** into version ranking tie-break (see [`plans/version-completeness-ranking.md`](plans/version-completeness-ranking.md); helper ships in v1.0.10)
 
 
 
@@ -129,7 +130,7 @@
 
 - [ ] **Swipe to delete** diary food entries (with undo or confirm as fits existing patterns)
 - [ ] **Recents restore last grams** (including custom amounts like 130 g), not only product/version
-- [ ] **Version picker on log-entry** (portion screen): default = most likes, then newest; remember **last version this user used** for that product when possible
+- [ ] **Version picker on log-entry** (portion screen): default = most likes → **completeness score** → newest; remember **last version this user used** for that product when possible. Plan: [`plans/version-completeness-ranking.md`](plans/version-completeness-ranking.md)
 - [ ] **Star / favorite** products (or versions): save for quick filter in **Search**
 
 
@@ -162,17 +163,17 @@
 ## Rejected / deferred
 
 
-| Item                                                                                        | Reason                                                                                             |
-| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Feedback: multiple screenshots (max 5)                                                      | Keep single image for now. Also listed under Old notes.                                            |
-| Quick-log % macro sliders (restaurant)                                                      | `ROADMAP.md` v1.3                                                                                  |
-| Personal reorder of add-food tabs                                                           | `ROADMAP.md` v1.3                                                                                  |
-| Auto-trim low-like product versions                                                         | `ROADMAP.md` v1.2                                                                                  |
-| Version ownership / 30-day fork / profile visibility slider / duplicate-from-version / admin product merge | `ROADMAP.md` v1.2 (product public/private catalog visibility shipped early in 1.0.0) |
-| Recipes, community duplicate meals, salt/micros                                             | `ROADMAP.md` v1.4                                                                                  |
-| Personal meal templates + meal planner                                                      | `ROADMAP.md` v1.3                                                                                  |
-| Analytics / success metrics tooling                                                         | `ROADMAP.md` v1.5                                                                                  |
-| Supporter pay-what-you-want + quarterly in-app funding notices                            | `ROADMAP.md` v1.6                                                                                  |
-| User feedback at scale (replies, status, dedupe)                                            | Not decided — `[community-feedback-future.md](../../project-context/community-feedback-future.md)` |
+| Item                                                                                                       | Reason                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Feedback: multiple screenshots (max 5)                                                                     | Keep single image for now. Also listed under Old notes.                                            |
+| Quick-log % macro sliders (restaurant)                                                                     | `ROADMAP.md` v1.3                                                                                  |
+| Personal reorder of add-food tabs                                                                          | `ROADMAP.md` v1.3                                                                                  |
+| Auto-trim low-like product versions                                                                        | `ROADMAP.md` v1.2                                                                                  |
+| Version ownership / 30-day fork / profile visibility slider / duplicate-from-version / admin product merge | `ROADMAP.md` v1.2 (product public/private catalog visibility shipped early in 1.0.0)               |
+| Recipes, community duplicate meals, salt/micros                                                            | `ROADMAP.md` v1.4                                                                                  |
+| Personal meal templates + meal planner                                                                     | `ROADMAP.md` v1.3                                                                                  |
+| Analytics / success metrics tooling                                                                        | `ROADMAP.md` v1.5                                                                                  |
+| Supporter pay-what-you-want + quarterly in-app funding notices                                             | `ROADMAP.md` v1.6                                                                                  |
+| User feedback at scale (replies, status, dedupe)                                                           | Not decided — `[community-feedback-future.md](../../project-context/community-feedback-future.md)` |
 
 
