@@ -1,9 +1,9 @@
 /*
  * SECTION: Last logged grams per product version
- * WHAT: For multi-add, prefer the grams the user last logged for that version.
+ * WHAT: Prefer the grams this user last logged for a version (multi-add + single log-entry).
  * HOW: Query own diary_entries newest-first; first hit per version_id wins.
  * INPUT: product_version ids
- * OUTPUT: Map versionId → grams (missing → caller uses 100 g)
+ * OUTPUT: Map versionId → grams (missing → caller uses FALLBACK_LOG_GRAMS)
  */
 import { supabase } from './supabase';
 

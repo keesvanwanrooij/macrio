@@ -1,8 +1,8 @@
 /*
  * SECTION: Log / edit diary portion
  * WHAT: Pick a named portion (with optional fractional count) or raw grams, then save macros.
- * HOW: 1) load version (+ entry if edit) 2) grams = portion.grams * count OR parseNum(gramsText)
- *      3) macrosForGrams → insert/update diary_entries
+ * HOW: 1) load version (+ entry if edit) 2) new log: prefer last logged grams for this version
+ *      3) else first named portion / 100 g 4) macrosForGrams → insert/update diary_entries
  * INPUT: route versionId | entryId, meal slot, date; session
  * OUTPUT: diary row; navigate back
  *
@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AllergenWarning } from '../components/AllergenBadges';
 import { Button, Chip, Field, Loading } from '../components/ui';
+import { FALLBACK_LOG_GRAMS, lastGramsByVersionIds } from '../lib/lastLoggedGrams';
 import { fmt, macrosForGrams, parseNum, slotLabelKey, versionName } from '../lib/nutrition';
 import { useSession } from '../lib/session';
 import { supabase } from '../lib/supabase';
@@ -50,7 +51,7 @@ export default function LogEntry() {
   const [portionIdx, setPortionIdx] = useState<number | null>(null); // null = raw grams
   const [count, setCount] = useState(1);
   const [countText, setCountText] = useState('1');
-  const [gramsText, setGramsText] = useState('100');
+  const [gramsText, setGramsText] = useState(String(FALLBACK_LOG_GRAMS));
   const [busy, setBusy] = useState(false);
 
   function applyCount(n: number, fromStepper = false) {
@@ -69,7 +70,8 @@ export default function LogEntry() {
         const { data: e } = await supabase.from('diary_entries').select('*').eq('id', params.entryId).single();
         if (e) {
           setEntry(e as DiaryEntry);
-          setGramsText(String(e.grams ?? 100));
+          setGramsText(String(e.grams ?? FALLBACK_LOG_GRAMS));
+          setPortionIdx(null);
           versionId = e.product_version_id ?? undefined;
         }
       }
@@ -78,9 +80,29 @@ export default function LogEntry() {
         if (v) {
           const pv = v as ProductVersion;
           setVersion(pv);
-          if (!params.entryId && pv.portions.length > 0) {
-            setPortionIdx(0);
-            setGramsText(String(pv.portions[0].grams));
+          // New log (not edit): restore last grams for this version (Recents / Search / Scan)
+          if (!params.entryId) {
+            const lastMap = await lastGramsByVersionIds([versionId]);
+            const last = lastMap.get(versionId);
+            if (last != null && last > 0) {
+              // Prefer matching named portion when grams equal a defined portion
+              const matchIdx = pv.portions.findIndex((p) => Math.abs(p.grams - last) < 0.05);
+              if (matchIdx >= 0) {
+                setPortionIdx(matchIdx);
+                setCount(1);
+                setCountText('1');
+                setGramsText(String(pv.portions[matchIdx].grams));
+              } else {
+                setPortionIdx(null);
+                setGramsText(String(last));
+              }
+            } else if (pv.portions.length > 0) {
+              setPortionIdx(0);
+              setGramsText(String(pv.portions[0].grams));
+            } else {
+              setPortionIdx(null);
+              setGramsText(String(FALLBACK_LOG_GRAMS));
+            }
           }
         }
       }
