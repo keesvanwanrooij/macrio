@@ -242,7 +242,9 @@
     "avgOnly": "Avg {{avg}} {{unit}}",
     "avgVsGoal": "Avg {{avg}} {{unit}} · goal {{goal}} {{unit}}",
     "avgVsGoalLeft": "Avg {{avg}} {{unit}} · {{left}} {{unit}} left vs goal {{goal}}",
-    "avgVsGoalOver": "Avg {{avg}} {{unit}} · {{over}} {{unit}} over goal {{goal}}"
+    "avgVsGoalOver": "Avg {{avg}} {{unit}} · {{over}} {{unit}} over goal {{goal}}",
+    "goalPerMeal": "Goal per meal: {{amount}} {{unit}}",
+    "goalPerMealWithSnacks": "Goal per meal: {{meal}} {{unit}}, snacks: {{snack}} {{unit}}"
   },
   "settings": {
     "title": "Settings",

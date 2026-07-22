@@ -242,7 +242,9 @@
     "avgOnly": "Gem. {{avg}} {{unit}}",
     "avgVsGoal": "Gem. {{avg}} {{unit}} · doel {{goal}} {{unit}}",
     "avgVsGoalLeft": "Gem. {{avg}} {{unit}} · {{left}} {{unit}} over vs doel {{goal}}",
-    "avgVsGoalOver": "Gem. {{avg}} {{unit}} · {{over}} {{unit}} boven doel {{goal}}"
+    "avgVsGoalOver": "Gem. {{avg}} {{unit}} · {{over}} {{unit}} boven doel {{goal}}",
+    "goalPerMeal": "Doel per maaltijd: {{amount}} {{unit}}",
+    "goalPerMealWithSnacks": "Doel per maaltijd: {{meal}} {{unit}}, snacks: {{snack}} {{unit}}"
   },
   "settings": {
     "title": "Instellingen",

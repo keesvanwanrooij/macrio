@@ -15,6 +15,7 @@ import { fmt } from '../lib/nutrition';
 import { MACRO_COMPACT_WIDTH, macroDisplayLabel, type MacroKey } from '../lib/macroLabels';
 import { colors, radius, spacing } from '../lib/theme';
 import type { MacroTotals, Profile } from '../lib/types';
+import { ProgressBar } from './ProgressBar'; // shared with reports day bars
 
 const MACROS = ['kcal', 'carbs', 'protein', 'fat'] as const;
 
@@ -53,24 +54,6 @@ function display(
     consumed,
     goal,
   };
-}
-
-function ProgressBar({ ratio, highlight }: { ratio: number; highlight?: boolean }) {
-  const over = ratio > 1;
-  const widthPct = Math.max(0, Math.min(ratio, 1)) * 100;
-  return (
-    <View style={styles.barTrack}>
-      <View
-        style={[
-          styles.barFill,
-          {
-            width: `${widthPct}%`,
-            backgroundColor: over ? colors.danger : highlight ? colors.primary : colors.primaryDark,
-          },
-        ]}
-      />
-    </View>
-  );
 }
 
 export function MacroSummary({
@@ -215,14 +198,6 @@ const styles = StyleSheet.create({
   cellLabel: { fontSize: 11, color: colors.muted, fontWeight: '700', textAlign: 'center' },
   cellLabelCompact: { fontSize: 10 },
   cellSub: { fontSize: 10, color: colors.faint, textAlign: 'center' },
-  barTrack: {
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: colors.border,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  barFill: { height: '100%', borderRadius: 3 },
   barSpacer: { height: 5 },
   focusLabel: { fontSize: 15, fontWeight: '700', color: colors.muted },
   focusValue: { fontSize: 48, fontWeight: '900', color: colors.primaryDark, marginTop: 4 },

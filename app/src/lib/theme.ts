@@ -4,6 +4,8 @@ export const colors = {
   primarySoft: '#DCFCE7',
   danger: '#DC2626',
   dangerSoft: '#FEE2E2',
+  /** Soft coral for meal over-goal bars (less intimidating than danger). */
+  dangerMuted: '#F87171',
   warn: '#D97706',
   warnSoft: '#FEF3C7',
   bg: '#F8FAFC',

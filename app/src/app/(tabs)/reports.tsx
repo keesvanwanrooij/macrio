@@ -12,6 +12,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next';
 
 import { Card, Loading, SectionTitle } from '../../components/ui';
+import { ProgressBar } from '../../components/ProgressBar';
 import {
   fetchGoalRevisionsUpTo,
   goalValue,
@@ -19,6 +20,7 @@ import {
   type GoalSnapshot,
 } from '../../lib/goalRevisions';
 import { MACRO_COMPACT_WIDTH, MACRO_KEYS, macroDisplayLabel, type MacroKey } from '../../lib/macroLabels';
+import { mealSlotGoal, isSnackSlot } from '../../lib/mealGoalShare';
 import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDateString } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
@@ -43,15 +45,19 @@ export default function Reports() {
   }, [anchor]);
 
   const load = useCallback(async () => {
-    setEntries(null);
     const from = mode === 'day' ? anchor : weekStart;
     const to = mode === 'day' ? anchor : addDays(weekStart, 6);
-    const [entryRes, revs] = await Promise.all([
-      supabase.from('diary_entries').select('*').gte('date', from).lte('date', to),
-      fetchGoalRevisionsUpTo(to),
-    ]);
-    setEntries((entryRes.data as DiaryEntry[]) ?? []);
-    setRevisions(revs);
+    try {
+      const [entryRes, revs] = await Promise.all([
+        supabase.from('diary_entries').select('*').gte('date', from).lte('date', to),
+        fetchGoalRevisionsUpTo(to),
+      ]);
+      setEntries((entryRes.data as DiaryEntry[]) ?? []);
+      setRevisions(revs);
+    } catch {
+      setEntries([]);
+      setRevisions([]);
+    }
   }, [mode, anchor, weekStart]);
 
   useFocusEffect(
@@ -124,7 +130,13 @@ export default function Reports() {
           </View>
 
           {mode === 'day' ? (
-            <DayReport entries={entries} selected={selectedMacro} onSelect={setSelectedMacro} />
+            <DayReport
+              date={anchor}
+              entries={entries}
+              revisions={revisions}
+              selected={selectedMacro}
+              onSelect={setSelectedMacro}
+            />
           ) : (
             <WeekReport
               entries={entries}
@@ -142,46 +154,113 @@ export default function Reports() {
 
 /*
  * SECTION: Day report body
- * WHAT: Totals + meal list for the selected macro.
- * HOW: Tap totals to change macro; parent swipe changes day.
- * INPUT: entries, selected macro
- * OUTPUT: Meal rows showing selected macro values
+ * WHAT: Totals + full-width day progress card + meal list for selected macro.
+ * HOW: Day goal from revisions (else profile). Meals: mains 2 parts, logged snacks 1.
+ *      Day bar uses strong over color; meal bars use soft coral when over.
+ * INPUT: date, entries, revisions, selected macro
+ * OUTPUT: Calmer day UI with share hint under Dagboek
  */
 function DayReport({
+  date,
   entries,
+  revisions,
   selected,
   onSelect,
 }: {
+  date: string;
   entries: DiaryEntry[];
+  revisions: GoalSnapshot[];
   selected: MacroKey;
   onSelect: (key: MacroKey) => void;
 }) {
   const { t } = useTranslation();
+  const { profile } = useSession();
   const totals = sumEntries(entries);
   const slots = MAIN_SLOTS.flatMap((m) => [m, SNACK_AFTER[m]]);
   const unit = selected === 'kcal' ? t('common.kcal') : 'g';
 
+  const dayGoal = useMemo(() => {
+    const fromRev = goalValue(resolveGoalForDate(revisions, date), selected);
+    if (fromRev != null && fromRev > 0) return fromRev;
+    if (!profile) return null;
+    return goalValue(
+      {
+        effective_date: date,
+        goal_kcal: profile.goal_kcal,
+        goal_carbs: profile.goal_carbs,
+        goal_protein: profile.goal_protein,
+        goal_fat: profile.goal_fat,
+      },
+      selected
+    );
+  }, [revisions, date, selected, profile]);
+
+  const slotsWithFood = useMemo(() => {
+    const present = new Set(entries.map((e) => Number(e.meal_slot)));
+    return MAIN_SLOTS.flatMap((m) => [m, SNACK_AFTER[m]]).filter((s) => present.has(s));
+  }, [entries]);
+
+  const mealShareGoal =
+    dayGoal != null ? mealSlotGoal(dayGoal, MAIN_SLOTS[0], slotsWithFood) : null;
+  const firstSnackWithFood = slotsWithFood.find((s) => isSnackSlot(s));
+  const snackShareGoal =
+    dayGoal != null && firstSnackWithFood != null
+      ? mealSlotGoal(dayGoal, firstSnackWithFood, slotsWithFood)
+      : null;
+
   if (entries.length === 0) {
     return <Text style={styles.empty}>{t('reports.noData')}</Text>;
   }
+
+  const consumed = totals[selected];
 
   return (
     <>
       <Card>
         <TotalsRow totals={totals} selected={selected} onSelect={onSelect} />
       </Card>
+
+      {dayGoal != null && dayGoal > 0 ? (
+        <Card style={styles.dayProgressCard}>
+          <Text style={styles.dayProgressLabel}>
+            {fmt(consumed)} / {fmt(dayGoal)} {unit}
+          </Text>
+          <ProgressBar ratio={consumed / dayGoal} highlight overTone="strong" />
+        </Card>
+      ) : null}
+
       <SectionTitle>{t('diary.title')}</SectionTitle>
+      {mealShareGoal != null ? (
+        <Text style={styles.mealGoalHint}>
+          {snackShareGoal != null
+            ? t('reports.goalPerMealWithSnacks', {
+                meal: fmt(mealShareGoal),
+                snack: fmt(snackShareGoal),
+                unit,
+              })
+            : t('reports.goalPerMeal', { amount: fmt(mealShareGoal), unit })}
+        </Text>
+      ) : null}
+
       <Card>
         {slots.map((slot) => {
-          const slotEntries = entries.filter((e) => e.meal_slot === slot);
+          const slotEntries = entries.filter((e) => Number(e.meal_slot) === slot);
           if (slotEntries.length === 0) return null;
           const st = sumEntries(slotEntries);
+          const slotConsumed = st[selected];
+          const slotGoal =
+            dayGoal != null ? mealSlotGoal(dayGoal, slot, slotsWithFood) : null;
           return (
-            <View key={slot} style={styles.mealRow}>
-              <Text style={styles.mealName}>{t(slotLabelKey(slot))}</Text>
-              <Text style={styles.mealValue}>
-                {fmt(st[selected])} {unit}
-              </Text>
+            <View key={slot} style={styles.mealBlock}>
+              <View style={styles.mealRow}>
+                <Text style={styles.mealName}>{t(slotLabelKey(slot))}</Text>
+                <Text style={styles.mealValue}>
+                  {fmt(slotConsumed)} {unit}
+                </Text>
+              </View>
+              {slotGoal != null && slotGoal > 0 ? (
+                <ProgressBar ratio={slotConsumed / slotGoal} overTone="soft" />
+              ) : null}
             </View>
           );
         })}
@@ -420,12 +499,34 @@ const styles = StyleSheet.create({
   navArrow: { fontSize: 26, color: colors.muted, paddingHorizontal: spacing.m },
   navLabel: { fontSize: 15, fontWeight: '800', color: colors.text },
   empty: { color: colors.faint, textAlign: 'center', marginTop: spacing.xxl, fontSize: 15 },
-  mealRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  dayProgressCard: {
+    paddingVertical: spacing.m,
+    paddingHorizontal: spacing.l,
+    marginTop: spacing.s,
+  },
+  dayProgressLabel: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: '600',
+    marginBottom: spacing.s,
+    textAlign: 'center',
+  },
+  mealGoalHint: {
+    fontSize: 12,
+    color: colors.faint,
+    marginBottom: spacing.s,
+    marginTop: -4,
+  },
+  mealBlock: {
     paddingVertical: spacing.s,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+    gap: 6,
+  },
+  mealRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   mealName: { fontSize: 14, color: colors.text, fontWeight: '600' },
   mealValue: { fontSize: 14, color: colors.muted, fontWeight: '700' },
