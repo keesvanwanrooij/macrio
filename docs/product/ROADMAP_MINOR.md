@@ -1,25 +1,33 @@
-# Minor & Patch Planning — current cycle
+# Minor & Patch Planning — pre-public (0.x)
 
-> Planning board for **v1.0.x patches**. Big features stay in `[ROADMAP.md](ROADMAP.md)`. Fed by founder notes (`project-context/notes.md`), Supabase/GitHub feedback, and GitHub issues.
+> Planning board for **0.x** patches before public **1.0.0**. Post-launch majors stay in [`ROADMAP.md`](ROADMAP.md). Fed by founder notes (`project-context/notes.md`), Supabase/GitHub feedback, and GitHub issues.
 
-*Ship order: v1.0.1 → … → v1.0.10 (then public)*
+**Version scheme:** `0.1.0` → … → **`0.14.0`** (pre-public) → then **`1.0.0`** public. See [`VERSIONING.md`](../process/VERSIONING.md).
 
-### v1.0.1 — portion units (g / ml) + default 100 g
+Patches are **grouped** below. Some plan filenames still use older `v1.0.x` names; the **heading is the ship identity**.
 
-**Plan:** `[plans/v1.0.1-portion-units.md](plans/v1.0.1-portion-units.md)`
+---
+
+## Group A — Launch ops & account
+
+### v0.1.0 — crash reporting / error monitoring
+
+**Plan:** [`plans/v1.0.1-crash-reporting.md`](plans/v1.0.1-crash-reporting.md)
 
 **Progress:**
 
-- [ ] `unit: 'g' | 'ml'` on portion JSONB + UI
-- [ ] Seed liquids (melk, cola, bier, …) in `002_seed.sql`
-- [ ] Default custom amount to 100 (g/ml)
-- [x] Fractional named-portion counts (±0.5, typed) — shipped early in 1.0.0 testing
+- [ ] Integrate **Sentry** (or equivalent) for crashes + handled errors
+- [ ] Wire Expo / RN release source maps; env DSN (no secrets in git)
+- [ ] Smoke: force test error in dev; verify event in dashboard
+- [ ] Ship **before** public users (do not wait for v1.5 analytics)
+
+_Note: portion-units content lives in **v0.8.0** (plan file `v1.0.1-portion-units.md` kept)._
 
 
 
-### v1.0.2 — auth emails + forgot password
+### v0.2.0 — auth emails + forgot password
 
-**Plan:** `[plans/v1.0.2-auth-emails.md](plans/v1.0.2-auth-emails.md)`
+**Plan:** [`plans/v1.0.2-auth-emails.md`](plans/v1.0.2-auth-emails.md)
 
 **Progress:**
 
@@ -29,24 +37,28 @@
 
 
 
-### v1.0.3 — Settings identity & dates
+### v0.3.0 — Settings identity, dates + GDPR account delete / export
 
-**Plan:** `[plans/v1.0.3-settings-identity.md](plans/v1.0.3-settings-identity.md)`
+**Plan:** [`plans/v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.md) · GDPR: [`plans/v1.0.3-gdpr-account.md`](plans/v1.0.3-gdpr-account.md)
 
 **Progress:**
 
 - [ ] Edit username in Settings
-- [x] App version shown in Settings (reads `app.json` via expo-constants) — early in 1.0.0 testing
+- [x] App version shown in Settings (reads `app.json` via expo-constants) — early founder testing
 - [ ] Shared native date picker (Expo / community datetimepicker)
 - [ ] DOB calendar picker (onboarding + profile) via shared picker
 - [ ] Tap date on **diary + reports** → jump to that day (week mode: jump to week containing the day); max = today; any past date
 - [ ] Date format setting
+- [ ] **Account deletion** in-app (App Store / Play requirement + GDPR)
+- [ ] **Download my data** (export profile + diary + related personal data; CSV/JSON as fits) in the same Settings privacy flow
 
+---
 
+## Group B — Goals & onboarding
 
-### v1.0.4 — onboarding & daily goals UX (+ g/kg macro sliders)
+### v0.4.0 — onboarding & daily goals UX (+ g/kg macro sliders)
 
-**Plan:** `[plans/v1.0.4-onboarding-goals.md](plans/v1.0.4-onboarding-goals.md)`
+**Plan:** [`plans/v1.0.4-onboarding-goals.md`](plans/v1.0.4-onboarding-goals.md)
 
 **Progress:**
 
@@ -56,9 +68,11 @@
 - [ ] Macro autocomplete + kcal equivalents
 - [ ] **Goal macro sliders** (onboarding + Settings): set kcal (or calculate), then protein/carbs/fat on logical g/kg ranges (e.g. protein ~0.8–2.2 g/kg); show **grams and kcal** for each macro so targets are understandable
 
+---
 
+## Group C — Diary & reports
 
-### v1.0.5 — diary meal totals & daily progress
+### v0.5.0 — diary meal totals & daily progress
 
 **Plan:** [`plans/v1.0.5-diary-progress.md`](plans/v1.0.5-diary-progress.md)
 
@@ -66,27 +80,69 @@
 
 - [ ] Macro totals per meal
 - [ ] Progress toward daily kcal/macros on diary (meal-level remaining)
-- [x] Diary header progress bars + stronger totals; focus swipe L/R; long-press → overview; overview does not tap-toggle — early in 1.0.0 testing
+- [x] Diary header progress bars + stronger totals; focus swipe L/R; long-press → overview; overview does not tap-toggle — early founder testing
 - [x] Reports: selectable macros (tap), ghost bars, historical goals, swipe/‹ › for day·week, tap bar → diary (migration `014`)
 - [x] Reports day: selected-macro progress bars; snacks deducted then ÷3; over = total + goal marker
 - [ ] Reports: pie chart for macro distribution (carbs / protein / fat of the day or week)
 
 
 
-### v1.0.6 — named portions (S / M / L)
+### v0.6.0 — rule-based report coaching texts
 
-**Plan:** `[plans/v1.0.6-named-portions.md](plans/v1.0.6-named-portions.md)`
+**Plan:** [`plans/v1.0.6-report-coaching.md`](plans/v1.0.6-report-coaching.md)
+
+**Progress:**
+
+- [ ] Day (and week where natural) **rule-based** lines under reports, nl/en — e.g. hit/miss goal, macro balance tips
+- [ ] Example tone: `✅ 182g eiwit (102%)` · `⚠️ 340 kcal onder doel` · `💡 Nog 18g vet beschikbaar`
+- [ ] Pure rules (no LLM); AI coach stays **v2.0**
+
+
+
+### v0.7.0 — diary & search QoL (log, recents, favorites)
+
+**Plan:** [`plans/v1.0.10-diary-search-qol.md`](plans/v1.0.10-diary-search-qol.md) _(filename legacy; ships as v0.7.0)_
+
+**Progress:**
+
+- [ ] **Swipe to delete** diary food entries (with undo or confirm as fits existing patterns)
+- [ ] **Recents restore last grams** (including custom amounts like 130 g), not only product/version
+- [ ] **Version picker on log-entry** (portion screen): default = most likes → **completeness score** → newest; remember **last version this user used** for that product when possible. Plan: [`plans/version-completeness-ranking.md`](plans/version-completeness-ranking.md)
+- [ ] **Star / favorite** products (or versions): save for quick filter in **Search**
+
+---
+
+## Group D — Portions & units
+
+### v0.8.0 — portion units (g / ml) + default 100 g
+
+**Plan:** [`plans/v1.0.1-portion-units.md`](plans/v1.0.1-portion-units.md) _(filename legacy; ships as v0.8.0)_
+
+**Progress:**
+
+- [ ] `unit: 'g' | 'ml'` on portion JSONB + UI
+- [ ] Seed liquids (melk, cola, bier, …) in `002_seed.sql`
+- [ ] Default custom amount to 100 (g/ml)
+- [x] Fractional named-portion counts (±0.5, typed) — early founder testing
+
+
+
+### v0.9.0 — named portions (S / M / L)
+
+**Plan:** [`plans/v1.0.6-named-portions.md`](plans/v1.0.6-named-portions.md) _(filename legacy; ships as v0.9.0)_
 
 **Progress:**
 
 - [ ] Multiple named portions per version
 - [ ] Picker when logging + seed examples
 
+---
 
+## Group E — Catalog, quality & nutrition data
 
-### v1.0.7 — cooked / uncooked / not applicable (+ dual macros)
+### v0.10.0 — cooked / uncooked / not applicable (+ dual macros)
 
-**Plan:** [`plans/v1.0.7-cook-state.md`](plans/v1.0.7-cook-state.md)
+**Plan:** [`plans/v1.0.7-cook-state.md`](plans/v1.0.7-cook-state.md) _(filename legacy; ships as v0.10.0)_
 
 **Progress:**
 
@@ -94,13 +150,13 @@
 - [ ] When `both`: primary + alt macro columns (or jsonb); UI toggle cooked ↔ uncooked on product + log-entry
 - [ ] Create/edit/search badges; seed staples; OFF default
 - [ ] Version edits copy both macro blocks; **30-day owner fork** same as other foods (`ROADMAP.md` v1.2 - not in this patch)
-- [ ] Feed **cook completeness** into version ranking tie-break (see [`plans/version-completeness-ranking.md`](plans/version-completeness-ranking.md); helper ships in v1.0.10)
+- [ ] Feed **cook completeness** into version ranking tie-break (see [`plans/version-completeness-ranking.md`](plans/version-completeness-ranking.md); helper ships with diary QoL **v0.7.0**)
 
 
 
-### v1.0.8 — mother catalog, barcode grouping, admin seed (pre-launch blocker)
+### v0.11.0 — mother catalog, barcode grouping, admin seed (pre-launch blocker)
 
-**Plan:** [`plans/v1.0.8-mother-catalog.md`](plans/v1.0.8-mother-catalog.md)  
+**Plan:** [`plans/v1.0.8-mother-catalog.md`](plans/v1.0.8-mother-catalog.md) _(filename legacy; ships as v0.11.0)_  
 (Old parent/child plan superseded: [`plans/v1.0.8-parent-catalog.md`](plans/v1.0.8-parent-catalog.md))
 
 **Progress:**
@@ -118,9 +174,22 @@
 
 
 
-### v1.0.9 — create product UX (allergens, names, macro sliders)
+### v0.12.0 — version quality badge + “help improve” missing info
 
-**Plan:** `[plans/v1.0.9-create-product-ux.md](plans/v1.0.9-create-product-ux.md)`
+**Plan:** [`plans/v1.0.12-version-quality.md`](plans/v1.0.12-version-quality.md)
+
+**Progress:**
+
+- [ ] Visible quality badge on versions, e.g. ★★★★★ Verified → ★ Incomplete (nl/en)
+- [ ] Score from: macros filled, allergens complete, barcode present, likes, users, age, reports, confirmations (likes as confirm), etc.
+- [ ] Product/version open: **Help dit product verbeteren** checklist (ingredients, allergens, portions, cook state, photo, …) - Wikipedia-style community fill-in
+- [ ] Align with completeness ranking helper where possible
+
+
+
+### v0.13.0 — create product UX (allergens, names, macro sliders)
+
+**Plan:** [`plans/v1.0.9-create-product-ux.md`](plans/v1.0.9-create-product-ux.md) _(filename legacy; ships as v0.13.0)_
 
 **Progress:**
 
@@ -130,30 +199,28 @@
 
 
 
-### v1.0.10 — diary & search QoL (log, recents, favorites)
+### v0.14.0 — full nutrition fields (fiber, sugars, fats, micronutrients)
 
-**Plan:** `[plans/v1.0.10-diary-search-qol.md](plans/v1.0.10-diary-search-qol.md)`
+**Plan:** [`plans/v1.0.14-full-nutrition.md`](plans/v1.0.14-full-nutrition.md)
 
 **Progress:**
 
-- [ ] **Swipe to delete** diary food entries (with undo or confirm as fits existing patterns)
-- [ ] **Recents restore last grams** (including custom amounts like 130 g), not only product/version
-- [ ] **Version picker on log-entry** (portion screen): default = most likes → **completeness score** → newest; remember **last version this user used** for that product when possible. Plan: [`plans/version-completeness-ranking.md`](plans/version-completeness-ranking.md)
-- [ ] **Star / favorite** products (or versions): save for quick filter in **Search**
+- [ ] Schema + create/edit/log/reports for **fiber, sugars, salt/sodium, saturated + unsaturated fat** (and related fat fields as agreed)
+- [ ] **Micronutrients** (vitamins/minerals) in DB + UI (honest unknown when missing)
+- [ ] Seed / OFF mapping where available; diary snapshots include new fields when logging
+- [ ] Pre-public blocker (moved forward from old v1.4 salt/micros line)
 
-
+---
 
 ## Released
 
+### Founder MVP (historical; app still may show `1.0.0`)
 
+Built before the **0.x** scheme. Next closed patch should tag **`v0.1.0`**, not `v1.0.1`. Public launch is later **`v1.0.0`**.
 
-### v1.0.0 — MVP (founder testing; tag `v1.0.0` when ready)
+**Core MVP:** checklist in [`ROADMAP.md`](ROADMAP.md) “Founder MVP”.
 
-**App version:** `1.0.0` · See `CHANGELOG.md`
-
-**Core MVP:** all items checked in `[ROADMAP.md](ROADMAP.md)` v1.0 section.
-
-**Also shipped during 1.0.0 testing (no version bump — counts toward later patches):**
+**Also shipped during founder testing (no 0.x bump yet):**
 
 - [x] Goal calculator (Mifflin-St Jeor) in onboarding + Settings
 - [x] Username sign-up / login; profile grants fix (migration 009)
@@ -165,23 +232,27 @@
 - [x] App version in Settings + feedback metadata
 - [x] Product visibility public/private (create checkbox + owner toggle; migration 013); scan prefers public
 - [x] Diary macro header: progress bars, focus swipe, long-press to overview
+- [x] Allergen `may_contain` / kan bevatten (orange) + mother-catalog plan docs
 
-
+---
 
 ## Rejected / deferred
 
-
-| Item                                                                                                       | Reason                                                                                             |
-| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Feedback: multiple screenshots (max 5)                                                                     | Keep single image for now. Also listed under Old notes.                                            |
-| Quick-log % macro sliders (restaurant)                                                                     | `ROADMAP.md` v1.3                                                                                  |
-| Personal reorder of add-food tabs                                                                          | `ROADMAP.md` v1.3                                                                                  |
-| Auto-trim low-like product versions (beyond per-owner cap)                                             | `ROADMAP.md` v1.2                                                                                  |
-| 30-day version edit fork / profile visibility slider / duplicate-from-version / multi-admin merge UI   | `ROADMAP.md` v1.2 (mother catalog + 3-version cap + version visibility → v1.0.8)                    |
-| Recipes, community duplicate meals, salt/micros                                                            | `ROADMAP.md` v1.4                                                                                  |
-| Personal meal templates + meal planner                                                                     | `ROADMAP.md` v1.3                                                                                  |
-| Analytics / success metrics tooling                                                                        | `ROADMAP.md` v1.5                                                                                  |
-| Supporter pay-what-you-want + quarterly in-app funding notices                                             | `ROADMAP.md` v1.6                                                                                  |
-| User feedback at scale (replies, status, dedupe)                                                           | Not decided — `[community-feedback-future.md](../../project-context/community-feedback-future.md)` |
-
-
+| Item | Reason |
+|---|---|
+| Feedback: multiple screenshots (max 5) | Keep single image for now. Also listed under Old notes. |
+| Quick-log % macro sliders (restaurant) | `ROADMAP.md` v1.3 |
+| Personal reorder of add-food tabs | `ROADMAP.md` v1.3 |
+| Water tracker / daily diary notes / meal reminders / home widgets | `ROADMAP.md` v1.3 (post-public) |
+| Food-logging streaks, freezers, coins, avatar store, community badges | `ROADMAP.md` v1.4 |
+| Auto-trim low-like product versions (beyond per-owner cap) | `ROADMAP.md` v1.2 |
+| 30-day version edit fork / profile visibility slider / duplicate-from-version / multi-admin merge UI | `ROADMAP.md` v1.2 |
+| Recipes, community duplicate meals | `ROADMAP.md` v1.4 |
+| Personal meal templates + meal planner + meal/ingredient photos | `ROADMAP.md` v1.3 |
+| Salt / fiber / micros (old v1.4 line) | **Moved** to pre-public **v0.14.0** |
+| Analytics / success metrics tooling | `ROADMAP.md` v1.5 (not crash reporting) |
+| Crash reporting | **Moved** to pre-public **v0.1.0** |
+| Account delete + data export (GDPR) | **Moved** to pre-public **v0.3.0** |
+| Supporter pay-what-you-want + quarterly in-app funding notices | `ROADMAP.md` v1.6 |
+| AI photo + AI coach | `ROADMAP.md` v2.0 |
+| User feedback at scale (replies, status, dedupe) | Not decided — [`community-feedback-future.md`](../../project-context/community-feedback-future.md) |

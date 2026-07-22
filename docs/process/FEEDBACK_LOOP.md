@@ -20,7 +20,7 @@ Product **melden** (wrong macros/allergens) is **not** feedback — it goes to t
 - *Session time* separates power users from first-impressions feedback.
 - *Days since install* distinguishes onboarding friction (day 0–1) from long-term needs.
 - *Screenshots* remove the "which screen do you mean?" round-trip.
-- *App version* ties feedback to what build they ran (currently **1.0.0** during founder testing).
+- *App version* ties feedback to what build they ran (founder builds may still show **1.0.0**; next shipped patches are **0.x**, then public **1.0.0**).
 
 ## Cycle (per minor release)
 
