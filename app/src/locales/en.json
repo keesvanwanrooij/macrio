@@ -30,7 +30,8 @@
     "fatShort": "Fat",
     "remaining": "left",
     "consumed": "eaten",
-    "goal": "goal"
+    "goal": "goal",
+    "goalWithAmount": "Goal: {{amount}}"
   },
   "meals": {
     "breakfast": "Breakfast",

@@ -30,7 +30,8 @@
     "fatShort": "Vet",
     "remaining": "over",
     "consumed": "gegeten",
-    "goal": "doel"
+    "goal": "doel",
+    "goalWithAmount": "Doel: {{amount}}"
   },
   "meals": {
     "breakfast": "Ontbijt",
