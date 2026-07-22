@@ -31,7 +31,3 @@ Thumbs.db
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
-
-# Personal prompt scratchpad (local only)
-Prompts.md
-Prompts
