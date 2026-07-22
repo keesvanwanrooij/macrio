@@ -16,10 +16,10 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 
 **Progress:**
 
-- [ ] Integrate **Sentry** (or equivalent) for crashes + handled errors
-- [ ] Wire Expo / RN release source maps; env DSN (no secrets in git)
-- [ ] Smoke: force test error in dev; verify event in dashboard
-- [ ] Ship **before** public users (do not wait for v1.5 analytics)
+- [x] Integrate **Sentry** (or equivalent) for crashes + handled errors
+- [x] Wire Expo / RN release source maps; env DSN (no secrets in git)
+- [x] Smoke: force test error in dev; verify event in dashboard
+- [x] Ship **before** public users (do not wait for v1.5 analytics)
 
 _Note: portion-units content lives in **v0.8.0** (plan file `v1.0.1-portion-units.md` kept)._
 
@@ -214,9 +214,14 @@ _Note: portion-units content lives in **v0.8.0** (plan file `v1.0.1-portion-unit
 
 ## Released
 
-### Founder MVP (historical; app still may show `1.0.0`)
+### v0.1.0 — crash reporting (Sentry)
 
-Built before the **0.x** scheme. Next closed patch should tag **`v0.1.0`**, not `v1.0.1`. Public launch is later **`v1.0.0`**.
+**App version:** `0.1.0` · See `CHANGELOG.md`
+
+- [x] `@sentry/react-native` + optional DSN; Settings smoke test in `__DEV__`
+- [x] Expo / Metro plugins for future source maps; SETUP docs
+
+### Founder MVP (historical; formerly labeled `1.0.0`)
 
 **Core MVP:** checklist in [`ROADMAP.md`](ROADMAP.md) “Founder MVP”.
 

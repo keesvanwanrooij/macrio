@@ -5,6 +5,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import '../lib/i18n';
+import { Sentry } from '../lib/sentry';
 import { SessionProvider, useSession } from '../lib/session';
 import { supabase } from '../lib/supabase';
 import { colors, spacing } from '../lib/theme';
@@ -81,7 +82,7 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SessionProvider>
@@ -90,7 +91,7 @@ export default function RootLayout() {
       </SessionProvider>
     </GestureHandlerRootView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   repair: {

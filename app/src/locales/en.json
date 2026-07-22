@@ -356,7 +356,10 @@
     "deleteConfirmTitle": "Delete account?",
     "deleteConfirmBody": "All your diary data will be permanently erased. Products you created remain anonymously for the community.",
     "version": "Version",
-    "license": "License: AGPL-3.0"
+    "license": "License: AGPL-3.0",
+    "sentryTest": "Send test error to Sentry",
+    "sentryTestSent": "Test error sent. Check Issues in Sentry.",
+    "sentryTestDisabled": "Sentry is off. Set EXPO_PUBLIC_SENTRY_DSN in app/.env."
   },
   "feedback": {
     "title": "Feedback",

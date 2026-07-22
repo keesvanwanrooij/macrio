@@ -2,9 +2,24 @@
 
 All notable changes to Macrio. Format: [Keep a Changelog](https://keepachangelog.com/), versioning per `docs/process/VERSIONING.md`.
 
-## [Unreleased] — v1.0.0 (MVP, founder testing)
+## [0.1.0] — 2026-07-22
 
-App version **1.0.0**. Partial work toward v1.0.1+ is tracked in `docs/product/ROADMAP_MINOR.md` checkboxes — no version bump until a patch ships.
+First pre-public patch under the **0.x** scheme (`docs/process/VERSIONING.md`).
+
+### Added
+
+- **Sentry** crash / error reporting (`@sentry/react-native`): optional `EXPO_PUBLIC_SENTRY_DSN`, PII-safe init, root layout wrap
+- Expo + Metro Sentry plugins for future release source-map uploads (`SENTRY_AUTH_TOKEN` at build time)
+- Dev-only Settings button to send a smoke-test error
+- SETUP notes for founding a Sentry project
+
+### Changed
+
+- App config moved from `app.json` to `app.config.js` (version **0.1.0**)
+
+## [Unreleased] — founder MVP history (was labeled 1.0.0)
+
+Partial work toward later 0.x patches is tracked in `docs/product/ROADMAP_MINOR.md`.
 
 ### Added
 - Food diary: breakfast/lunch/dinner + snack slots between and after meals, date navigation, pull-to-refresh
@@ -21,10 +36,11 @@ App version **1.0.0**. Partial work toward v1.0.1+ is tracked in `docs/product/R
 - Auth: email/password via Supabase; profile auto-created on signup
 - Backend: full Postgres schema with RLS, like-count triggers, search/create RPCs, storage buckets, seed of ~54 generic Dutch/English foods
 
-### Added (1.0.0 testing, no version bump yet)
+### Added (founder testing, before 0.1.0)
 
 - Fractional portion counts when logging
 - Add barcode later (type/scan) on product page
 - Recents show each user's last-logged version per product
 - Product report modal (all reasons + cancel on Android)
-- App version in Settings (from `app.json`)
+- App version in Settings (from Expo config)
+- Allergen `may_contain` / kan bevatten (orange)

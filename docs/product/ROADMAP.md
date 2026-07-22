@@ -11,7 +11,7 @@
 | **1.1+** | New product areas after public (workouts, trust, community, …). |
 | **2.0** | Paid intelligence (AI photo + AI coach). |
 
-**App today:** still labeled `1.0.0` from early founder builds. **Next shipped patch** should bump to **`0.1.0`** and continue `0.2.0` … `0.14.0`, then public **`1.0.0`**.
+**App today:** **0.1.0** (first pre-public patch). Continue `0.2.0` … `0.14.0`, then public **`1.0.0`**.
 
 ## Founder MVP (done; pre-0.x history)
 

@@ -13,6 +13,7 @@ import type { BodyMetricsDraft } from '../../lib/goalCalculator';
 import { macrosFromKcal } from '../../lib/goalCalculator';
 import { upsertTodayGoalRevision } from '../../lib/goalRevisions';
 import { parseNum } from '../../lib/nutrition';
+import { captureException, isSentryEnabled } from '../../lib/sentry';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing } from '../../lib/theme';
@@ -242,6 +243,23 @@ export default function Settings() {
         </Text>
         <View style={{ height: spacing.m }} />
         <Button title={t('settings.sponsor')} onPress={() => Linking.openURL(SPONSOR_URL)} />
+        {__DEV__ ? (
+          <>
+            <View style={{ height: spacing.m }} />
+            <Button
+              title={t('settings.sentryTest')}
+              variant="secondary"
+              onPress={() => {
+                if (!isSentryEnabled) {
+                  Alert.alert(t('common.error'), t('settings.sentryTestDisabled'));
+                  return;
+                }
+                captureException(new Error('Macrio Sentry smoke test'));
+                Alert.alert(t('common.done'), t('settings.sentryTestSent'));
+              }}
+            />
+          </>
+        ) : null}
       </Card>
 
       <View style={{ height: spacing.xl }} />

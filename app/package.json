@@ -1,10 +1,11 @@
 {
   "name": "app",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@sentry/react-native": "~7.2.0",
     "@supabase/supabase-js": "^2.110.7",
     "base64-arraybuffer": "^1.0.2",
     "expo": "~54.0.0",

@@ -356,7 +356,10 @@
     "deleteConfirmTitle": "Account verwijderen?",
     "deleteConfirmBody": "Al je dagboekdata wordt permanent gewist. Producten die je maakte blijven anoniem bestaan voor de community.",
     "version": "Versie",
-    "license": "Licentie: AGPL-3.0"
+    "license": "Licentie: AGPL-3.0",
+    "sentryTest": "Stuur testfout naar Sentry",
+    "sentryTestSent": "Testfout verzonden. Controleer Issues in Sentry.",
+    "sentryTestDisabled": "Sentry staat uit. Zet EXPO_PUBLIC_SENTRY_DSN in app/.env."
   },
   "feedback": {
     "title": "Feedback",

@@ -14,9 +14,9 @@
 Pre-public detail: [`docs/product/ROADMAP_MINOR.md`](../product/ROADMAP_MINOR.md).  
 Post-public majors: [`docs/product/ROADMAP.md`](../product/ROADMAP.md).
 
-## Current app label: **1.0.0** (founder era)
+## Current app label: **0.1.0**
 
-Early builds used `1.0.0` before this scheme. Treat that as **pre-1.0 history**, not “public 1.0”.
+First pre-public patch shipped. Early founder builds used `1.0.0` before the 0.x scheme.
 
 **Do not bump** `app/app.json`, `app/package.json`, or root `VERSION` for every fix.
 

@@ -34,6 +34,13 @@ Three steps, ~15 minutes total. You only do steps 1–2 once.
 2. Paste your URL and anon key into it.
 3. Keep `EXPO_PUBLIC_AUTH_REDIRECT_URL=http://localhost:3000` (must match Supabase URL Configuration above).
 
+### Sentry crash reporting (v0.1.0, optional)
+
+1. Create a free account at [sentry.io](https://sentry.io) → new **React Native** project (prefer an **EU** region if offered).
+2. Copy the project **DSN** into `app/.env` as `EXPO_PUBLIC_SENTRY_DSN=...`.
+3. Match plugin slugs if needed: set `SENTRY_ORG` and `SENTRY_PROJECT` to your Sentry org/project slugs (defaults in `app.config.js` are `macrio` / `macrio`).
+4. Restart Expo (`npm start -- --clear`). In **Settings → About**, use **Send test error to Sentry** (dev builds only) and confirm the event in the Sentry Issues UI.
+5. **Source maps** (readable release stacks) need a native/EAS release build plus `SENTRY_AUTH_TOKEN` in the build environment. Do not commit that token. Expo Go only needs the DSN for the smoke test.
 
 
 ## 3. Start & test (~2 min)
@@ -64,6 +71,7 @@ Run `npm install` only the first time (or after dependencies change). Off the sa
 | Problem                           | Fix                                                                                           |
 | --------------------------------- | --------------------------------------------------------------------------------------------- |
 | "Missing Supabase config" error   | `.env` missing or not filled in — restart `npm start` after editing                           |
+| Sentry smoke button missing / no events | Need `__DEV__` + non-empty `EXPO_PUBLIC_SENTRY_DSN`; restart Expo after editing `.env` |
 | Sign-up succeeds but app stays on welcome | Confirm email is on — open the link in your inbox, then use **Sign in** |
 | Sign-in button finishes but nothing happens | Reload with `npm start -- --clear` from `app/`. Prefer **email + password** (not username). Email confirmation is **not** in `profiles` — check **Authentication → Users** → your user → **Confirm email** / Email Confirmed. |
 | “permission denied for table profiles” after onboarding | Run `009_grant_authenticated_table_privs.sql` in Supabase SQL Editor, then finish onboarding / save goals again. |
