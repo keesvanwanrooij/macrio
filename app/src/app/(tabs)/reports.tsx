@@ -78,6 +78,29 @@ function dayGoalForMacro(
   return { dayGoal: defaults[macro], goalIsDefault: true };
 }
 
+/*
+ * SECTION: Week goal uniformity helper
+ * WHAT: From seven day goals, decide if they share one value and which number to use for avg lines.
+ * HOW: Collect defined (>0) goals; uniform if every defined day matches the first; else average.
+ * INPUT: dayGoals[i] = goal for that weekday (null/undefined = unknown)
+ * OUTPUT: goalsUniform, uniformGoal (single shared value or null), displayGoal (uniform or mean, or null)
+ */
+function resolveWeekGoalDisplay(dayGoals: readonly (number | null | undefined)[]) {
+  const defined = dayGoals.filter((g): g is number => g != null && g > 0);
+  if (defined.length === 0) {
+    return { goalsUniform: true, uniformGoal: null as number | null, displayGoal: null as number | null };
+  }
+  const first = defined[0];
+  const goalsUniform =
+    dayGoals.every((g) => g == null || g === first) && defined.every((g) => g === first);
+  if (goalsUniform) return { goalsUniform: true, uniformGoal: first, displayGoal: first };
+  return {
+    goalsUniform: false,
+    uniformGoal: null as number | null,
+    displayGoal: defined.reduce((a, b) => a + b, 0) / defined.length,
+  };
+}
+
 export default function Reports() {
   const { t, i18n } = useTranslation();
   const [mode, setMode] = useState<'day' | 'week'>('day');
@@ -327,11 +350,7 @@ function DayAllTotalsCard({
                 {fmt(consumed)} / {fmt(dayGoal)} {unit}
               </Text>
             </View>
-            <ProgressBar
-              consumed={consumed}
-              goal={dayGoal}
-              overTone="strong"
-            />
+            <ProgressBar consumed={consumed} goal={dayGoal} overTone="strong" />
           </View>
         );
       })}
@@ -425,11 +444,7 @@ function DayMacroBlock({
               {fmt(consumed)} / {fmt(dayGoal)} {unit}
             </Text>
           </View>
-          <ProgressBar
-            consumed={consumed}
-            goal={dayGoal}
-            overTone="strong"
-          />
+          <ProgressBar consumed={consumed} goal={dayGoal} overTone="strong" />
         </Card>
       ) : null}
 
@@ -504,14 +519,9 @@ function WeekReport({
   // Soft-red selector when weekly average of the focused macro is over its avg goal
   const selectedOver = useMemo(() => {
     const dayGoals = days.map((d) => goalValue(resolveGoalForDate(revisions, d), selected));
-    const defined = dayGoals.filter((g): g is number => g != null && g > 0);
-    if (defined.length === 0) return false;
-    const uniform =
-      dayGoals.every((g) => g == null || g === defined[0]) && defined.every((g) => g === defined[0]);
-    const avgGoal = uniform
-      ? defined[0]
-      : defined.reduce((a, b) => a + b, 0) / defined.length;
-    return avg[selected] > avgGoal;
+    const { displayGoal } = resolveWeekGoalDisplay(dayGoals);
+    if (displayGoal == null) return false;
+    return avg[selected] > displayGoal;
   }, [days, revisions, selected, avg[selected]]);
 
   return (
@@ -566,16 +576,10 @@ function WeekMacroChart({
     [days, revisions, macro]
   );
 
-  const goalsUniform = useMemo(() => {
-    const defined = dayGoals.filter((g): g is number => g != null && g > 0);
-    if (defined.length === 0) return true;
-    const first = defined[0];
-    return dayGoals.every((g) => g == null || g === first) && defined.every((g) => g === first);
-  }, [dayGoals]);
-
-  const uniformGoal = goalsUniform
-    ? dayGoals.find((g) => g != null && g > 0) ?? null
-    : null;
+  const { goalsUniform, uniformGoal, displayGoal: avgGoal } = useMemo(
+    () => resolveWeekGoalDisplay(dayGoals),
+    [dayGoals]
+  );
 
   const maxVal = Math.max(...values, ...dayGoals.map((g) => g ?? 0), 1);
 
@@ -583,12 +587,6 @@ function WeekMacroChart({
   const unit = macro === 'kcal' ? t('common.kcal') : 'g';
   const daysWithData = perDay.filter((p) => p.kcal > 0).length || 1;
   const avgVal = perDay.reduce((s, p) => s + p[macro], 0) / daysWithData;
-  const avgGoal =
-    uniformGoal ??
-    (() => {
-      const gs = dayGoals.filter((g): g is number => g != null && g > 0);
-      return gs.length ? gs.reduce((a, b) => a + b, 0) / gs.length : null;
-    })();
 
   function openDiary(date: string) {
     router.push({ pathname: '/(tabs)', params: { date } });
