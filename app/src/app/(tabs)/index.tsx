@@ -8,11 +8,18 @@ import { useTranslation } from 'react-i18next';
 
 import { MacroSummary } from '../../components/MacroSummary';
 import { Loading } from '../../components/ui';
+import { type MacroKey } from '../../lib/macroLabels';
 import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDateString } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
 import type { DiaryEntry } from '../../lib/types';
+
+/** Right-side / meal-total amount for the focused macro (1A: number + unit). */
+function formatFocusedAmount(value: number, key: MacroKey): string {
+  if (key === 'kcal') return fmt(value);
+  return `${fmt(value)} g`;
+}
 
 export default function Diary() {
   const { t, i18n } = useTranslation();
@@ -22,6 +29,8 @@ export default function Diary() {
   const [date, setDate] = useState(toDateString(new Date()));
   const [entries, setEntries] = useState<DiaryEntry[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  /** Which macro the focus header is on (drives meal row right values). */
+  const [focusMacro, setFocusMacro] = useState<MacroKey>('kcal');
 
   // Reports (and others) can open a specific diary day via ?date=YYYY-MM-DD
   useEffect(() => {
@@ -47,6 +56,7 @@ export default function Diary() {
   );
 
   const totals = useMemo(() => sumEntries(entries ?? []), [entries]);
+  const focusMode = profile?.macro_display === 'focus';
 
   function dateLabel(): string {
     const today = toDateString(new Date());
@@ -75,6 +85,18 @@ export default function Diary() {
   }
 
   function renderEntry(entry: DiaryEntry) {
+    // Overview: grams + koolh/eiwit/vet under name, kcal on the right
+    // Focus: grams only under name; right side = focused macro amount
+    const meta = focusMode
+      ? entry.grams
+        ? `${fmt(entry.grams)} g`
+        : null
+      : `${entry.grams ? `${fmt(entry.grams)} g · ` : ''}${t('macros.carbsShort')} ${fmt(entry.carbs)} · ${t('macros.proteinShort')} ${fmt(entry.protein)} · ${t('macros.fatShort')} ${fmt(entry.fat)}`;
+
+    const rightValue = focusMode
+      ? formatFocusedAmount(Number(entry[focusMacro] ?? 0), focusMacro)
+      : fmt(entry.kcal);
+
     return (
       <Pressable
         key={entry.id}
@@ -90,12 +112,9 @@ export default function Diary() {
           <Text style={styles.entryName} numberOfLines={1}>
             {entry.custom_name ?? '…'}
           </Text>
-          <Text style={styles.entryMeta}>
-            {entry.grams ? `${fmt(entry.grams)} g · ` : ''}
-            {t('macros.carbsShort')} {fmt(entry.carbs)} · {t('macros.proteinShort')} {fmt(entry.protein)} · {t('macros.fatShort')} {fmt(entry.fat)}
-          </Text>
+          {meta ? <Text style={styles.entryMeta}>{meta}</Text> : null}
         </View>
-        <Text style={styles.entryKcal}>{fmt(entry.kcal)}</Text>
+        <Text style={styles.entryKcal}>{rightValue}</Text>
       </Pressable>
     );
   }
@@ -114,13 +133,18 @@ export default function Diary() {
         </Pressable>
       );
     }
+
+    const mealTotal = focusMode
+      ? focusMacro === 'kcal'
+        ? `${fmt(slotTotals.kcal)} ${t('common.kcal')}`
+        : `${fmt(slotTotals[focusMacro])} g`
+      : `${fmt(slotTotals.kcal)} ${t('common.kcal')}`;
+
     return (
       <View key={slot} style={styles.mealCard}>
         <View style={styles.mealHeader}>
           <Text style={styles.mealTitle}>{t(slotLabelKey(slot))}</Text>
-          {slotEntries.length > 0 && (
-            <Text style={styles.mealKcal}>{fmt(slotTotals.kcal)} {t('common.kcal')}</Text>
-          )}
+          {slotEntries.length > 0 && <Text style={styles.mealKcal}>{mealTotal}</Text>}
         </View>
         {slotEntries.map(renderEntry)}
         <Pressable
@@ -167,6 +191,7 @@ export default function Diary() {
           <MacroSummary
             totals={totals}
             profile={profile}
+            onFocusMacroChange={setFocusMacro}
             onToggleMode={() =>
               updateProfile({
                 macro_display: profile.macro_display === 'focus' ? 'overview' : 'focus',

@@ -84,10 +84,13 @@ export function MacroSummary({
   totals,
   profile,
   onToggleMode,
+  onFocusMacroChange,
 }: {
   totals: MacroTotals;
   profile: Profile;
   onToggleMode: () => void;
+  /** Diary meal list follows the focused macro (kcal / carbs / protein / fat). */
+  onFocusMacroChange?: (key: MacroKey) => void;
 }) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
@@ -95,6 +98,11 @@ export function MacroSummary({
   const [focusIdx, setFocusIdx] = useState(0);
   const [showGoals, setShowGoals] = useState(false);
   const [goalsReady, setGoalsReady] = useState(false);
+
+  // Keep diary meal rows in sync with the focused macro
+  useEffect(() => {
+    onFocusMacroChange?.(MACROS[focusIdx]);
+  }, [focusIdx, onFocusMacroChange]);
 
   // Step 1: Restore last show/hide choice (survives app kill)
   useEffect(() => {
