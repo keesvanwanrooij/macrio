@@ -36,7 +36,7 @@
 | v1.0.5 | [diary meal totals & progress](v1.0.5-diary-progress.md) |
 | v1.0.6 | [named portions](v1.0.6-named-portions.md) |
 | v1.0.7 | [cook state](v1.0.7-cook-state.md) |
-| v1.0.8 | [parent catalog + Dutch seed](v1.0.8-parent-catalog.md) |
+| v1.0.8 | [mother catalog + barcode grouping + admin seed](v1.0.8-mother-catalog.md) (old [parent catalog](v1.0.8-parent-catalog.md) superseded) |
 | v1.0.9 | [create product UX](v1.0.9-create-product-ux.md) |
 | v1.0.10 | [diary & search QoL](v1.0.10-diary-search-qol.md) |
 | (cross-patch) | [version completeness ranking](version-completeness-ranking.md) (likes tie-break; v1.0.10 + v1.0.7) |

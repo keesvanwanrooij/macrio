@@ -1,10 +1,11 @@
 /*
  * SECTION: Allergen chips, search badges, portion warning
- * WHAT: Shared red/green/grey allergen UI with state-aware labels.
- * HOW: allergenChipLabel always uses the full state phrase; Text may shrink
- *      to 70% via adjustsFontSizeToFit when space is tight.
+ * WHAT: Shared grey/red/orange/green allergen UI with short or full labels.
+ * HOW: Interactive chips use short names + color; read-only (diary, search,
+ *      product overview, portion warning) use full state phrases. Warning shows
+ *      contains (red) and may_contain (orange) banners when relevant.
  * INPUT: allergen map + user allergen keys (or single key/state for a chip)
- * OUTPUT: colored pills / warning banner
+ * OUTPUT: colored pills / warning banner(s)
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -16,34 +17,43 @@ import type { AllergenState } from '../lib/types';
 
 export function stateColor(state: AllergenState): { bg: string; fg: string } {
   switch (state) {
-    case 'contains': return { bg: colors.dangerSoft, fg: colors.danger };
-    case 'free': return { bg: colors.primarySoft, fg: colors.primaryDark };
-    default: return { bg: '#F1F5F9', fg: colors.faint };
+    case 'contains':
+      return { bg: colors.dangerSoft, fg: colors.danger };
+    case 'may_contain':
+      return { bg: colors.warnSoft, fg: colors.warn };
+    case 'free':
+      return { bg: colors.primarySoft, fg: colors.primaryDark };
+    default:
+      return { bg: '#F1F5F9', fg: colors.faint };
   }
 }
 
 type ChipSize = 'compact' | 'default';
+type LabelMode = 'full' | 'short';
 
 /**
- * One allergen pill. Always shows full state wording (bevat / -vrij / onbekend);
- * font can shrink to 0.7 so long labels still fit on one line.
+ * One allergen pill.
+ * labelMode full = Bevat X / Kan X bevatten / … (diary, search, product, warning).
+ * labelMode short = short name only (interactive create / quick-add); color carries state.
  */
 export function AllergenStateChip({
   allergenKey,
   state,
   onPress,
   size = 'default',
+  labelMode = 'full',
   style,
 }: {
   allergenKey: string;
   state: AllergenState;
   onPress?: () => void;
   size?: ChipSize;
+  labelMode?: LabelMode;
   style?: StyleProp<ViewStyle>;
 }) {
   const { t } = useTranslation();
   const c = stateColor(state);
-  const label = allergenChipLabel(t, allergenKey, state);
+  const label = allergenChipLabel(t, allergenKey, state, labelMode);
   const fontSize = size === 'compact' ? 11 : 13;
   const body = (
     <View style={[size === 'compact' ? styles.compactChip : styles.chip, { backgroundColor: c.bg }, style]}>
@@ -96,13 +106,25 @@ export function AllergenWarning({
   userAllergens: string[];
 }) {
   const { t } = useTranslation();
-  const hits = userAllergens.filter((k) => allergens?.[k] === 'contains');
-  if (hits.length === 0) return null;
-  // Full “Contains X” phrases; warning template is just {{list}}
-  const list = hits.map((k) => allergenFullStateLabel(t, k, 'contains')).join(', ');
+  const containsHits = userAllergens.filter((k) => allergens?.[k] === 'contains');
+  const mayHits = userAllergens.filter((k) => allergens?.[k] === 'may_contain');
+  if (containsHits.length === 0 && mayHits.length === 0) return null;
+
+  const containsList = containsHits.map((k) => allergenFullStateLabel(t, k, 'contains')).join(', ');
+  const mayList = mayHits.map((k) => allergenFullStateLabel(t, k, 'may_contain')).join(', ');
+
   return (
-    <View style={styles.warning}>
-      <Text style={styles.warningText}>⚠ {t('allergens.warning', { list })}</Text>
+    <View>
+      {containsHits.length > 0 ? (
+        <View style={styles.warning}>
+          <Text style={styles.warningText}>⚠ {t('allergens.warning', { list: containsList })}</Text>
+        </View>
+      ) : null}
+      {mayHits.length > 0 ? (
+        <View style={styles.warningMay}>
+          <Text style={styles.warningMayText}>⚠ {t('allergens.warningMayContain', { list: mayList })}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -128,4 +150,11 @@ const styles = StyleSheet.create({
     marginVertical: spacing.s,
   },
   warningText: { color: colors.danger, fontWeight: '700' },
+  warningMay: {
+    backgroundColor: colors.warnSoft,
+    borderRadius: radius.m,
+    padding: spacing.m,
+    marginVertical: spacing.s,
+  },
+  warningMayText: { color: colors.warn, fontWeight: '700' },
 });

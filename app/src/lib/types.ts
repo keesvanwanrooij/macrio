@@ -1,4 +1,4 @@
-export type AllergenState = 'contains' | 'free' | 'unknown';
+export type AllergenState = 'contains' | 'may_contain' | 'free' | 'unknown';
 
 export type Portion = { name: string; grams: number };
 
@@ -61,7 +61,7 @@ export type DiaryEntry = {
   fat: number;
   logged_at: string;
   /**
-   * Quick-add only: allergen key → contains | free (unknown = omitted).
+   * Quick-add only: allergen key → contains | may_contain | free (unknown = omitted).
    * Product-linked rows leave this empty and use product_versions.allergens.
    */
   allergens?: Record<string, AllergenState> | null;

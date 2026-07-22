@@ -60,10 +60,11 @@ If only Nutrition is available, the topic row can hide entirely (period-only chr
 | Entry | Period row + topic row as above. Not a separate top tab “Allergieën \| Dag \| Week” |
 | Period for allergens | Same Day/Week/Month/Year as Nutrition; start with **Day** (+ Week when ready). Month/year on allergens after Nutrition month/year feel solid |
 | Safe score | `grams without contains-hit / total grams eaten`. **Unknown does not count as a hit** → those grams stay in the numerator. Quick-add with no ticks = no hit |
+| may_contain in scores | **Settings toggle (personal):** user chooses whether `may_contain` / kan bevatten counts as a hit. Personal preference; default TBD when building. Diary still shows orange pills either way |
 | Score layout | Combined “any of my allergens” score + **per-allergen** scores. Same UX pattern as macros: focus one allergen, **Toon alles** stacks all |
 | Top offenders | List with **times logged** + **grams**; sort by grams |
 | Macro charts | Never color or replace Nutrition graphs with allergen data |
-| Diary (done) | Red name pills for `contains` only; search/recents badges unchanged; quick-add optional contains ticks |
+| Diary (done) | Red pills for `contains`, orange for `may_contain` next to food name; search/recents badges + portion warning use full labels; interactive chips use short names + legend |
 
 ## Score examples (user allergens: milk, gluten)
 

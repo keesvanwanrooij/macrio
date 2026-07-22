@@ -167,35 +167,37 @@ export default function ProductPage() {
             <Text style={styles.visibilityBadge}>
               {visibility === 'private' ? t('product.visibilityPrivate') : t('product.visibilityPublic')}
             </Text>
-            {isOwner ? (
-              <Pressable style={styles.addBarcodeBtn} onPress={toggleVisibility} disabled={visibilityBusy}>
-                <Text style={styles.addBarcodeText}>
-                  {visibility === 'private' ? t('product.makePublic') : t('product.makePrivate')}
-                </Text>
-              </Pressable>
-            ) : null}
-            {!barcode ? (
-              <Pressable
-                style={styles.addBarcodeBtn}
-                onPress={() =>
-                  router.push({ pathname: '/product/add-barcode', params: { productId: id } })
-                }
-              >
-                <Text style={styles.addBarcodeText}>{t('product.addBarcode')}</Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                style={styles.addBarcodeBtn}
-                onPress={() =>
-                  router.push({
-                    pathname: '/product/add-barcode',
-                    params: { productId: id, mode: 'edit', currentBarcode: barcode },
-                  })
-                }
-              >
-                <Text style={styles.addBarcodeText}>{t('product.editBarcode')}</Text>
-              </Pressable>
-            )}
+            <View style={styles.actionRow}>
+              {isOwner ? (
+                <Pressable style={styles.addBarcodeBtn} onPress={toggleVisibility} disabled={visibilityBusy}>
+                  <Text style={styles.addBarcodeText}>
+                    {visibility === 'private' ? t('product.makePublic') : t('product.makePrivate')}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {!barcode ? (
+                <Pressable
+                  style={styles.addBarcodeBtn}
+                  onPress={() =>
+                    router.push({ pathname: '/product/add-barcode', params: { productId: id } })
+                  }
+                >
+                  <Text style={styles.addBarcodeText}>{t('product.addBarcode')}</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={styles.addBarcodeBtn}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/product/add-barcode',
+                      params: { productId: id, mode: 'edit', currentBarcode: barcode },
+                    })
+                  }
+                >
+                  <Text style={styles.addBarcodeText}>{t('product.editBarcode')}</Text>
+                </Pressable>
+              )}
+            </View>
           </View>
         </View>
 
@@ -217,16 +219,14 @@ export default function ProductPage() {
 
         <SectionTitle>{t('settings.myAllergens')}</SectionTitle>
         <Card>
-          {sortedAllergens.map((key) => {
-            const state: AllergenState = current.allergens?.[key] ?? 'unknown';
-            const mine = userAllergens.includes(key);
-            return (
-              <View key={key} style={styles.allergenRow}>
-                {mine ? <Text style={styles.allergenMine}>★</Text> : null}
-                <AllergenStateChip allergenKey={key} state={state} size="compact" />
-              </View>
-            );
-          })}
+          <View style={styles.allergenInlineWrap}>
+            {sortedAllergens.map((key) => {
+              const state: AllergenState = current.allergens?.[key] ?? 'unknown';
+              return (
+                <AllergenStateChip key={key} allergenKey={key} state={state} size="compact" />
+              );
+            })}
+          </View>
         </Card>
 
         <SectionTitle>
@@ -321,27 +321,30 @@ const styles = StyleSheet.create({
   name: { fontSize: 22, fontWeight: '900', color: colors.text },
   brand: { fontSize: 15, color: colors.muted, marginTop: 2 },
   source: { fontSize: 12, color: colors.faint, marginTop: 4 },
-  visibilityBadge: { fontSize: 12, fontWeight: '700', color: colors.primaryDark, marginTop: 6 },
+  visibilityBadge: { fontSize: 12, fontWeight: '700', color: colors.muted, marginTop: 6, marginBottom: 0 },
+  actionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.s,
+    marginTop: 4,
+  },
   addBarcodeBtn: {
-    marginTop: spacing.s,
-    alignSelf: 'flex-start',
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: radius.s,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: '#F1F5F9',
   },
-  addBarcodeText: { color: colors.primaryDark, fontWeight: '700', fontSize: 13 },
+  addBarcodeText: { color: colors.muted, fontWeight: '700', fontSize: 13 },
   macroRow: { flexDirection: 'row', marginBottom: spacing.s },
   macroValue: { fontSize: 17, fontWeight: '800', color: colors.text },
   macroLabel: { fontSize: 12, color: colors.muted, marginTop: 2 },
   portionLine: { fontSize: 13, color: colors.muted, marginTop: 4 },
-  allergenRow: {
+  allergenInlineWrap: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacing.s,
-    paddingVertical: 6,
+    alignItems: 'center',
   },
-  allergenMine: { color: colors.warn, fontWeight: '800', fontSize: 14 },
   versionRow: {
     flexDirection: 'row',
     alignItems: 'center',

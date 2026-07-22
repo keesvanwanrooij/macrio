@@ -19,6 +19,7 @@ import { BarcodeScannerFrame } from '../components/BarcodeScannerFrame';
 import { AllergenStateChip } from '../components/AllergenBadges';
 import { SelectableProductRow } from '../components/SelectableProductRow';
 import { Button, Field } from '../components/ui';
+import { nextAllergenState } from '../lib/allergens';
 import { lookupKeys, toEan13 } from '../lib/barcode';
 import { fetchFromOpenFoodFacts } from '../lib/off';
 import { parseNum } from '../lib/nutrition';
@@ -398,8 +399,6 @@ function RecentsTab({
 }
 
 // ---------- Quick add (no product) ----------
-const ALLERGEN_CYCLE: AllergenState[] = ['unknown', 'contains', 'free'];
-
 function QuickTab({
   slot,
   date,
@@ -424,7 +423,7 @@ function QuickTab({
   function cycleAllergen(key: string) {
     setAllergens((cur) => {
       const state = cur[key] ?? 'unknown';
-      const next = ALLERGEN_CYCLE[(ALLERGEN_CYCLE.indexOf(state) + 1) % ALLERGEN_CYCLE.length];
+      const next = nextAllergenState(state);
       const copy = { ...cur };
       if (next === 'unknown') delete copy[key];
       else copy[key] = next;
@@ -462,12 +461,14 @@ function QuickTab({
       {userAllergens.length > 0 ? (
         <View style={styles.allergenBlock}>
           <Text style={styles.allergenTitle}>{t('addFood.quickAllergens')}</Text>
+          <Text style={styles.allergenLegend}>{t('allergens.legend')}</Text>
           <View style={styles.chipWrap}>
             {userAllergens.map((key) => (
               <AllergenStateChip
                 key={key}
                 allergenKey={key}
                 state={allergens[key] ?? 'unknown'}
+                labelMode="short"
                 onPress={() => cycleAllergen(key)}
               />
             ))}
@@ -520,6 +521,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
     marginBottom: spacing.s,
+  },
+  allergenLegend: {
+    fontSize: 12,
+    color: colors.muted,
+    marginBottom: spacing.s,
+    lineHeight: 17,
   },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.s },
 });

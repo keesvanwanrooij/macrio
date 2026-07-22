@@ -22,6 +22,8 @@ Scope locked in `MVP_SCOPE.md`. Triage founder notes → [`ROADMAP_MINOR.md`](RO
 
 **Pre-public polish:** finish planned patches in `ROADMAP_MINOR.md` (currently through **v1.0.10**), then public launch. Detail and order change there, not in this file.
 
+**Pre-public catalog (v1.0.8):** mothers (`products`) group versions by barcode; search finds **versions**; mother name only when browsing versions; users own versions only; admin seeds/renames mothers; max 3 versions per owner per mother; quick-add stays diary-only. Plan: [`plans/v1.0.8-mother-catalog.md`](plans/v1.0.8-mother-catalog.md).
+
 **Post-launch OK:** full unit model per 100 g or 100 ml (beyond simple g/ml portion labels).
 
 ## v1.1 — workout builder & tracker
@@ -34,15 +36,15 @@ Scope locked in `MVP_SCOPE.md`. Triage founder notes → [`ROADMAP_MINOR.md`](RO
 ## v1.2 — trust, versions & governance
 
 - [ ] Weighted trust graph; community report voting
-- [ ] Version hygiene (trim/archive low-like old versions)
-- [ ] **Version ownership:** each version has an owner; owner may edit in place for **30 days** after creation; after 30 days an edit forks a **new version** that **copies likes** so both stay; users can unlike the new one and the old top version can rise again. Same rule for public and private products.
+- [ ] **Version hygiene (deeper):** scheduled trim/archive of old unused low-like versions beyond the v1.0.8 per-owner cap (soft-delete first; hard purge only when safe)
+- [ ] **Version ownership (edit window):** owner may edit in place for **30 days** after creation; after 30 days an edit forks a **new version** that **copies likes** so both stay; users can unlike the new one and the old top version can rise again. Applies to public and private **versions** (subject to max 3 per owner per mother from v1.0.8)
 - [ ] **Duplicate from any version:** pick e.g. v2 as base while current is v5 → create v6 (not only prefill from most-liked)
-- [ ] Product page: show **owner name and/or date** instead of bare “version N”, respecting profile privacy / visibility
+- [ ] Product page: show **version owner name and/or date** instead of bare “version N”, respecting profile privacy / visibility
 - [ ] **Profile community visibility slider** (private → balanced → public): e.g. show username + profile link on versions / meals as incentive for good contributions
-- [ ] **Product merge (admin governance):** duplicate catalog entries are common; **admin** role; merge when a **majority of admins** agree (founder should not need a part-time job moderating merges alone)
+- [ ] **Admin role expansion:** more than founder can rename mothers, reserve usernames, and clean catalog; optional majority-agree merge UI for hard duplicate cases the barcode link path cannot fix
 - [ ] Health sync (Health Connect, HealthKit, Samsung)
 
-_Note: catalog `products.visibility` public|private (create checkbox, owner toggle, RLS) shipped during 1.0.0 testing (migration 013)._
+_Note: v1.0.8 moves catalog visibility to **versions** and treats mothers as barcode (or no-barcode) groupings. Early `products.visibility` (migration 013) is superseded by that patch._
 
 ## v1.3 — planning & personalization
 
@@ -53,7 +55,7 @@ _Note: catalog `products.visibility` public|private (create checkbox, owner togg
 - [ ] Personal add-food tab order
 - [ ] **Reports:** month and year screens (same day/week pattern: totals, charts, swipe/‹ ›); then custom report periods
 - [ ] **Reports IA:** keep period switcher **Day | Week | Month | Year**; add a second row under it for **topic**: **Nutrition | Fitness | Allergens** (nl: **Voeding | Fitness | Allergieën**). Allergens only when `profile.allergens.length > 0`. Fitness when workouts exist (v1.1+); until then Nutrition (+ Allergens if set). Plan: [`plans/allergen-reports.md`](plans/allergen-reports.md)
-- [ ] **Allergen reports** (Nutrition period + Allergens topic): safe-grams score (total + per allergen, Toon alles), top offenders (times + grams). Macro charts stay on Nutrition only
+- [ ] **Allergen reports** (Nutrition period + Allergens topic): safe-grams score (total + per allergen, Toon alles), top offenders (times + grams). Macro charts stay on Nutrition only. **Settings toggle (personal):** whether **kan bevatten / may contain** counts as a hit in allergen scores (user choice; default TBD when building)
 - [ ] Workout heatmap
 
 ## v1.4 — community

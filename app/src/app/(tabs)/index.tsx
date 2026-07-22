@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { MacroSummary } from '../../components/MacroSummary';
 import { AllergenStateChip } from '../../components/AllergenBadges';
 import { Loading } from '../../components/ui';
-import { diaryContainsHits } from '../../lib/allergens';
+import { diaryAllergenHits } from '../../lib/allergens';
 import { type MacroKey } from '../../lib/macroLabels';
 import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDateString } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
@@ -55,7 +55,7 @@ export default function Diary() {
     const rows = (data as DiaryEntry[]) ?? [];
     setEntries(rows);
 
-    // Load allergen maps for product versions (contains → red pills)
+    // Load allergen maps for product versions (contains / may_contain → pills)
     const ids = [
       ...new Set(rows.map((e) => e.product_version_id).filter((id): id is string => !!id)),
     ];
@@ -126,7 +126,7 @@ export default function Diary() {
       ? formatFocusedAmount(Number(entry[focusMacro] ?? 0), focusMacro)
       : fmt(entry.kcal);
 
-    const allergenHits = diaryContainsHits(
+    const allergenHits = diaryAllergenHits(
       entry,
       profile?.allergens ?? [],
       entry.product_version_id ? versionAllergens[entry.product_version_id] : null
@@ -150,8 +150,8 @@ export default function Diary() {
                 <Text style={styles.entryName} numberOfLines={1}>
                   {entry.custom_name ?? '…'}
                 </Text>
-                {allergenHits.map((key) => (
-                  <AllergenStateChip key={key} allergenKey={key} state="contains" size="compact" />
+                {allergenHits.map(({ key, state }) => (
+                  <AllergenStateChip key={`${key}-${state}`} allergenKey={key} state={state} size="compact" />
                 ))}
               </View>
               {meta ? <Text style={styles.entryMeta}>{meta}</Text> : null}

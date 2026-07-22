@@ -98,15 +98,23 @@
 
 
 
-### v1.0.8 — parent food catalog + Dutch ~80% base seed (pre-launch)
+### v1.0.8 — mother catalog, barcode grouping, admin seed (pre-launch blocker)
 
-**Plan:** `[plans/v1.0.8-parent-catalog.md](plans/v1.0.8-parent-catalog.md)` · Pitch: `[parent-food-catalog-pitch.md](../../project-context/parent-food-catalog-pitch.md)`
+**Plan:** [`plans/v1.0.8-mother-catalog.md`](plans/v1.0.8-mother-catalog.md)  
+(Old parent/child plan superseded: [`plans/v1.0.8-parent-catalog.md`](plans/v1.0.8-parent-catalog.md))
 
 **Progress:**
 
-- [ ] Parent/child data model
-- [ ] Dutch parent seed (~80% coverage)
-- [ ] Founder + AI fill pass + human review
+- [ ] Mothers = `products`; versions = `product_versions` (no third table); evolve schema/RLS/RPCs
+- [ ] Scan known barcode → existing mother + ranked versions; unknown → mother + version 1 (user owns version only)
+- [ ] Ranking: likes → completeness → newest; search shows versions; mother name only when browsing versions (empty → most liked version’s name)
+- [ ] Visibility on **versions** (migrate off product-level visibility); private versions owner-only
+- [ ] No-barcode mothers OK; attach/detach barcode on a version merges/unlinks (RPC)
+- [ ] Quick-add: diary-only, never catalog rows
+- [ ] Max **3 versions per owner per mother** (RPC + soft-archive oldest); safe vs diary snapshots
+- [ ] Reserved usernames; admin account owns seed / staple mothers + seed versions
+- [ ] Dutch ~80% staple seed under admin (content from old parent pitch, as normal mothers)
+- [ ] Update DATA_MODEL + NAMING to mother language
 
 
 
@@ -168,8 +176,8 @@
 | Feedback: multiple screenshots (max 5)                                                                     | Keep single image for now. Also listed under Old notes.                                            |
 | Quick-log % macro sliders (restaurant)                                                                     | `ROADMAP.md` v1.3                                                                                  |
 | Personal reorder of add-food tabs                                                                          | `ROADMAP.md` v1.3                                                                                  |
-| Auto-trim low-like product versions                                                                        | `ROADMAP.md` v1.2                                                                                  |
-| Version ownership / 30-day fork / profile visibility slider / duplicate-from-version / admin product merge | `ROADMAP.md` v1.2 (product public/private catalog visibility shipped early in 1.0.0)               |
+| Auto-trim low-like product versions (beyond per-owner cap)                                             | `ROADMAP.md` v1.2                                                                                  |
+| 30-day version edit fork / profile visibility slider / duplicate-from-version / multi-admin merge UI   | `ROADMAP.md` v1.2 (mother catalog + 3-version cap + version visibility → v1.0.8)                    |
 | Recipes, community duplicate meals, salt/micros                                                            | `ROADMAP.md` v1.4                                                                                  |
 | Personal meal templates + meal planner                                                                     | `ROADMAP.md` v1.3                                                                                  |
 | Analytics / success metrics tooling                                                                        | `ROADMAP.md` v1.5                                                                                  |

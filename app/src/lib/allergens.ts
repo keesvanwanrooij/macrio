@@ -1,10 +1,11 @@
 /*
- * SECTION: EU-14 allergen keys + diary contains helpers + chip labels
- * WHAT: Canonical allergen keys, OFF tag map, diary contains hits, state-aware labels.
- * HOW: diaryContainsHits uses product/quick-add maps. allergenChipLabel always
- *      returns the full state phrase; chips may shrink font to 0.7 to fit.
+ * SECTION: EU-14 allergen keys + diary alert helpers + chip labels
+ * WHAT: Canonical allergen keys, OFF tag map, diary contains/may_contain hits,
+ *       shared tap cycle, state-aware labels.
+ * HOW: diaryAllergenHits reads product or quick-add maps. Interactive chips use
+ *      short names + nextAllergenState; read-only UI uses full state phrases.
  * INPUT: diary entry, user allergen keys, optional version allergens map, i18n t()
- * OUTPUT: contains keys for red diary pills; chip label strings for UI
+ * OUTPUT: alert hits for diary pills; chip label strings; next cycle state
  */
 import type { TFunction } from 'i18next';
 
@@ -47,39 +48,62 @@ export const OFF_TAG_MAP: Record<string, AllergenKey> = {
   'en:molluscs': 'molluscs',
 };
 
+/** Tap cycle for create / quick-add chips (interactive only). */
+export const ALLERGEN_STATE_CYCLE: AllergenState[] = [
+  'unknown',
+  'contains',
+  'may_contain',
+  'free',
+];
+
+export function nextAllergenState(state: AllergenState): AllergenState {
+  const i = ALLERGEN_STATE_CYCLE.indexOf(state);
+  const from = i < 0 ? 0 : i;
+  return ALLERGEN_STATE_CYCLE[(from + 1) % ALLERGEN_STATE_CYCLE.length];
+}
+
+export type DiaryAllergenHit = { key: string; state: 'contains' | 'may_contain' };
+
 /**
- * Which of the user's selected allergens this diary row contains.
- * Product rows: version map state === 'contains'.
- * Quick-add: entry.allergens[key] === 'contains' (free / unknown ignored).
+ * User allergens this diary row contains or may contain (for diary pills).
+ * Product rows: version map. Quick-add: entry.allergens. free / unknown ignored.
  */
-export function diaryContainsHits(
+export function diaryAllergenHits(
   entry: DiaryEntry,
   userAllergens: readonly string[],
   versionAllergens: Record<string, AllergenState> | null | undefined
-): string[] {
+): DiaryAllergenHit[] {
   if (userAllergens.length === 0) return [];
-  if (entry.product_version_id) {
-    if (!versionAllergens) return [];
-    return userAllergens.filter((key) => versionAllergens[key] === 'contains');
+  const map = entry.product_version_id ? versionAllergens ?? {} : entry.allergens ?? {};
+  const hits: DiaryAllergenHit[] = [];
+  for (const key of userAllergens) {
+    const state = map[key];
+    if (state === 'contains' || state === 'may_contain') {
+      hits.push({ key, state });
+    }
   }
-  const map = entry.allergens ?? {};
-  return userAllergens.filter((key) => map[key] === 'contains');
+  return hits;
 }
 
-/** Short allergen name (settings / onboarding / stripped chip). */
+/** Short allergen name (settings / onboarding / interactive chips). */
 export function allergenShortLabel(t: TFunction, key: string): string {
   return t(`allergens.${key}`);
 }
 
-/** Full state phrase, e.g. Bevat gluten / Glutenvrij / Gluten onbekend. */
+/** Full state phrase, e.g. Bevat gluten / Kan gluten bevatten / Glutenvrij. */
 export function allergenFullStateLabel(t: TFunction, key: string, state: AllergenState): string {
   return t(`allergens.${key}_${state}`);
 }
 
 /**
- * Chip text: always the full state phrase (Bevat X / Xvrij / X onbekend).
- * Long labels rely on adjustsFontSizeToFit (min 0.7), not stripping words.
+ * Chip text: full state phrase by default; short name for interactive create/quick-add.
  */
-export function allergenChipLabel(t: TFunction, key: string, state: AllergenState): string {
+export function allergenChipLabel(
+  t: TFunction,
+  key: string,
+  state: AllergenState,
+  labelMode: 'full' | 'short' = 'full'
+): string {
+  if (labelMode === 'short') return allergenShortLabel(t, key);
   return allergenFullStateLabel(t, key, state);
 }

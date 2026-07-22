@@ -15,14 +15,12 @@ import { useTranslation } from 'react-i18next';
 
 import { AllergenStateChip } from '../../components/AllergenBadges';
 import { Button, Field } from '../../components/ui';
-import { EU_ALLERGENS } from '../../lib/allergens';
+import { EU_ALLERGENS, nextAllergenState } from '../../lib/allergens';
 import { digitsOnly, validateRetailBarcode, barcodeErrorKey } from '../../lib/barcode';
 import { parseNum } from '../../lib/nutrition';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
 import type { AllergenState, ProductVersion } from '../../lib/types';
-
-const CYCLE: AllergenState[] = ['unknown', 'contains', 'free'];
 
 export default function CreateProduct() {
   const { t, i18n } = useTranslation();
@@ -101,7 +99,7 @@ export default function CreateProduct() {
   function cycleAllergen(key: string) {
     setAllergens((cur) => {
       const state = cur[key] ?? 'unknown';
-      const next = CYCLE[(CYCLE.indexOf(state) + 1) % CYCLE.length];
+      const next = nextAllergenState(state);
       const copy = { ...cur };
       if (next === 'unknown') delete copy[key];
       else copy[key] = next;
@@ -300,13 +298,14 @@ export default function CreateProduct() {
       )}
 
       <Text style={styles.section}>{t('product.allergensLabel')}</Text>
-      <Text style={styles.hint}>{t('product.allergenHint')}</Text>
+      <Text style={styles.hint}>{t('allergens.legend')}</Text>
       <View style={styles.allergenWrap}>
         {EU_ALLERGENS.map((key) => (
           <AllergenStateChip
             key={key}
             allergenKey={key}
             state={allergens[key] ?? 'unknown'}
+            labelMode="short"
             onPress={() => cycleAllergen(key)}
           />
         ))}
