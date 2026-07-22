@@ -10,6 +10,7 @@ import { isPasswordRecoveryPending, setPasswordRecoveryPending } from '../lib/pa
 import { SessionProvider, useSession } from '../lib/session';
 import { supabase } from '../lib/supabase';
 import { colors, spacing } from '../lib/theme';
+import { useAuthDeepLinkHandler } from '../lib/useAuthDeepLinkHandler';
 import { Button, Loading } from '../components/ui';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -20,6 +21,9 @@ function RootNavigator() {
   const { t } = useTranslation();
   const [retrying, setRetrying] = useState(false);
   const [, bump] = useState(0);
+
+  // Password-reset emails must work even if expo-router never mounts /auth/callback.
+  useAuthDeepLinkHandler();
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -38,14 +42,19 @@ function RootNavigator() {
     const inOnboarding = segments[0] === 'onboarding';
     const inAuthCallback = segments[0] === 'auth';
     const authScreen = typeof segments[1] === 'string' ? segments[1] : '';
-    const stayOnAuthWhileRecovering =
-      isPasswordRecoveryPending() &&
-      (authScreen === 'reset-password' || authScreen === 'callback' || inAuthCallback);
+
+    // Recovery wins over "already onboarded → tabs" so users always see set-password.
+    if (isPasswordRecoveryPending()) {
+      const onReset = inAuth && authScreen === 'reset-password';
+      const onCallback = inAuthCallback;
+      if (!onReset && !onCallback) {
+        router.replace('/(auth)/reset-password');
+      }
+      return;
+    }
 
     if (!session && !inAuth && !inAuthCallback) {
       router.replace('/(auth)/welcome');
-    } else if (session && stayOnAuthWhileRecovering) {
-      // Keep recovery flow on reset-password / callback
     } else if (session && profile && !profile.onboarded && !inOnboarding) {
       router.replace('/onboarding');
     } else if (session && profile?.onboarded && (inAuth || inOnboarding)) {

@@ -1,7 +1,11 @@
 import { supabase } from './supabase';
 
 export { getAuthRedirectUrl } from './authDeepLink';
-export { getPasswordResetRedirectUrl, createSessionFromUrl } from './authDeepLink';
+export {
+  getPasswordResetRedirectUrl,
+  createSessionFromUrl,
+  passwordResetRedirectNeedsTunnel,
+} from './authDeepLink';
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();

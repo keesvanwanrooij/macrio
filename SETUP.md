@@ -26,12 +26,15 @@ Three steps, ~15 minutes total. You only do steps 1–2 once.
      - `http://localhost:3000` (same as `EXPO_PUBLIC_AUTH_REDIRECT_URL` in `app/.env`)
      - `macrio://**`
      - `exp://**` while testing with Expo Go (password reset uses `Linking.createURL('/auth/callback')`)
+   - **Expo Go password reset on a real phone:** Supabase **rejects** redirect URLs with a LAN IP (`exp://192.168.…`). The email then falls back to **Site URL** `http://localhost:3000` (“site not reachable”) and the one-time link can expire if you also open it on a PC. Start the app with **`npx expo start --tunnel`**, reload on the phone, then request a **new** reset. Open the mail **only on the phone**. Check Metro for `[auth] password reset redirectTo:` — it should show an `exp.direct` (or similar) host, not `192.168.…`.
+   - **At public launch (`v1.0.0`):** replace founder `localhost` with your real production Site URL and matching Redirect URL(s). Keep `macrio://**`. Drop or keep `exp://**` only if you still test with Expo Go. Also update `EXPO_PUBLIC_AUTH_REDIRECT_URL` in production env. Checklist: [`ROADMAP.md`](docs/product/ROADMAP.md) → v1.0.0 and [`RELEASE_CHECKLIST.md`](docs/process/RELEASE_CHECKLIST.md).
 17. **Authentication → Providers → Email** → **Confirm email**:
    - May stay **OFF** for fast founder sign-up.
    - Turn **ON** when verifying **v0.2.0** and leave **ON** before public **1.0.0**. See `docs/product/ROADMAP_MINOR.md`.
    - Set **minimum password length** to **8**.
 18. **Authentication → Email Templates:** paste Macrio HTML from `backend/supabase/email-templates/` (see that folder’s README).
 19. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
+20. **Custom SMTP** is **not** required for founder testing (Supabase’s built-in mail is enough). Before **public v1.0.0**, enable custom SMTP with mail on **macrio.nl** / **macrio.app** (after hosting + mailbox). See [`ROADMAP.md`](docs/product/ROADMAP.md) → v1.0.0.
 
 
 

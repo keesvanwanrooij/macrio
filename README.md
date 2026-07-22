@@ -2,13 +2,13 @@
 
 > Bilingual (Dutch/English), community-governed calorie & macro tracking with allergen safety (gluten-free first) and a full workout planner. One app, use either half or both.
 
-**Status:** v1.0 MVP built — in founder testing. First-time setup (Supabase + `.env`): [`SETUP.md`](SETUP.md).
+**Status:** v1.0 MVP built — in founder testing. First-time setup (Supabase + `.env`): `[SETUP.md](SETUP.md)`.
 
 **Funding:** Macrio is free and open source, funded by donations. Core features will never be paywalled.
 
 ## Run the app (Windows)
 
-After setup ([`SETUP.md`](SETUP.md)), run npm **inside `app/`** (there is no `package.json` in the Macrio root). From the repo root:
+After setup (`[SETUP.md](SETUP.md)`), run npm **inside** `app/` (there is no `package.json` in the Macrio root). From the repo root:
 
 ```powershell
 cd app
@@ -32,6 +32,12 @@ Off the same Wi-Fi (tunnel; slower, needs Ngrok):
 npm start -- --clear --tunnel
 ```
 
+To have working password resets
+
+```powershell
+npx expo start --tunnel
+```
+
 Then open **Expo Go** (SDK **54**) on your phone and scan the QR code.
 
 If you see `ENOENT ... package.json`, you are still in the Macrio root - run `cd app` first.
@@ -41,7 +47,7 @@ If you see `ENOENT ... package.json`, you are still in the Macrio root - run `cd
 - Prefer `npm start -- --clear` for daily testing. Tunnel is only needed off-network.
 - If the QR code does nothing: same Wi-Fi, or try tunnel; firewall may block LAN.
 - `localhost:8081` is Metro (the app). `localhost:3000` in Supabase is only for auth email redirects - they are unrelated.
-- Full backend setup and troubleshooting: [`SETUP.md`](SETUP.md).
+- Full backend setup and troubleshooting: `[SETUP.md](SETUP.md)`.
 
 ## ❤️ Support Macrio
 
@@ -62,18 +68,20 @@ Every donation goes directly into keeping Macrio free, open, and ad-free for eve
 
 ## Docs
 
-| Start here | |
-|---|---|
-| Product requirements | [`docs/product/PRD.md`](docs/product/PRD.md) |
-| MVP scope | [`docs/product/MVP_SCOPE.md`](docs/product/MVP_SCOPE.md) |
-| Roadmap | [`docs/product/ROADMAP.md`](docs/product/ROADMAP.md) |
-| Patch board | [`docs/product/ROADMAP_MINOR.md`](docs/product/ROADMAP_MINOR.md) |
-| Working plans | [`docs/product/plans/`](docs/product/plans/README.md) |
-| Founder notes | [`project-context/notes.md`](project-context/notes.md) |
-| Product naming | [`docs/product/NAMING.md`](docs/product/NAMING.md) |
-| App version | [`VERSION`](VERSION) (mirrors `app/app.json`; bump on patch release only) |
-| Architecture | [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) |
-| Data model | [`docs/architecture/DATA_MODEL.md`](docs/architecture/DATA_MODEL.md) |
+
+| Start here           |                                                                           |
+| -------------------- | ------------------------------------------------------------------------- |
+| Product requirements | `[docs/product/PRD.md](docs/product/PRD.md)`                              |
+| MVP scope            | `[docs/product/MVP_SCOPE.md](docs/product/MVP_SCOPE.md)`                  |
+| Roadmap              | `[docs/product/ROADMAP.md](docs/product/ROADMAP.md)`                      |
+| Patch board          | `[docs/product/ROADMAP_MINOR.md](docs/product/ROADMAP_MINOR.md)`          |
+| Working plans        | `[docs/product/plans/](docs/product/plans/README.md)`                     |
+| Founder notes        | `[project-context/notes.md](project-context/notes.md)`                    |
+| Product naming       | `[docs/product/NAMING.md](docs/product/NAMING.md)`                        |
+| App version          | `[VERSION](VERSION)` (mirrors `app/app.json`; bump on patch release only) |
+| Architecture         | `[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)`  |
+| Data model           | `[docs/architecture/DATA_MODEL.md](docs/architecture/DATA_MODEL.md)`      |
+
 
 ## Repository layout
 
@@ -98,8 +106,8 @@ React Native (Expo, TypeScript) · Supabase (Postgres, Auth, Storage, EU region)
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). This project is community-governed by design.
+See `[CONTRIBUTING.md](CONTRIBUTING.md)`. This project is community-governed by design.
 
 ## License
 
-AGPL-3.0 — see [`LICENSE`](LICENSE). Food data: ODbL (seeded in part from [Open Food Facts](https://openfoodfacts.org)).
+AGPL-3.0 — see `[LICENSE](LICENSE)`. Food data: ODbL (seeded in part from [Open Food Facts](https://openfoodfacts.org)).

@@ -13,9 +13,11 @@ Both use Supabase’s `{{ .ConfirmationURL }}` (works for confirm and recovery l
 
 **Authentication → URL Configuration → Redirect URLs** should include:
 
-- Your confirm browser URL (same as `EXPO_PUBLIC_AUTH_REDIRECT_URL`, e.g. `http://localhost:3000`)
+- Your confirm browser URL (same as `EXPO_PUBLIC_AUTH_REDIRECT_URL`, e.g. `http://localhost:3000` while founder-testing)
 - `macrio://**` (store / custom scheme)
 - The Expo Linking URL from a running app (log `getPasswordResetRedirectUrl()` once, or allow `exp://**` while using Expo Go)
+
+**Public launch reminder:** `localhost` and `exp://**` are for development. Before **v1.0.0**, change **Site URL** and Redirect URLs (and production env) to the real hosting URL. See `SETUP.md` and `ROADMAP.md` → v1.0.0.
 
 ## Confirm email toggle
 

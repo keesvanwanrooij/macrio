@@ -42,7 +42,25 @@ Must include before public: crash monitoring, GDPR account delete + data export,
 ## v1.0.0 — public launch
 
 - [ ] Pre-public **0.x** board complete
-- [ ] Store listing + production auth/emails
+- [ ] Store listing (EAS production builds, screenshots, nl/en store text)
+- [ ] **Hosting + landing (macrio.nl / macrio.app):** buy hosting; ship a simple HTTPS landing (privacy, store links). This URL becomes the real **Supabase Site URL** and confirm-email browser target. Domains already owned.
+- [ ] **Custom SMTP in Supabase:** project mail from your domain (e.g. `noreply@macrio.nl`) via hosting/mail provider. Confirm + reset must not rely on Supabase’s built-in founder mail. Dashboard: Project Settings → Authentication → SMTP.
+- [ ] **Production Auth URLs (must be correct before public users):**
+  - **Site URL:** production `https://…` on macrio.nl or macrio.app (no wildcards; **not** `localhost:3000`)
+  - **Redirect URLs allow-list:** that same `https://…` (and paths if needed) + **`macrio://**`** for store / EAS builds. Remove founder-only `http://localhost:3000` and drop **`exp://**`** unless you still use Expo Go for debugging
+  - **App env:** production `EXPO_PUBLIC_AUTH_REDIRECT_URL` = that HTTPS Site URL (must match dashboard)
+  - **Password reset / confirm deep links:** store builds use scheme **`macrio`** (`Linking.createURL` / `macrio://…/auth/callback`). Root app must exchange the email `code` and **force** the set-password screen (do not send onboarded users straight to tabs). Do **not** ship relying on Expo Go LAN IPs (`exp://192.168.…`) - Supabase rejects those and falls back to Site URL. Verify on a **real store or preview build**: forgot password → open mail on phone → **New password** screen → save → sign in
+  - **Confirm email:** leave **ON**
+  - Paste branded templates still current (`backend/supabase/email-templates/`)
+  - Optional hardening: WebCrypto / `expo-crypto` so PKCE uses sha256 (avoid “plain” code challenge warnings on RN)
+  - Smoke: new signup confirm + forgot-password end-to-end on phone
+  - Details: `SETUP.md` step 16+, `RELEASE_CHECKLIST.md`, `project-context/supabase-v0.2.0-auth-setup.md`
+- [ ] **Password-reset abuse prevention (launch):** stop username/email trolling (spam reset mails to others). Prefer a small Edge Function / RPC that wraps “request reset” so limits are server-side:
+  - **Rate limits:** per IP, per account/email (e.g. ~3 / hour, ~5 / day), and per client so one phone cannot spray many usernames
+  - **Cooldown soft lock:** after a send for an account, same generic copy (“if you have the email, use the link we already sent”) for N minutes
+  - **Progressive backoff per IP:** longer waits after repeated attempts from the same IP
+  - **Light delay / jitter:** artificial ~1–2s before send (slows bulk scripts; not a full defense alone)
+  - Heavier bot measures (CAPTCHA, honeypot, click heuristics, ops auto-block) → **v1.5** if abuse appears
 - [ ] Tag `v1.0.0` and open to the public
 - [ ] **Sentry account:** start signup/trial around launch (not earlier - avoid burning the trial during quiet founder testing). Wire `EXPO_PUBLIC_SENTRY_DSN` in production env; confirm smoke/test event. SDK already shipped in **v0.1.0** (`SETUP.md`)
 
@@ -100,13 +118,19 @@ Big retention / fun / monetization step.
 - [ ] **Recipes** (community): likes and profile popularity; creators visible on version / recipe lists
 - [ ] **Duplicate / share meals** in the community (copy into diary or templates)
 - [ ] Prices per country (community, optional)
+- [ ] **Themed seasonal events** (limited-time community campaigns): e.g. Christmas, Halloween, New Year, Easter, summer / back-to-school. Event-specific avatar cosmetics or badges in the store, themed challenges (logging / sharing meals / contributing products), optional community posts or groups for the season. Keep opt-in and light; no pressure to buy. Calendar can expand later (local holidays, brand moments)
 
 _Note: salt / fiber / sugars / micros ship in **0.x** before public, not here._
 
-## v1.5 — analytics
+## v1.5 — analytics & abuse ops
 
 - [ ] Analytics integration to measure success metrics (`SUCCESS_METRICS.md`) and spot when targets are missed
 - [ ] Founder/ops dashboards or exports as needed (privacy-aware; no PII in public docs)
+- [ ] **Forgot-password abuse (escalate if launch limits are not enough):** builds on **v1.0.0** rate limits / cooldown / jitter
+  - **CAPTCHA / bot check** (hCaptcha or Cloudflare Turnstile) before send, plus a **honeypot** field (hidden from humans, filled by dumb bots)
+  - **Anti-script UX:** occasional button position / layout shift and basic detection for always tapping the same screen coordinates (soft signal, not sole proof)
+  - **Ops detection:** alert when one IP (or device) requests resets for many distinct accounts; **temporary block** that IP / device
+  - Keep UX light for honest users; turn CAPTCHA on when abuse is visible, not by default if limits already hold
 
 _Note: **crash / error monitoring** (e.g. Sentry) is **v0.1.0**, not this major. Analytics ≠ crash reporting._
 
