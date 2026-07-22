@@ -16,6 +16,6 @@
 | Supporter pay-what-you-want / funding notices | v1.5 | Ask only after the product has long-term users |
 | AI photo meal logging + AI coach | v2.0, paid | Real infra cost; needs security work; the only planned paid features |
 | NEVO (RIVM) import | Never (not a goal) | OFF + curated parent seed + community; avoid second DB/license pipeline |
-| kJ / imperial units | On demand | Metric+kcal fits NL/EU launch |
+| kJ / imperial units | v1.3 | Metric+kcal fits NL/EU launch; Settings toggle with date-format preference pattern from **v0.3.0** |
 | Web app | Community-driven later | React Native for Web keeps the door open |
 | Medical advice of any kind | Never | We are a tracking tool, not a medical device (see LEGAL.md) |

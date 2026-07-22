@@ -37,11 +37,9 @@ yarn-error.log*
 .cursorrules
 .cursor/
 
-# Founder scratchpad + product boards (local only; not published with the app)
+# Founder scratchpad (local only; not published with the app)
 docs/context/
-docs/product/ROADMAP.md
-docs/product/ROADMAP_MINOR.md
-docs/product/plans/
+
 
 # Accidental root lockfile (app/ is the Expo package)
 /package-lock.json
