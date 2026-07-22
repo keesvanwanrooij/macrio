@@ -134,17 +134,29 @@ export default function Diary() {
       );
     }
 
+    const mealGrams = slotEntries.reduce((s, e) => s + Number(e.grams ?? 0), 0);
+
     const mealTotal = focusMode
       ? focusMacro === 'kcal'
         ? `${fmt(slotTotals.kcal)} ${t('common.kcal')}`
         : `${fmt(slotTotals[focusMacro])} g`
-      : `${fmt(slotTotals.kcal)} ${t('common.kcal')}`;
+      : // Overview: total weight · macros · kcal (same muted grey)
+        `${fmt(mealGrams)} g · ${t('macros.carbsShort')} ${fmt(slotTotals.carbs)} · ${t('macros.proteinShort')} ${fmt(slotTotals.protein)} · ${t('macros.fatShort')} ${fmt(slotTotals.fat)} · ${fmt(slotTotals.kcal)} ${t('common.kcal')}`;
 
     return (
       <View key={slot} style={styles.mealCard}>
         <View style={styles.mealHeader}>
           <Text style={styles.mealTitle}>{t(slotLabelKey(slot))}</Text>
-          {slotEntries.length > 0 && <Text style={styles.mealKcal}>{mealTotal}</Text>}
+          {slotEntries.length > 0 && (
+            <Text
+              style={styles.mealKcal}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {mealTotal}
+            </Text>
+          )}
         </View>
         {slotEntries.map(renderEntry)}
         <Pressable
@@ -230,9 +242,15 @@ const styles = StyleSheet.create({
     padding: spacing.l,
     marginBottom: spacing.s,
   },
-  mealHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  mealTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
-  mealKcal: { fontSize: 13, fontWeight: '700', color: colors.muted },
+  mealHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.s },
+  mealTitle: { fontSize: 15, fontWeight: '800', color: colors.text, flexShrink: 0 },
+  mealKcal: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.muted,
+    textAlign: 'right',
+  },
   entryRow: {
     flexDirection: 'row',
     alignItems: 'center',
