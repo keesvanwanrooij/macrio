@@ -31,9 +31,9 @@ _Note: portion-units content lives in **v0.8.0** (plan file `v1.0.1-portion-unit
 
 **Progress:**
 
-- [ ] Confirm email ON for production + redirect URLs
-- [ ] Branded confirm + reset email templates
-- [ ] In-app forgot password (nl/en)
+- [x] Confirm email ON for production + redirect URLs (documented; founder flips Supabase toggle when verifying)
+- [x] Branded confirm + reset email templates (`backend/supabase/email-templates/`)
+- [x] In-app forgot password (nl/en)
 
 
 
@@ -67,6 +67,7 @@ _Note: portion-units content lives in **v0.8.0** (plan file `v1.0.1-portion-unit
 - [ ] Soft body validation (height/weight/age)
 - [ ] Macro autocomplete + kcal equivalents
 - [ ] **Goal macro sliders** (onboarding + Settings): set kcal (or calculate), then protein/carbs/fat on logical g/kg ranges (e.g. protein ~0.8–2.2 g/kg); show **grams and kcal** for each macro so targets are understandable
+- [ ] _(Later)_ Auto-calc from **health-synced weight** + g/kg sliders (carbs fill rest) → `ROADMAP.md` v1.2
 
 ---
 
@@ -214,12 +215,21 @@ _Note: portion-units content lives in **v0.8.0** (plan file `v1.0.1-portion-unit
 
 ## Released
 
+### v0.2.0 — auth emails + forgot password
+
+**App version:** `0.2.0` · See `CHANGELOG.md` · tag `v0.2.0` (create on ship commit)
+
+- [x] Forgot / reset password flow + deep link callback
+- [x] Paste-ready branded email templates
+- [x] SETUP: Confirm email + redirect URL checklist
+
 ### v0.1.0 — crash reporting (Sentry)
 
-**App version:** `0.1.0` · See `CHANGELOG.md`
+**App version:** `0.1.0` · See `CHANGELOG.md` · tag `v0.1.0`
 
 - [x] `@sentry/react-native` + optional DSN; Settings smoke test in `__DEV__`
 - [x] Expo / Metro plugins for future source maps; SETUP docs
+- [ ] _(Ops)_ Create Sentry account / start trial at **public v1.0.0** launch - see `ROADMAP.md` (do not burn trial during pre-public)
 
 ### Founder MVP (historical; formerly labeled `1.0.0`)
 
@@ -246,6 +256,7 @@ _Note: portion-units content lives in **v0.8.0** (plan file `v1.0.1-portion-unit
 | Item | Reason |
 |---|---|
 | Feedback: multiple screenshots (max 5) | Keep single image for now. Also listed under Old notes. |
+| Health-synced weight → auto kcal + g/kg macros (carbs fill rest) | `ROADMAP.md` v1.2 (after Health sync) |
 | Quick-log % macro sliders (restaurant) | `ROADMAP.md` v1.3 |
 | Personal reorder of add-food tabs | `ROADMAP.md` v1.3 |
 | Water tracker / daily diary notes / meal reminders / home widgets | `ROADMAP.md` v1.3 (post-public) |

@@ -1,9 +1,7 @@
 import { supabase } from './supabase';
 
-/** Where Supabase sends the browser after email confirm. Must match Auth → URL Configuration. */
-export function getAuthRedirectUrl(): string {
-  return process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL ?? 'http://localhost:3000';
-}
+export { getAuthRedirectUrl } from './authDeepLink';
+export { getPasswordResetRedirectUrl, createSessionFromUrl } from './authDeepLink';
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();

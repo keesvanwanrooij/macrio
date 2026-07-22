@@ -41,6 +41,20 @@ Open-source (AGPL-3.0) food & fitness tracker. **v1.0 = food logging + EU-14 all
 
 ---
 
+## Version releases (mandatory git tag)
+
+When a **named board version is complete** (pre-public `0.x.y` in `ROADMAP_MINOR.md`, or a major like `1.0.0` / `1.1.0` in `ROADMAP.md`), finishing the ship is not only a commit:
+
+1. Tick the patch checkboxes; update `CHANGELOG.md`.
+2. Bump version in **all** of: `app/app.config.js` (or Expo config), `app/package.json`, root `VERSION`.
+3. Commit the ship (when the user asks to commit).
+4. **Always create an annotated git tag** on that release commit: `v0.1.0`, `v0.2.0`, `v1.0.0`, etc. Matching `docs/process/VERSIONING.md`.
+5. Tell the user the tag name; **do not `git push` / push tags** unless they ask.
+
+Do **not** ship a completed minor/patch with only a commit and no `vX.Y.Z` tag. Everyday WIP commits stay untagged.
+
+---
+
 ## Git commits (descriptive)
 
 Use **Conventional Commits** with a **descriptive subject and body** so `git log` tells the story without opening the diff.

@@ -20,11 +20,18 @@ Three steps, ~15 minutes total. You only do steps 1–2 once.
 13. Same way, run `backend/supabase/migrations/012_barcode_check_digit.sql` (reject invalid check digits / GS1-128-style codes).
 14. Same way, run `backend/supabase/migrations/013_product_visibility.sql` (public/private products + RLS).
 15. Same way, run `backend/supabase/migrations/014_goal_revisions.sql` (historical daily goals for report charts).
-16. **Authentication → URL Configuration** (fixes broken confirm-email links):
+16. **Authentication → URL Configuration** (fixes broken confirm-email / reset links):
    - **Site URL:** `http://localhost:3000` (do **not** use your `*.supabase.co` project URL here)
-   - **Redirect URLs:** add `http://localhost:3000` (and keep it in `app/.env` as `EXPO_PUBLIC_AUTH_REDIRECT_URL`)
-17. **Authentication → Providers → Email** → **Confirm email** may be **OFF** while founder-testing (faster sign-up). Turn it **ON** before public release — see `docs/product/ROADMAP_MINOR.md` (v1.0.2). Set **minimum password length** to **8**.
-18. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
+   - **Redirect URLs:** add all of:
+     - `http://localhost:3000` (same as `EXPO_PUBLIC_AUTH_REDIRECT_URL` in `app/.env`)
+     - `macrio://**`
+     - `exp://**` while testing with Expo Go (password reset uses `Linking.createURL('/auth/callback')`)
+17. **Authentication → Providers → Email** → **Confirm email**:
+   - May stay **OFF** for fast founder sign-up.
+   - Turn **ON** when verifying **v0.2.0** and leave **ON** before public **1.0.0**. See `docs/product/ROADMAP_MINOR.md`.
+   - Set **minimum password length** to **8**.
+18. **Authentication → Email Templates:** paste Macrio HTML from `backend/supabase/email-templates/` (see that folder’s README).
+19. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
 
 
 
@@ -34,13 +41,17 @@ Three steps, ~15 minutes total. You only do steps 1–2 once.
 2. Paste your URL and anon key into it.
 3. Keep `EXPO_PUBLIC_AUTH_REDIRECT_URL=http://localhost:3000` (must match Supabase URL Configuration above).
 
-### Sentry crash reporting (v0.1.0, optional)
+### Sentry crash reporting (v0.1.0 SDK; account at public launch)
+
+The SDK is already in the app. **Wait to create the Sentry account / start the trial until around public `v1.0.0` launch** so the trial covers real usage, not quiet founder testing. Checklist: [`ROADMAP.md`](docs/product/ROADMAP.md) → v1.0.0.
+
+When ready:
 
 1. Create a free account at [sentry.io](https://sentry.io) → new **React Native** project (prefer an **EU** region if offered).
-2. Copy the project **DSN** into `app/.env` as `EXPO_PUBLIC_SENTRY_DSN=...`.
+2. Copy the project **DSN** into `app/.env` as `EXPO_PUBLIC_SENTRY_DSN=...` (and production/EAS secrets for store builds).
 3. Match plugin slugs if needed: set `SENTRY_ORG` and `SENTRY_PROJECT` to your Sentry org/project slugs (defaults in `app.config.js` are `macrio` / `macrio`).
 4. Restart Expo (`npm start -- --clear`). In **Settings → About**, use **Send test error to Sentry** (dev builds only) and confirm the event in the Sentry Issues UI.
-5. **Source maps** (readable release stacks) need a native/EAS release build plus `SENTRY_AUTH_TOKEN` in the build environment. Do not commit that token. Expo Go only needs the DSN for the smoke test.
+5. **Source maps** (readable release stacks) need a native/EAS release build plus `SENTRY_AUTH_TOKEN` in the build environment. Do not commit that token.
 
 
 ## 3. Start & test (~2 min)

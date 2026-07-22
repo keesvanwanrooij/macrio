@@ -5,8 +5,9 @@
 - [ ] All targeted stories meet Definition of Done
 - [ ] Manual test pass on Android (Expo Go / build) — iOS when hardware available
 - [ ] Both languages spot-checked (nl/en)
-- [ ] `CHANGELOG.md` updated; version bumped in `app.json`
-- [ ] Tag `vX.Y.Z` pushed; GitHub release with notes referencing addressed feedback
+- [ ] `CHANGELOG.md` updated; version bumped in `app/app.config.js`, `app/package.json`, and root `VERSION`
+- [ ] Annotated git tag `vX.Y.Z` created on the release commit (required for every completed board version)
+- [ ] Tag pushed when founder asks; GitHub release with notes referencing addressed feedback
 
 ## Store releases (first store launch adds)
 

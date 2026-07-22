@@ -73,6 +73,9 @@ export default function SignIn() {
         onChangeText={setPassword}
         autoComplete="current-password"
       />
+      <Text style={styles.forgot} onPress={() => router.push('/(auth)/forgot-password')}>
+        {t('auth.forgotLink')}
+      </Text>
       <Button
         title={t('auth.signIn')}
         onPress={handleSignIn}
@@ -95,6 +98,13 @@ const styles = StyleSheet.create({
     marginTop: -spacing.s,
     marginBottom: spacing.m,
     lineHeight: 16,
+  },
+  forgot: {
+    color: colors.primaryDark,
+    fontWeight: '600',
+    textAlign: 'right',
+    marginBottom: spacing.l,
+    marginTop: -spacing.s,
   },
   switch: { color: colors.primaryDark, textAlign: 'center', marginTop: spacing.xl, fontWeight: '600' },
 });

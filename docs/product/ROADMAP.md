@@ -11,7 +11,7 @@
 | **1.1+** | New product areas after public (workouts, trust, community, …). |
 | **2.0** | Paid intelligence (AI photo + AI coach). |
 
-**App today:** **0.1.0** (first pre-public patch). Continue `0.2.0` … `0.14.0`, then public **`1.0.0`**.
+**App today:** **0.2.0**. Continue `0.3.0` … `0.14.0`, then public **`1.0.0`**.
 
 ## Founder MVP (done; pre-0.x history)
 
@@ -44,6 +44,7 @@ Must include before public: crash monitoring, GDPR account delete + data export,
 - [ ] Pre-public **0.x** board complete
 - [ ] Store listing + production auth/emails
 - [ ] Tag `v1.0.0` and open to the public
+- [ ] **Sentry account:** start signup/trial around launch (not earlier - avoid burning the trial during quiet founder testing). Wire `EXPO_PUBLIC_SENTRY_DSN` in production env; confirm smoke/test event. SDK already shipped in **v0.1.0** (`SETUP.md`)
 
 ## v1.1 — workout builder & tracker
 
@@ -61,7 +62,8 @@ Must include before public: crash monitoring, GDPR account delete + data export,
 - [ ] Product page: show **version owner name and/or date** instead of bare “version N”, respecting profile privacy / visibility
 - [ ] **Profile community visibility slider** (private → balanced → public): e.g. show username + profile link on versions / meals as incentive for good contributions
 - [ ] **Admin role expansion:** more than founder can rename mothers, reserve usernames, and clean catalog; optional majority-agree merge UI for hard duplicate cases the barcode link path cannot fix
-- [ ] Health sync (Health Connect, HealthKit, Samsung)
+- [ ] **Health sync** (Health Connect, HealthKit, Samsung): read body weight (kg) and related metrics the user allows
+- [ ] **Goals from health weight + g/kg sliders:** after health sync supplies weight, optionally auto-calculate daily **kcal target** and macros from protein/fat **g/kg** sliders; **carbs fill the remaining kcal**. User can still override manually. Builds on the pre-public g/kg slider UX (`ROADMAP_MINOR` v0.4.0)
 
 _Note: catalog visibility on **versions** and mother/barcode model ship in **0.x** (see minor board)._
 

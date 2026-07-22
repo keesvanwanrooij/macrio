@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bevestig je Macrio-account</title>
+  </head>
+  <body style="margin:0;padding:0;background:#F8FAFC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F8FAFC;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" style="max-width:480px;background:#FFFFFF;border-radius:12px;padding:32px 28px;border:1px solid #E2E8F0;">
+            <tr>
+              <td>
+                <p style="margin:0 0 8px;font-size:22px;font-weight:800;color:#15803D;">Macrio</p>
+                <p style="margin:0 0 16px;font-size:18px;font-weight:700;color:#0F172A;">Bevestig je e-mail / Confirm your email</p>
+                <p style="margin:0 0 12px;font-size:15px;line-height:22px;color:#64748B;">
+                  NL: Klik op de knop om je account te bevestigen. Daarna kun je inloggen in de app.
+                </p>
+                <p style="margin:0 0 24px;font-size:15px;line-height:22px;color:#64748B;">
+                  EN: Click the button to confirm your account, then sign in to the app.
+                </p>
+                <p style="margin:0 0 28px;">
+                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#16A34A;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:15px;padding:12px 20px;border-radius:8px;">
+                    Bevestigen / Confirm
+                  </a>
+                </p>
+                <p style="margin:0;font-size:12px;line-height:18px;color:#94A3B8;">
+                  Als de knop niet werkt, kopieer deze link / If the button fails, copy this link:<br />
+                  <span style="word-break:break-all;color:#64748B;">{{ .ConfirmationURL }}</span>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

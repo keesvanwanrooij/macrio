@@ -2,6 +2,19 @@
 
 All notable changes to Macrio. Format: [Keep a Changelog](https://keepachangelog.com/), versioning per `docs/process/VERSIONING.md`.
 
+## [0.2.0] — 2026-07-22
+
+### Added
+
+- In-app **forgot password** + **set new password** (nl/en), with deep-link callback (`/auth/callback`)
+- Paste-ready branded Supabase email templates (confirm + reset) under `backend/supabase/email-templates/`
+- SETUP checklist for Confirm email, redirect URLs (`macrio://**`, `exp://**`), and templates
+
+### Changed
+
+- Supabase client uses PKCE (`flowType: 'pkce'`) for email recovery links
+- App version **0.2.0**
+
 ## [0.1.0] — 2026-07-22
 
 First pre-public patch under the **0.x** scheme (`docs/process/VERSIONING.md`).
