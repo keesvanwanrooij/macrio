@@ -52,7 +52,8 @@ _Note: catalog `products.visibility` public|private (create checkbox, owner togg
 - [ ] Quick-log restaurant % macro sliders
 - [ ] Personal add-food tab order
 - [ ] **Reports:** month and year screens (same day/week pattern: totals, charts, swipe/‹ ›); then custom report periods
-- [ ] **Allergen reports** (separate tab left of Dag; hidden if no profile allergens): safe-grams score (total + per allergen, Toon alles), top offenders (times + grams). Plan: [`plans/allergen-reports.md`](plans/allergen-reports.md). Macro charts stay kcal/macros only
+- [ ] **Reports IA:** keep period switcher **Day | Week | Month | Year**; add a second row under it for **topic**: **Nutrition | Fitness | Allergens** (nl: **Voeding | Fitness | Allergieën**). Allergens only when `profile.allergens.length > 0`. Fitness when workouts exist (v1.1+); until then Nutrition (+ Allergens if set). Plan: [`plans/allergen-reports.md`](plans/allergen-reports.md)
+- [ ] **Allergen reports** (Nutrition period + Allergens topic): safe-grams score (total + per allergen, Toon alles), top offenders (times + grams). Macro charts stay on Nutrition only
 - [ ] Workout heatmap
 
 ## v1.4 — community
