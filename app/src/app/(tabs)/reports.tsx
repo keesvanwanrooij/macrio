@@ -13,8 +13,16 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } fr
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next';
 
+import { NativeDatePicker } from '../../components/NativeDatePicker';
 import { Button, Card, Loading, SectionTitle } from '../../components/ui';
 import { ProgressBar } from '../../components/ProgressBar';
+import {
+  clampToToday,
+  formatDateDisplay,
+  resolveDateFormat,
+  todayIso,
+  weekStartMonday,
+} from '../../lib/dates';
 import {
   fetchGoalRevisionsUpTo,
   goalValue,
@@ -103,6 +111,7 @@ function resolveWeekGoalDisplay(dayGoals: readonly (number | null | undefined)[]
 
 export default function Reports() {
   const { t, i18n } = useTranslation();
+  const { profile } = useSession();
   const [mode, setMode] = useState<'day' | 'week'>('day');
   const [anchor, setAnchor] = useState(toDateString(new Date()));
   const [selectedMacro, setSelectedMacro] = useState<MacroKey>('kcal');
@@ -111,11 +120,11 @@ export default function Reports() {
   const [entries, setEntries] = useState<DiaryEntry[] | null>(null);
   const [revisions, setRevisions] = useState<GoalSnapshot[]>([]);
 
-  const weekStart = useMemo(() => {
-    const d = new Date(anchor + 'T12:00:00');
-    const day = (d.getDay() + 6) % 7;
-    return addDays(anchor, -day);
-  }, [anchor]);
+  const today = todayIso();
+  const dateFormat = resolveDateFormat(profile?.date_format);
+
+  const weekStart = useMemo(() => weekStartMonday(anchor), [anchor]);
+  const currentWeekStart = useMemo(() => weekStartMonday(today), [today]);
 
   const load = useCallback(async () => {
     const from = mode === 'day' ? anchor : weekStart;
@@ -141,10 +150,22 @@ export default function Reports() {
 
   const shift = useCallback(
     (direction: 1 | -1) => {
-      setAnchor((a) => addDays(a, mode === 'day' ? direction : direction * 7));
+      setAnchor((a) => {
+        if (mode === 'day') {
+          const next = addDays(a, direction);
+          return clampToToday(next, today);
+        }
+        // Week: jump by 7 days; do not navigate into future weeks
+        const next = addDays(a, direction * 7);
+        if (direction > 0 && weekStartMonday(next) > currentWeekStart) return a;
+        return next;
+      });
     },
-    [mode]
+    [mode, today, currentWeekStart]
   );
+
+  const canShiftForward =
+    mode === 'day' ? anchor < today : weekStart < currentWeekStart;
 
   // One swipe meaning: prev/next day or week (same as ‹ ›)
   const dateGesture = useMemo(
@@ -163,15 +184,13 @@ export default function Reports() {
   function label(): string {
     const locale = i18n.language === 'nl' ? 'nl-NL' : 'en-GB';
     if (mode === 'day') {
-      return new Date(anchor + 'T12:00:00').toLocaleDateString(locale, {
+      const weekday = new Date(anchor + 'T12:00:00').toLocaleDateString(locale, {
         weekday: 'long',
-        day: 'numeric',
-        month: 'short',
       });
+      return `${weekday} ${formatDateDisplay(anchor, dateFormat)}`;
     }
-    const start = new Date(weekStart + 'T12:00:00');
-    const end = new Date(addDays(weekStart, 6) + 'T12:00:00');
-    return `${start.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString(locale, { day: 'numeric', month: 'short' })}`;
+    const weekEnd = addDays(weekStart, 6);
+    return `${formatDateDisplay(weekStart, dateFormat)} – ${formatDateDisplay(weekEnd, dateFormat)}`;
   }
 
   if (entries === null) return <Loading />;
@@ -196,9 +215,16 @@ export default function Reports() {
             <Pressable hitSlop={12} onPress={() => shift(-1)}>
               <Text style={styles.navArrow}>‹</Text>
             </Pressable>
-            <Text style={styles.navLabel}>{label()}</Text>
-            <Pressable hitSlop={12} onPress={() => shift(1)}>
-              <Text style={styles.navArrow}>›</Text>
+            <NativeDatePicker
+              variant="plain"
+              value={anchor}
+              onChange={(iso) => setAnchor(clampToToday(iso, today))}
+              dateFormat={dateFormat}
+              displayText={label()}
+              maximumDate={new Date(today + 'T12:00:00')}
+            />
+            <Pressable hitSlop={12} onPress={() => shift(1)} disabled={!canShiftForward}>
+              <Text style={[styles.navArrow, !canShiftForward && { color: colors.faint }]}>›</Text>
             </Pressable>
           </View>
 

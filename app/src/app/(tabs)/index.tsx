@@ -6,10 +6,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { MacroSummary } from '../../components/MacroSummary';
 import { AllergenStateChip } from '../../components/AllergenBadges';
+import { MacroSummary } from '../../components/MacroSummary';
+import { NativeDatePicker } from '../../components/NativeDatePicker';
 import { Loading } from '../../components/ui';
 import { diaryAllergenHits } from '../../lib/allergens';
+import { clampToToday, formatDateDisplay, resolveDateFormat, todayIso } from '../../lib/dates';
 import { type MacroKey } from '../../lib/macroLabels';
 import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDateString } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
@@ -83,16 +85,28 @@ export default function Diary() {
   const totals = useMemo(() => sumEntries(entries ?? []), [entries]);
   const focusMode = profile?.macro_display === 'focus';
 
+  const today = todayIso();
+  const dateFormat = resolveDateFormat(profile?.date_format);
+
   function dateLabel(): string {
-    const today = toDateString(new Date());
     if (date === today) return t('diary.today');
     if (date === addDays(today, -1)) return t('diary.yesterday');
-    const d = new Date(date + 'T12:00:00');
-    return d.toLocaleDateString(i18n.language === 'nl' ? 'nl-NL' : 'en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    });
+    // Prefer profile date_format for non-relative days
+    const weekday = new Date(date + 'T12:00:00').toLocaleDateString(
+      i18n.language === 'nl' ? 'nl-NL' : 'en-GB',
+      { weekday: 'short' }
+    );
+    return `${weekday} ${formatDateDisplay(date, dateFormat)}`;
+  }
+
+  function goPrevDay() {
+    setDate(addDays(date, -1));
+  }
+
+  function goNextDay() {
+    const next = addDays(date, 1);
+    if (next > today) return;
+    setDate(next);
   }
 
   function confirmDelete(entry: DiaryEntry) {
@@ -235,14 +249,23 @@ export default function Diary() {
   return (
     <View style={styles.container}>
       <View style={styles.dateNav}>
-        <Pressable hitSlop={12} onPress={() => setDate(addDays(date, -1))}>
+        <Pressable hitSlop={12} onPress={goPrevDay}>
           <Ionicons name="chevron-back" size={24} color={colors.muted} />
         </Pressable>
-        <Pressable onPress={() => setDate(toDateString(new Date()))}>
-          <Text style={styles.dateLabel}>{dateLabel()}</Text>
-        </Pressable>
-        <Pressable hitSlop={12} onPress={() => setDate(addDays(date, 1))}>
-          <Ionicons name="chevron-forward" size={24} color={colors.muted} />
+        <NativeDatePicker
+          variant="plain"
+          value={date}
+          onChange={(iso) => setDate(clampToToday(iso, today))}
+          dateFormat={dateFormat}
+          displayText={dateLabel()}
+          maximumDate={new Date(today + 'T12:00:00')}
+        />
+        <Pressable hitSlop={12} onPress={goNextDay} disabled={date >= today}>
+          <Ionicons
+            name="chevron-forward"
+            size={24}
+            color={date >= today ? colors.faint : colors.muted}
+          />
         </Pressable>
       </View>
 

@@ -3,7 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { NativeDatePicker } from './NativeDatePicker';
 import { Button, Chip, Field } from './ui';
+import { resolveDateFormat, todayIso } from '../lib/dates';
 import {
   ACTIVITIES,
   GENDERS,
@@ -13,7 +15,6 @@ import {
   isActivityLevel,
   isGender,
   isWeightGoal,
-  normalizeDateOfBirthInput,
   type ActivityLevel,
   type BodyMetricsDraft,
   type Gender,
@@ -53,7 +54,8 @@ export function GoalCalculator({ profile, defaultOpen = false, onCalculated }: P
   }, [profile]);
 
   function runCalculate() {
-    const dateOfBirth = normalizeDateOfBirthInput(dob);
+    // DOB comes from the native picker as ISO YYYY-MM-DD
+    const dateOfBirth = /^\d{4}-\d{2}-\d{2}$/.test(dob) ? dob : null;
     const ageYears = dateOfBirth ? ageFromDateOfBirth(dateOfBirth) : null;
     const weightKg = parseNum(weight);
     const heightCm = parseNum(height);
@@ -81,6 +83,9 @@ export function GoalCalculator({ profile, defaultOpen = false, onCalculated }: P
       },
     });
   }
+
+  const dobValue = /^\d{4}-\d{2}-\d{2}$/.test(dob) ? dob : '2000-01-01';
+  const dateFormat = resolveDateFormat(profile?.date_format);
 
   return (
     <View style={styles.wrap}>
@@ -110,13 +115,13 @@ export function GoalCalculator({ profile, defaultOpen = false, onCalculated }: P
 
           <Field label={t('goalsCalc.weight')} value={weight} onChangeText={setWeight} keyboardType="numeric" />
           <Field label={t('goalsCalc.height')} value={height} onChangeText={setHeight} keyboardType="numeric" />
-          <Field
+          <NativeDatePicker
             label={t('goalsCalc.dateOfBirth')}
-            value={dob}
-            onChangeText={setDob}
-            placeholder={t('goalsCalc.dateOfBirthPlaceholder')}
-            autoCapitalize="none"
-            trimOnBlur
+            value={dobValue}
+            onChange={setDob}
+            dateFormat={dateFormat}
+            maximumDate={new Date(todayIso() + 'T12:00:00')}
+            minimumDate={new Date('1920-01-01T12:00:00')}
           />
 
           <Text style={styles.label}>{t('goalsCalc.activity')}</Text>

@@ -5,7 +5,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Field, PasswordField } from '../../components/ui';
 import { isValidUsername, sanitizeUsernameInput } from '../../lib/username';
-import { isDuplicateEmailSignUpError, getAuthRedirectUrl, isValidEmail, normalizeEmail } from '../../lib/auth';
+import {
+  isDuplicateEmailSignUpError,
+  isUsernameAvailable,
+  isUsernameTakenSignUpError,
+  getAuthRedirectUrl,
+  isValidEmail,
+  normalizeEmail,
+} from '../../lib/auth';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing } from '../../lib/theme';
@@ -21,11 +28,27 @@ export default function SignUp() {
 
   const canSubmit = isValidUsername(username) && isValidEmail(email) && password.length >= 8;
 
+  /*
+   * SECTION: Create account
+   * WHAT: Validates username, checks availability, then auth.signUp with metadata.
+   * HOW: 1) isUsernameAvailable RPC 2) signUp with data.username 3) map taken/format errors
+   * INPUT: username, email, password fields
+   * OUTPUT: session + success alert, confirm-email flow, or usernameTaken / emailTaken alert
+   * NOTE: Migration 018 makes handle_new_user raise username_taken instead of user_<id>.
+   */
   async function handleSignUp() {
     setBusy(true);
     try {
       const normalizedEmail = normalizeEmail(email);
       const cleanUsername = username.trim();
+
+      // Reject taken names before creating an auth user (avoids orphan + random fallback).
+      const available = await isUsernameAvailable(cleanUsername);
+      if (!available) {
+        Alert.alert(t('auth.signUpFailed'), t('auth.usernameTaken'));
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
@@ -37,9 +60,7 @@ export default function SignUp() {
       if (error) {
         const msg = isDuplicateEmailSignUpError(error.message)
           ? t('auth.emailTaken')
-          : error.message.includes('profiles_username_lower_idx') ||
-              error.message.includes('profiles_nickname_lower_idx') ||
-              error.message.toLowerCase().includes('duplicate')
+          : isUsernameTakenSignUpError(error.message)
             ? t('auth.usernameTaken')
             : error.message.includes('profiles_username_format') || error.message.includes('profiles_nickname_format')
               ? t('auth.usernameInvalid')

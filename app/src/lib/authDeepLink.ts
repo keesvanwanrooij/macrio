@@ -1,9 +1,9 @@
 /*
  * SECTION: Auth redirect URLs + deep-link session exchange
- * WHAT: Confirm uses browser redirect env; password reset uses Expo Linking URL.
- * HOW: createURL for reset; parse incoming URL for PKCE code or tokens; exchange session.
+ * WHAT: Confirm uses browser redirect env; password reset + email-change use Expo Linking URLs.
+ * HOW: createURL for reset/email-change; parse incoming URL for PKCE code or tokens; exchange session.
  * INPUT: env EXPO_PUBLIC_AUTH_REDIRECT_URL; deep link URL from email
- * OUTPUT: redirect strings; session after exchange/setSession
+ * OUTPUT: redirect strings; session after exchange/setSession; kind = recovery | email_change | other
  *
  * IMPORTANT (Expo Go + Supabase):
  * Supabase Auth rejects redirect URLs that use private LAN IPs (e.g. exp://192.168.x.x:…).
@@ -11,7 +11,7 @@
  * with `--tunnel`, or a native/dev build with macrio:// (allow-listed).
  *
  * PKCE recovery emails often land as `…/auth/callback?code=…` without `type=recovery`.
- * Treat `/auth/callback` paths as recovery so we always show the set-password screen.
+ * Treat `/auth/callback` as recovery and `/auth/email-callback` as email change.
  */
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
@@ -53,17 +53,34 @@ export function getPasswordResetRedirectUrl(): string {
   return Linking.createURL('/auth/callback');
 }
 
+/** Deep link after confirm-to-new-address (email change). Distinct path from password reset. */
+export function getEmailChangeRedirectUrl(): string {
+  if (Constants.appOwnership !== 'expo') {
+    return Linking.createURL('/auth/email-callback', { scheme: 'macrio' });
+  }
+  return Linking.createURL('/auth/email-callback');
+}
+
 /** True when this redirect would be dropped by Supabase → Site URL fallback. */
 export function passwordResetRedirectNeedsTunnel(url: string = getPasswordResetRedirectUrl()): boolean {
   const host = hostnameFromRedirect(url);
   return host != null && isPrivateLanHostname(host);
 }
 
-/** True when this URL is our auth email callback (reset / confirm landing in-app). */
+export type AuthDeepLinkKind = 'recovery' | 'email_change' | 'other';
+
+/** Classify auth email deep links (path + type= query). */
+export function authDeepLinkKind(url: string): AuthDeepLinkKind {
+  if (/auth\/email-callback/i.test(url)) return 'email_change';
+  if (/[?&#]type=email_change(?:&|#|$)/i.test(url)) return 'email_change';
+  if (/auth\/callback/i.test(url)) return 'recovery';
+  if (/[?&#]type=recovery(?:&|#|$)/i.test(url)) return 'recovery';
+  return 'other';
+}
+
+/** True when this URL is our auth email callback (reset / email-change landing in-app). */
 export function isAuthCallbackUrl(url: string): boolean {
-  if (/auth\/callback/i.test(url)) return true;
-  if (/[?&#]type=recovery(?:&|#|$)/i.test(url)) return true;
-  return false;
+  return authDeepLinkKind(url) !== 'other';
 }
 
 function parseAuthParams(url: string): Record<string, string> {
@@ -86,12 +103,13 @@ function parseAuthParams(url: string): Record<string, string> {
 }
 
 /**
- * Create a session from an auth email deep link (password recovery or magic).
+ * Create a session from an auth email deep link (password recovery or email change).
  * Supports PKCE `code` and implicit `access_token` + `refresh_token`.
  */
 export async function createSessionFromUrl(url: string): Promise<{
   session: Awaited<ReturnType<typeof supabase.auth.setSession>>['data']['session'];
   isRecovery: boolean;
+  kind: AuthDeepLinkKind;
   error: string | null;
 }> {
   if (__DEV__) {
@@ -99,34 +117,34 @@ export async function createSessionFromUrl(url: string): Promise<{
   }
 
   const params = parseAuthParams(url);
+  const kind = authDeepLinkKind(url);
   const errorDescription = params.error_description || params.error;
   if (errorDescription) {
-    return { session: null, isRecovery: false, error: errorDescription };
+    return { session: null, isRecovery: false, kind, error: errorDescription };
   }
 
   // PKCE reset links often omit type=recovery; /auth/callback still means set-password.
-  const isRecovery =
-    params.type === 'recovery' || /auth\/callback/i.test(url);
+  const isRecovery = kind === 'recovery';
 
   if (params.code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(params.code);
     if (error) {
       if (__DEV__) console.warn('[auth] exchangeCodeForSession failed:', error.message);
-      return { session: null, isRecovery, error: error.message };
+      return { session: null, isRecovery, kind, error: error.message };
     }
-    return { session: data.session, isRecovery, error: null };
+    return { session: data.session, isRecovery, kind, error: null };
   }
 
   const access_token = params.access_token;
   const refresh_token = params.refresh_token;
   if (access_token && refresh_token) {
     const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
-    if (error) return { session: null, isRecovery, error: error.message };
-    return { session: data.session, isRecovery: isRecovery || true, error: null };
+    if (error) return { session: null, isRecovery, kind, error: error.message };
+    return { session: data.session, isRecovery, kind, error: null };
   }
 
   if (__DEV__) {
     console.warn('[auth] createSessionFromUrl: no code/tokens in URL');
   }
-  return { session: null, isRecovery: false, error: null };
+  return { session: null, isRecovery: false, kind, error: null };
 }

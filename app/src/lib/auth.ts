@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 export { getAuthRedirectUrl } from './authDeepLink';
 export {
   getPasswordResetRedirectUrl,
+  getEmailChangeRedirectUrl,
   createSessionFromUrl,
   passwordResetRedirectNeedsTunnel,
 } from './authDeepLink';
@@ -26,6 +27,36 @@ export function isDuplicateEmailSignUpError(message: string): boolean {
     m.includes('already been registered') ||
     m.includes('user already exists')
   );
+}
+
+/** Map trigger / unique-index failures for a taken username during sign-up. */
+export function isUsernameTakenSignUpError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('username_taken') ||
+    m.includes('profiles_username_lower_idx') ||
+    m.includes('profiles_nickname_lower_idx') ||
+    (m.includes('duplicate') && (m.includes('username') || m.includes('nickname')))
+  );
+}
+
+/*
+ * SECTION: Username availability (pre-signup)
+ * WHAT: Asks Postgres if this username is free before auth.signUp.
+ * HOW: RPC is_username_available (migration 018). On RPC failure, return true so
+ *      older projects still sign up; handle_new_user is the real safety net.
+ * INPUT: trimmed username string
+ * OUTPUT: true = free (or check skipped); false = taken
+ */
+export async function isUsernameAvailable(username: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_username_available', {
+    p_username: username.trim(),
+  });
+  if (error) {
+    console.warn('[auth] is_username_available failed:', error.message);
+    return true;
+  }
+  return data === true;
 }
 
 export type SignInFailure =

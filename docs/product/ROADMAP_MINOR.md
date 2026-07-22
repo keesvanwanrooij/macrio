@@ -42,19 +42,20 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 **Progress:**
 
-- [ ] Edit username in Settings
-- [ ] Change password in Settings
-- [ ] Change email address in Settings
+- [x] Edit username in Settings
+- [x] Change password in Settings
+- [x] Change email address in Settings
 - [x] App version shown in Settings (reads Expo config via expo-constants) — early founder testing
-- [ ] Shared native date picker (Expo / community datetimepicker)
-- [ ] DOB calendar picker (onboarding + profile) via shared picker
-- [ ] Tap date on **diary + reports** → jump to that day (week mode: jump to week containing the day); max = today; any past date
-- [ ] Date format setting (default **DD-MM-YYYY**; also YYYY-MM-DD, MM-DD-YYYY)
-- [ ] **Account deletion** in-app (soft delete + **30-day grace**, then purge; App Store / Play + GDPR)
-- [ ] **Download my data** (JSON + diary CSV: profile, diary, goals/body metrics, own feedback) in the same Settings privacy flow
+- [x] Shared native date picker (Expo / community datetimepicker)
+- [x] DOB calendar picker (onboarding + profile) via shared picker
+- [x] Tap date on **diary + reports** → jump to that day (week mode: jump to week containing the day); max = today; any past date
+- [x] Date format setting (default **DD-MM-YYYY**; also YYYY-MM-DD, MM-DD-YYYY)
+- [x] **Account deletion** in-app (soft delete + **30-day grace**, then purge; App Store / Play + GDPR)
+- [x] **Download my data** (JSON + diary CSV: profile, diary, goals/body metrics, own feedback) in the same Settings privacy flow
 
 ### After Group A — simplify / DRY / prune
 
+- [x] Signup: taken username shows `auth.usernameTaken` (no silent `user_<id>`); migration `018` + `is_username_available`
 - [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on areas touched by Group A (auth, settings/account, crash ops). Simplify duplicates, share helpers, remove dead/obsolete code paths. No new features.
 
 ---
@@ -267,6 +268,14 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 ---
 
 ## Released
+
+### v0.3.0 — Settings identity, dates + GDPR
+
+**App version:** `0.3.0` · See `CHANGELOG.md` · tag when founder commits + tags
+
+- [x] Username / password / email change in Settings
+- [x] Native date picker + date format preference
+- [x] Diary + reports date jump; GDPR export + soft-delete / 30-day purge cron
 
 ### v0.2.0 — auth emails + forgot password
 

@@ -2,6 +2,8 @@ export type AllergenState = 'contains' | 'may_contain' | 'free' | 'unknown';
 
 export type Portion = { name: string; grams: number };
 
+export type DateFormat = 'DD-MM-YYYY' | 'YYYY-MM-DD' | 'MM-DD-YYYY';
+
 export type Profile = {
   id: string;
   username: string;
@@ -9,6 +11,8 @@ export type Profile = {
   language: 'nl' | 'en';
   count_direction: 'up' | 'down';
   macro_display: 'overview' | 'focus';
+  /** Display preference; default DD-MM-YYYY (migration 017). Optional until migration runs. */
+  date_format?: DateFormat | null;
   goal_kcal: number | null;
   goal_carbs: number | null;
   goal_protein: number | null;
@@ -21,6 +25,8 @@ export type Profile = {
   weight_goal: 'lose' | 'maintain' | 'gain' | null;
   allergens: string[];
   onboarded: boolean;
+  /** Set when soft-delete requested; purge after 30 days (migration 017). */
+  deletion_requested_at?: string | null;
 };
 
 export type ProductVersion = {

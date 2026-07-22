@@ -31,4 +31,4 @@
   (ADR-003). The seed only covers generic staples.
 - All security is enforced with Postgres Row Level Security — see
   `docs/architecture/SECURITY.md`.
-- Account deletion is the `delete_account()` RPC (GDPR).
+- Account deletion (v0.3.0): `delete_account()` soft-deletes + bans; Edge Function `purge-deleted-accounts` (daily cron) calls `purge_due_deleted_accounts()` after 30 days. Export: `export_my_data()`. Run migration `017_settings_identity_gdpr.sql`.

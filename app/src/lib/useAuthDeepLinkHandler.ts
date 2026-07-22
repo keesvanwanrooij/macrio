@@ -1,15 +1,17 @@
 /*
  * SECTION: Root auth deep-link handler
- * WHAT: Processes password-reset (and similar) email links even when /auth/callback did not mount.
- * HOW: Listen for Linking URL → createSessionFromUrl → mark recovery → applySession → reset-password
- * INPUT: exp://…/auth/callback?code=… or macrio://auth/callback?…
- * OUTPUT: recovery session + navigation to /(auth)/reset-password
+ * WHAT: Processes password-reset and email-change links even when callback routes did not mount.
+ * HOW: Listen for Linking URL → createSessionFromUrl → route by kind
+ * INPUT: exp://…/auth/callback?code=… or …/auth/email-callback?… or macrio://…
+ * OUTPUT: recovery → reset-password; email_change → Settings (session applied)
  */
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
+import { Alert } from 'react-native';
 
 import { createSessionFromUrl, isAuthCallbackUrl } from './authDeepLink';
+import i18n from './i18n';
 import { setPasswordRecoveryPending } from './passwordRecovery';
 import { useSession } from './session';
 
@@ -41,10 +43,21 @@ export function useAuthDeepLinkHandler() {
         return;
       }
 
-      // Always treat /auth/callback success as recovery (show set-password UI).
-      setPasswordRecoveryPending(true);
       await applySession(result.session);
       if (cancelled) return;
+
+      if (result.kind === 'email_change') {
+        setPasswordRecoveryPending(false);
+        Alert.alert(
+          i18n.t('settings.emailChangeConfirmedTitle'),
+          i18n.t('settings.emailChangeConfirmedBody')
+        );
+        router.replace('/(tabs)/settings');
+        return;
+      }
+
+      // Password recovery (default for /auth/callback)
+      setPasswordRecoveryPending(true);
       router.replace('/(auth)/reset-password');
     }
 

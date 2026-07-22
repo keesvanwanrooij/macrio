@@ -2,6 +2,22 @@
 
 All notable changes to Macrio. Format: [Keep a Changelog](https://keepachangelog.com/), versioning per `docs/process/VERSIONING.md`.
 
+## [0.3.0] — 2026-07-22
+
+### Added
+
+- Settings: edit **username**, change **password** (current-password challenge), change **email** (confirm-to-new-address + `/auth/email-callback`)
+- Shared native **date picker** for DOB (onboarding/Settings calculator), diary day jump, and reports day/week jump (max = today)
+- Profile **date format** preference (default DD-MM-YYYY; also YYYY-MM-DD, MM-DD-YYYY)
+- GDPR **Download my data** (JSON via `export_my_data` + diary CSV; in-app share)
+- GDPR **Delete account**: double confirm, immediate auth ban + soft-delete, **30-day** purge via Edge Function `purge-deleted-accounts` + SQL `purge_due_deleted_accounts()`
+- Migration `017_settings_identity_gdpr.sql`
+
+### Changed
+
+- Diary / reports: tap date label opens picker (‹ › still step); cannot navigate past today
+- App version **0.3.0**
+
 ## [0.2.0] — 2026-07-22
 
 ### Added

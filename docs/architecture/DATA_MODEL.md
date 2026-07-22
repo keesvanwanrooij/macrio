@@ -33,8 +33,12 @@ product_versions ── allergen fields (EU-14)
 | activity_level | text null | `sedentary` \| `light` \| `moderate` \| `active` \| `very_active` |
 | weight_goal | text null | `lose` \| `maintain` \| `gain` (muscle) |
 | allergens | text[] | subset of EU-14 keys |
+| date_format | text | `'DD-MM-YYYY'` (default) \| `'YYYY-MM-DD'` \| `'MM-DD-YYYY'` — display only; storage stays ISO |
+| deletion_requested_at | timestamptz null | soft-delete mark; auth user banned immediately; purge after 30 days |
 
 Email addresses are unique per account via **Supabase Auth** (`auth.users.email`).
+
+**GDPR (v0.3.0):** `delete_account()` soft-deletes (sets `deletion_requested_at`, bans auth user). Edge cron `purge-deleted-accounts` calls `purge_due_deleted_accounts()` after 30 days (hard-deletes `auth.users`; personal rows cascade; `products.created_by` / `product_versions.edited_by` become null). `export_my_data()` returns JSON for in-app download (profile, diary, goal_revisions, feedback).
 
 ### goal_revisions (historical goals for reports)
 | column | type | notes |

@@ -9,7 +9,7 @@ module.exports = {
   expo: {
     name: 'Macrio',
     slug: 'macrio',
-    version: '0.2.0',
+    version: '0.3.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'macrio',
@@ -51,6 +51,7 @@ module.exports = {
           cameraPermission: 'Macrio uses the camera to scan food barcodes.',
         },
       ],
+      '@react-native-community/datetimepicker',
       'expo-localization',
       'expo-asset',
       [
