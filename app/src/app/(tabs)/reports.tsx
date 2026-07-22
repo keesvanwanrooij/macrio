@@ -1,10 +1,7 @@
 /*
  * SECTION: Reports (day / week)
  * WHAT: Day meal breakdown by selected macro; week bar chart with historical goals.
- * HOW: Swipe zones:
- *   - Day/Week switcher → toggle mode
- *   - Totals + diary (day) or chart + average (week) → cycle macros
- *   - Elsewhere (incl. date nav) → prev/next day or week
+ * HOW: Tap macro totals to select; ‹ › or swipe L/R shifts day/week; tap week bar → diary.
  * INPUT: diary_entries + goal_revisions for selected day or week
  * OUTPUT: Scrollable report UI; navigation to diary with ?date=
  */
@@ -31,27 +28,11 @@ import type { DiaryEntry, MacroTotals } from '../../lib/types';
 const GHOST_BAR_HEIGHT = 10;
 const CHART_TRACK_HEIGHT = 120;
 
-/** Horizontal pan: swipe left → +1, swipe right → -1. Vertical scroll still wins. */
-function horizontalSwipe(onSwipe: (direction: 1 | -1) => void) {
-  return Gesture.Pan()
-    .activeOffsetX([-24, 24])
-    .failOffsetY([-20, 20])
-    .runOnJS(true)
-    .onEnd((e) => {
-      if (e.translationX <= -40) onSwipe(1);
-      else if (e.translationX >= 40) onSwipe(-1);
-    });
-}
-
-function cycleMacroKey(cur: MacroKey, direction: 1 | -1): MacroKey {
-  const idx = MACRO_KEYS.indexOf(cur);
-  return MACRO_KEYS[(idx + direction + MACRO_KEYS.length) % MACRO_KEYS.length];
-}
-
 export default function Reports() {
   const { t, i18n } = useTranslation();
   const [mode, setMode] = useState<'day' | 'week'>('day');
   const [anchor, setAnchor] = useState(toDateString(new Date()));
+  const [selectedMacro, setSelectedMacro] = useState<MacroKey>('kcal');
   const [entries, setEntries] = useState<DiaryEntry[] | null>(null);
   const [revisions, setRevisions] = useState<GoalSnapshot[]>([]);
 
@@ -86,23 +67,19 @@ export default function Reports() {
     [mode]
   );
 
-  const toggleMode = useCallback(() => {
-    setMode((m) => (m === 'day' ? 'week' : 'day'));
-  }, []);
-
-  const modeGesture = useMemo(
+  // One swipe meaning: prev/next day or week (same as ‹ ›)
+  const dateGesture = useMemo(
     () =>
       Gesture.Pan()
         .activeOffsetX([-24, 24])
         .failOffsetY([-20, 20])
         .runOnJS(true)
         .onEnd((e) => {
-          if (Math.abs(e.translationX) >= 40) toggleMode();
+          if (e.translationX <= -40) shift(1);
+          else if (e.translationX >= 40) shift(-1);
         }),
-    [toggleMode]
+    [shift]
   );
-
-  const dateGesture = useMemo(() => horizontalSwipe(shift), [shift]);
 
   function label(): string {
     const locale = i18n.language === 'nl' ? 'nl-NL' : 'en-GB';
@@ -122,23 +99,20 @@ export default function Reports() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.l, flexGrow: 1 }}>
-      <GestureDetector gesture={modeGesture}>
-        <View style={styles.switcher}>
-          {(['day', 'week'] as const).map((m) => (
-            <Pressable
-              key={m}
-              style={[styles.switchBtn, mode === m && styles.switchActive]}
-              onPress={() => setMode(m)}
-            >
-              <Text style={[styles.switchText, mode === m && styles.switchTextActive]}>{t(`reports.${m}`)}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </GestureDetector>
+      <View style={styles.switcher}>
+        {(['day', 'week'] as const).map((m) => (
+          <Pressable
+            key={m}
+            style={[styles.switchBtn, mode === m && styles.switchActive]}
+            onPress={() => setMode(m)}
+          >
+            <Text style={[styles.switchText, mode === m && styles.switchTextActive]}>{t(`reports.${m}`)}</Text>
+          </Pressable>
+        ))}
+      </View>
 
-      {/* Date/week shift: nav + empty areas. Nested macro zones block this. */}
       <GestureDetector gesture={dateGesture}>
-        <View style={styles.dateSwipeArea}>
+        <View style={styles.body}>
           <View style={styles.nav}>
             <Pressable hitSlop={12} onPress={() => shift(-1)}>
               <Text style={styles.navArrow}>‹</Text>
@@ -150,13 +124,14 @@ export default function Reports() {
           </View>
 
           {mode === 'day' ? (
-            <DayReport entries={entries} dateGesture={dateGesture} />
+            <DayReport entries={entries} selected={selectedMacro} onSelect={setSelectedMacro} />
           ) : (
             <WeekReport
               entries={entries}
               weekStart={weekStart}
               revisions={revisions}
-              dateGesture={dateGesture}
+              selected={selectedMacro}
+              onSelect={setSelectedMacro}
             />
           )}
         </View>
@@ -167,36 +142,24 @@ export default function Reports() {
 
 /*
  * SECTION: Day report body
- * WHAT: Totals + meal list for one macro.
- * HOW: Swipe on 4 columns or diary list → cycle macros; date swipe is parent zone.
- * INPUT: entries for anchor day
- * OUTPUT: Selected macro meal values
+ * WHAT: Totals + meal list for the selected macro.
+ * HOW: Tap totals to change macro; parent swipe changes day.
+ * INPUT: entries, selected macro
+ * OUTPUT: Meal rows showing selected macro values
  */
 function DayReport({
   entries,
-  dateGesture,
+  selected,
+  onSelect,
 }: {
   entries: DiaryEntry[];
-  dateGesture: ReturnType<typeof horizontalSwipe>;
+  selected: MacroKey;
+  onSelect: (key: MacroKey) => void;
 }) {
   const { t } = useTranslation();
-  const [selected, setSelected] = useState<MacroKey>('kcal');
   const totals = sumEntries(entries);
   const slots = MAIN_SLOTS.flatMap((m) => [m, SNACK_AFTER[m]]);
   const unit = selected === 'kcal' ? t('common.kcal') : 'g';
-
-  const cycleMacro = useCallback((direction: 1 | -1) => {
-    setSelected((cur) => cycleMacroKey(cur, direction));
-  }, []);
-
-  const totalsMacroGesture = useMemo(
-    () => horizontalSwipe(cycleMacro).blocksExternalGesture(dateGesture),
-    [cycleMacro, dateGesture]
-  );
-  const diaryMacroGesture = useMemo(
-    () => horizontalSwipe(cycleMacro).blocksExternalGesture(dateGesture),
-    [cycleMacro, dateGesture]
-  );
 
   if (entries.length === 0) {
     return <Text style={styles.empty}>{t('reports.noData')}</Text>;
@@ -204,33 +167,25 @@ function DayReport({
 
   return (
     <>
-      <GestureDetector gesture={totalsMacroGesture}>
-        <View>
-          <Card>
-            <TotalsRow totals={totals} selected={selected} onSelect={setSelected} />
-          </Card>
-        </View>
-      </GestureDetector>
-      <GestureDetector gesture={diaryMacroGesture}>
-        <View>
-          <SectionTitle>{t('diary.title')}</SectionTitle>
-          <Card>
-            {slots.map((slot) => {
-              const slotEntries = entries.filter((e) => e.meal_slot === slot);
-              if (slotEntries.length === 0) return null;
-              const st = sumEntries(slotEntries);
-              return (
-                <View key={slot} style={styles.mealRow}>
-                  <Text style={styles.mealName}>{t(slotLabelKey(slot))}</Text>
-                  <Text style={styles.mealValue}>
-                    {fmt(st[selected])} {unit}
-                  </Text>
-                </View>
-              );
-            })}
-          </Card>
-        </View>
-      </GestureDetector>
+      <Card>
+        <TotalsRow totals={totals} selected={selected} onSelect={onSelect} />
+      </Card>
+      <SectionTitle>{t('diary.title')}</SectionTitle>
+      <Card>
+        {slots.map((slot) => {
+          const slotEntries = entries.filter((e) => e.meal_slot === slot);
+          if (slotEntries.length === 0) return null;
+          const st = sumEntries(slotEntries);
+          return (
+            <View key={slot} style={styles.mealRow}>
+              <Text style={styles.mealName}>{t(slotLabelKey(slot))}</Text>
+              <Text style={styles.mealValue}>
+                {fmt(st[selected])} {unit}
+              </Text>
+            </View>
+          );
+        })}
+      </Card>
     </>
   );
 }
@@ -238,36 +193,37 @@ function DayReport({
 /*
  * SECTION: Week report chart
  * WHAT: Macro bars, ghost empty days, historical goal line/ticks, avg vs goal.
- * HOW: Swipe chart or average row → cycle macros; parent zone shifts weeks.
- * INPUT: week entries, weekStart, goal revisions
+ * HOW: Tap totals to change macro; tap bar opens diary; parent swipe shifts week.
+ * INPUT: week entries, weekStart, goal revisions, selected macro
  * OUTPUT: Chart + average totals row
  */
 function WeekReport({
   entries,
   weekStart,
   revisions,
-  dateGesture,
+  selected,
+  onSelect,
 }: {
   entries: DiaryEntry[];
   weekStart: string;
   revisions: GoalSnapshot[];
-  dateGesture: ReturnType<typeof horizontalSwipe>;
+  selected: MacroKey;
+  onSelect: (key: MacroKey) => void;
 }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { profile } = useSession();
-  const [chartMacro, setChartMacro] = useState<MacroKey>('kcal');
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const perDay = useMemo(
     () => days.map((d) => sumEntries(entries.filter((e) => e.date === d))),
     [days, entries]
   );
-  const values = perDay.map((p) => p[chartMacro]);
+  const values = perDay.map((p) => p[selected]);
 
   const dayGoals = useMemo(
-    () => days.map((d) => goalValue(resolveGoalForDate(revisions, d), chartMacro)),
-    [days, revisions, chartMacro]
+    () => days.map((d) => goalValue(resolveGoalForDate(revisions, d), selected)),
+    [days, revisions, selected]
   );
 
   const goalsUniform = useMemo(() => {
@@ -292,27 +248,14 @@ function WeekReport({
   };
 
   const locale = i18n.language === 'nl' ? 'nl-NL' : 'en-GB';
-  const unit = chartMacro === 'kcal' ? t('common.kcal') : 'g';
-  const avgVal = avg[chartMacro];
+  const unit = selected === 'kcal' ? t('common.kcal') : 'g';
+  const avgVal = avg[selected];
   const avgGoal =
     uniformGoal ??
     (() => {
       const gs = dayGoals.filter((g): g is number => g != null && g > 0);
       return gs.length ? gs.reduce((a, b) => a + b, 0) / gs.length : null;
     })();
-
-  const cycleMacro = useCallback((direction: 1 | -1) => {
-    setChartMacro((cur) => cycleMacroKey(cur, direction));
-  }, []);
-
-  const chartMacroGesture = useMemo(
-    () => horizontalSwipe(cycleMacro).blocksExternalGesture(dateGesture),
-    [cycleMacro, dateGesture]
-  );
-  const avgMacroGesture = useMemo(
-    () => horizontalSwipe(cycleMacro).blocksExternalGesture(dateGesture),
-    [cycleMacro, dateGesture]
-  );
 
   function openDiary(date: string) {
     router.push({ pathname: '/(tabs)', params: { date } });
@@ -354,67 +297,57 @@ function WeekReport({
 
   return (
     <>
-      <GestureDetector gesture={chartMacroGesture}>
-        <View>
-          <Card>
-            <Text style={styles.chartTitle}>
-              {macroDisplayLabel(t, chartMacro, false)}
-              {chartMacro !== 'kcal' ? ` (${unit})` : ''}
-            </Text>
-            <View style={styles.chart}>
-              {goalLineBottom != null ? (
-                <View
-                  pointerEvents="none"
-                  style={[styles.goalLine, { bottom: goalLineBottom + 16 }]}
-                />
-              ) : null}
-              {days.map((d, i) => {
-                const v = values[i];
-                const empty = v <= 0;
-                const barH = empty
-                  ? GHOST_BAR_HEIGHT
-                  : Math.max(2, Math.round((v / maxVal) * CHART_TRACK_HEIGHT));
-                const dayGoal = dayGoals[i];
-                const tickH =
-                  !goalsUniform && dayGoal != null && dayGoal > 0
-                    ? (dayGoal / maxVal) * CHART_TRACK_HEIGHT
-                    : null;
+      <Card>
+        <Text style={styles.chartTitle}>
+          {macroDisplayLabel(t, selected, false)}
+          {selected !== 'kcal' ? ` (${unit})` : ''}
+        </Text>
+        <View style={styles.chart}>
+          {goalLineBottom != null ? (
+            <View
+              pointerEvents="none"
+              style={[styles.goalLine, { bottom: goalLineBottom + 16 }]}
+            />
+          ) : null}
+          {days.map((d, i) => {
+            const v = values[i];
+            const empty = v <= 0;
+            const barH = empty
+              ? GHOST_BAR_HEIGHT
+              : Math.max(2, Math.round((v / maxVal) * CHART_TRACK_HEIGHT));
+            const dayGoal = dayGoals[i];
+            const tickH =
+              !goalsUniform && dayGoal != null && dayGoal > 0
+                ? (dayGoal / maxVal) * CHART_TRACK_HEIGHT
+                : null;
 
-                return (
-                  <Pressable key={d} style={styles.chartCol} onPress={() => openDiary(d)}>
-                    <Text style={styles.barValue} numberOfLines={1}>
-                      {!empty ? fmt(v) : ''}
-                    </Text>
-                    <View style={[styles.barTrack, { height: CHART_TRACK_HEIGHT }]}>
-                      {tickH != null ? (
-                        <View
-                          pointerEvents="none"
-                          style={[styles.goalTick, { bottom: tickH - 1 }]}
-                        />
-                      ) : null}
-                      <View
-                        style={[styles.bar, empty && styles.barGhost, { height: barH }]}
-                      />
-                    </View>
-                    <Text style={styles.barLabel}>
-                      {new Date(d + 'T12:00:00').toLocaleDateString(locale, { weekday: 'narrow' })}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Text style={styles.avgLine}>{avgLine()}</Text>
-          </Card>
+            return (
+              <Pressable key={d} style={styles.chartCol} onPress={() => openDiary(d)}>
+                <Text style={styles.barValue} numberOfLines={1}>
+                  {!empty ? fmt(v) : ''}
+                </Text>
+                <View style={[styles.barTrack, { height: CHART_TRACK_HEIGHT }]}>
+                  {tickH != null ? (
+                    <View
+                      pointerEvents="none"
+                      style={[styles.goalTick, { bottom: tickH - 1 }]}
+                    />
+                  ) : null}
+                  <View style={[styles.bar, empty && styles.barGhost, { height: barH }]} />
+                </View>
+                <Text style={styles.barLabel}>
+                  {new Date(d + 'T12:00:00').toLocaleDateString(locale, { weekday: 'narrow' })}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
-      </GestureDetector>
-      <GestureDetector gesture={avgMacroGesture}>
-        <View>
-          <SectionTitle>{t('reports.average')}</SectionTitle>
-          <Card>
-            <TotalsRow totals={avg} selected={chartMacro} onSelect={setChartMacro} />
-          </Card>
-        </View>
-      </GestureDetector>
+        <Text style={styles.avgLine}>{avgLine()}</Text>
+      </Card>
+      <SectionTitle>{t('reports.average')}</SectionTitle>
+      <Card>
+        <TotalsRow totals={avg} selected={selected} onSelect={onSelect} />
+      </Card>
     </>
   );
 }
@@ -425,8 +358,8 @@ function TotalsRow({
   onSelect,
 }: {
   totals: MacroTotals;
-  selected?: MacroKey;
-  onSelect?: (key: MacroKey) => void;
+  selected: MacroKey;
+  onSelect: (key: MacroKey) => void;
 }) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
@@ -436,8 +369,12 @@ function TotalsRow({
     <View style={{ flexDirection: 'row' }}>
       {MACRO_KEYS.map((key) => {
         const active = selected === key;
-        const content = (
-          <>
+        return (
+          <Pressable
+            key={key}
+            style={[styles.totalCell, active && styles.totalCellActive]}
+            onPress={() => onSelect(key)}
+          >
             <Text style={[styles.totalValue, active && { color: colors.primaryDark }]}>
               {fmt(totals[key])}
               {key === 'kcal' ? '' : ' g'}
@@ -450,23 +387,7 @@ function TotalsRow({
             >
               {macroDisplayLabel(t, key, compact)}
             </Text>
-          </>
-        );
-        if (onSelect) {
-          return (
-            <Pressable
-              key={key}
-              style={[styles.totalCell, active && styles.totalCellActive]}
-              onPress={() => onSelect(key)}
-            >
-              {content}
-            </Pressable>
-          );
-        }
-        return (
-          <View key={key} style={styles.totalCell}>
-            {content}
-          </View>
+          </Pressable>
         );
       })}
     </View>
@@ -475,7 +396,7 @@ function TotalsRow({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  dateSwipeArea: { flexGrow: 1, minHeight: 280 },
+  body: { flexGrow: 1, minHeight: 280 },
   switcher: {
     flexDirection: 'row',
     backgroundColor: colors.card,

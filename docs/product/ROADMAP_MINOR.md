@@ -37,7 +37,9 @@
 
 - [ ] Edit username in Settings
 - [x] App version shown in Settings (reads `app.json` via expo-constants) — early in 1.0.0 testing
-- [ ] DOB calendar picker (onboarding + profile)
+- [ ] Shared native date picker (Expo / community datetimepicker)
+- [ ] DOB calendar picker (onboarding + profile) via shared picker
+- [ ] Tap date on **diary + reports** → jump to that day (week mode: jump to week containing the day); max = today; any past date
 - [ ] Date format setting
 
 
@@ -65,7 +67,7 @@
 - [ ] Macro totals per meal
 - [ ] Progress toward daily kcal/macros on diary (meal-level remaining)
 - [x] Diary header progress bars + stronger totals; focus swipe L/R; long-press → overview; overview does not tap-toggle — early in 1.0.0 testing
-- [x] Reports: selectable macros, ghost bars, historical goals, zoned swipes (mode / macros / date), tap bar → diary (migration `014`)
+- [x] Reports: selectable macros (tap), ghost bars, historical goals, swipe/‹ › for day·week, tap bar → diary (migration `014`)
 
 
 
