@@ -11,7 +11,7 @@ Product **melden** (wrong macros/allergens) is **not** feedback — it goes to t
 ## Triage (founder, now)
 
 1. Read Supabase **Table Editor → `feedback`** and open GitHub issues.
-2. Promote each item to **Inbox** or **Planned** in [`ROADMAP_MINOR.md`](../product/ROADMAP_MINOR.md), [`ROADMAP.md`](../product/ROADMAP.md), [`notes.md`](../../project-context/notes.md) (founder ideas), or a dedicated file under `project-context/`.
+2. Promote each item to **Inbox** or **Planned** in [`ROADMAP_MINOR.md`](../product/ROADMAP_MINOR.md), [`ROADMAP.md`](../product/ROADMAP.md), [`notes.md`](../founder/notes.md) (founder ideas), or a dedicated file under `docs/founder/`.
 3. Delete the Supabase row or close the GitHub issue once captured.
 4. Tick progress in the roadmap checklists; bump **app version + git tag only when a patch ships** (`VERSIONING.md`).
 
@@ -31,7 +31,7 @@ Product **melden** (wrong macros/allergens) is **not** feedback — it goes to t
 
 ## Later (not decided)
 
-Problem and options: [`project-context/community-feedback-future.md`](../../project-context/community-feedback-future.md). Nothing committed to the roadmap until we pick an approach.
+Problem and options: [`docs/founder/community-feedback-future.md`](../founder/community-feedback-future.md). Nothing committed to the roadmap until we pick an approach.
 
 ## Principle
 

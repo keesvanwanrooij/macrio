@@ -1,6 +1,6 @@
 # Community Governance
 
-> Data governance ships v1.2; people governance (social features) ships v2.0. Design details in `docs/architecture/TRUST_GRAPH.md`.
+> Data governance ships v1.2; people governance (social features) ships v1.4. Design details in `docs/architecture/TRUST_GRAPH.md`.
 
 ## Philosophy
 
@@ -12,7 +12,7 @@ Macrio runs without developer interference. The community is the moderator, thro
 - Reports past a trust-weighted threshold trigger a community vote: keep / rollback / delete.
 - Same machinery later applies to exercises and pinned tutorial videos (v1.1+ content).
 
-## People governance (v2.0)
+## People governance (v1.4)
 
 - Trust-weighted majority votes can mute/timeout users in community spaces.
 - Progressive penalties: first offense 1 day, building up with repeat offenses; no reset of the record.

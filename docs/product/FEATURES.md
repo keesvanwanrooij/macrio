@@ -14,6 +14,7 @@ Detailed specs live in `features/`, one file per feature, written before the ver
 - Body metrics & progress photos — v1.1
 - Trust graph & voting — v1.2 (design notes: `../architecture/TRUST_GRAPH.md`)
 - Health sync — v1.2 (design notes: `../architecture/INTEGRATIONS.md`)
-- Meal planning, questionnaire — v1.3
-- Community posts/groups/chat, profiles & XP — v2.0
-- AI photo logging — v2.x
+- Meal planning, questionnaire, reports IA, workout heatmap — v1.3
+- Community posts/groups/chat, profiles & XP / gamification — v1.4
+- Funding & Supporter (pay-what-you-want) — v1.5
+- AI photo logging + AI coach — v2.0

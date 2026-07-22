@@ -20,7 +20,7 @@ An open-source (AGPL-3.0), bilingual (nl/en), community-governed food & fitness 
 
 ## Non-goals for v1.0
 
-See `NON_GOALS.md`. Notably: workouts (v1.1), trust graph (v1.2), community/social (v2.0), AI photo logging (paid, future).
+See `NON_GOALS.md`. Notably: workouts (v1.1), trust graph (v1.2), planning (v1.3), community/social (v1.4), funding (v1.5), AI photo + coach (v2.0, paid).
 
 ## Target users
 

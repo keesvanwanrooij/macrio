@@ -16,6 +16,10 @@ android/app/build/
 .env
 .env.*
 !.env.example
+*.pem
+google-services.json
+GoogleService-Info.plist
+sentry.properties
 
 # Supabase local
 backend/supabase/.temp/
@@ -25,9 +29,18 @@ backend/supabase/.temp/
 Thumbs.db
 .idea/
 .vscode/
+*.log
+npm-debug.log*
+yarn-error.log*
 
-# Cursor — commit shared rules in .cursor/rules/, ignore personal/local files
+# Cursor (local only: rules, plans, personal settings)
 .cursorrules
-.cursor/*
-!.cursor/rules/
-!.cursor/rules/**
+.cursor/
+# Founder scratchpad + product boards (local only; not published with the app)
+docs/founder/
+docs/product/ROADMAP.md
+docs/product/ROADMAP_MINOR.md
+docs/product/plans/
+
+# Accidental root lockfile (app/ is the Expo package)
+/package-lock.json

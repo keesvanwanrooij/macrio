@@ -20,7 +20,7 @@
 - Default product version = highest **trust-weighted** like score (v1.0 uses raw likes; same column, new formula).
 - Reports trigger a vote when report count (trust-weighted) passes threshold → outcome: keep / rollback to earlier version / delete entry.
 
-## Community moderation (v2.0, people not data)
+## Community moderation (v1.4, people not data)
 
 - Majority vote can mute/timeout users; progressive durations (1 day, building up), vote weights reset monthly, timeout history permanent on profile.
 - Same weighted-vote machinery reused from data governance.

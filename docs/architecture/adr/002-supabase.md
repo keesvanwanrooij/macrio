@@ -13,7 +13,7 @@ Supabase: Postgres + Auth + Storage + Row Level Security; Edge Functions where n
 ## Reasons
 
 1. **Trust graph & voting are relational math.** Weighted vote scores are simple SQL joins/aggregates; in Firebase this is a live-computation and data-duplication nightmare where a product edit would need updates in dozens of denormalized places (risking wrong calorie counts).
-2. **Community structures are hard relations.** Facebook-like posts, WhatsApp-like groups with admins, Discord-like channels (v2.0) map directly onto relational tables.
+2. **Community structures are hard relations.** Facebook-like posts, WhatsApp-like groups with admins, Discord-like channels (v1.4) map directly onto relational tables.
 3. **Developer-free democracy needs database rules.** Automated mutes/timeouts after X votes are Postgres triggers and functions — no server babysitting.
 4. **Auth included:** email + Google + Apple sign-in out of the box (account required at startup).
 5. **Storage included:** product photos and feedback screenshots.

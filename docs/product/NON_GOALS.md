@@ -10,10 +10,11 @@
 | Health sync (Health Connect, Apple Health, Samsung Health) | v1.2 | Native modules + store review complexity |
 | Meal planning | v1.3 | Depends on a mature food database |
 | Optional onboarding questionnaire (Yazio-style) | v1.3 | Manual goals are fine for early adopters |
-| Community posts, groups, chat, democratic moderation | v2.0 | Social is a product in itself |
-| Profiles with XP/levels/badges, life-wheel | v2.0 | Ships with community |
-| Muscle-intensity body heatmap | v2.0 | Ships after workouts mature |
-| AI photo meal logging | v2.x, paid | Real infra cost; needs security work; the only planned paid feature |
+| Workout heatmap | v1.3 | Needs workouts first (v1.1) |
+| Community posts, groups, chat, democratic moderation | v1.4 | Social is a product in itself |
+| Profiles with XP/levels/badges, life-wheel, gamification | v1.4 | Ships with community |
+| Supporter pay-what-you-want / funding notices | v1.5 | Ask only after the product has long-term users |
+| AI photo meal logging + AI coach | v2.0, paid | Real infra cost; needs security work; the only planned paid features |
 | NEVO (RIVM) import | Never (not a goal) | OFF + curated parent seed + community; avoid second DB/license pipeline |
 | kJ / imperial units | On demand | Metric+kcal fits NL/EU launch |
 | Web app | Community-driven later | React Native for Web keeps the door open |

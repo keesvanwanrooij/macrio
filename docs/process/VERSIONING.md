@@ -6,9 +6,9 @@
 
 | Range | Meaning |
 |---|---|
-| **0.x.y** | Pre-public. API and UX may change freely. Patches on the minor board: `0.1.0` … `0.14.0`. |
+| **0.x.y** | Pre-public. API and UX may change freely. Patches on the minor board: `0.1.0` … `0.15.0`. |
 | **1.0.0** | First **public** release (stores / open users). |
-| **1.1+** | New product areas after public (`ROADMAP.md`: workouts, trust, community, …). |
+| **1.1+** | New product areas after public (`ROADMAP.md`: workouts, trust, community, funding, …). |
 | **2.0** | Paid intelligence (AI photo + AI coach). |
 
 Pre-public detail: [`docs/product/ROADMAP_MINOR.md`](../product/ROADMAP_MINOR.md).  

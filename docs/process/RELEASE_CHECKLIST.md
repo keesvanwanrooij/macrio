@@ -24,11 +24,11 @@
   - [ ] Production `EXPO_PUBLIC_AUTH_REDIRECT_URL` matches Site URL
   - [ ] Confirm email **ON**; branded templates still pasted
   - [ ] Smoke on a **store/preview build**: confirm signup + forgot password → **New password** screen opens (not home/tabs) → save → sign in. Open mail only on the phone
-  - [ ] **Forgot-password abuse (launch):** rate limits (IP + account + spray), cooldown soft lock, progressive IP backoff, light send jitter (see `ROADMAP.md` v1.0.0)
   - See `ROADMAP.md` v1.0.0 and `SETUP.md`
+- [ ] Confirm pre-public **v0.15.0** analytics + forgot-password abuse controls are shipped (`ROADMAP_MINOR.md`)
 
 ## After release
 
 - [ ] Monitor feedback table + crash reports for 48h
-- [ ] Watch forgot-password volume / multi-account sprays; escalate to **v1.5** CAPTCHA / honeypot / ops blocks if needed
+- [ ] Watch forgot-password volume / multi-account sprays (controls from **v0.15.0**; tune CAPTCHA/ops gates if needed)
 - [ ] Patch release if a blocker emerges
