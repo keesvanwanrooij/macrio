@@ -60,6 +60,11 @@ export type DiaryEntry = {
   protein: number;
   fat: number;
   logged_at: string;
+  /**
+   * Quick-add only: allergen key → contains | free (unknown = omitted).
+   * Product-linked rows leave this empty and use product_versions.allergens.
+   */
+  allergens?: Record<string, AllergenState> | null;
 };
 
 export type MacroTotals = { kcal: number; carbs: number; protein: number; fat: number };

@@ -13,7 +13,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { stateColor } from '../../components/AllergenBadges';
+import { AllergenStateChip } from '../../components/AllergenBadges';
 import { Button, Field } from '../../components/ui';
 import { EU_ALLERGENS } from '../../lib/allergens';
 import { digitsOnly, validateRetailBarcode, barcodeErrorKey } from '../../lib/barcode';
@@ -302,19 +302,14 @@ export default function CreateProduct() {
       <Text style={styles.section}>{t('product.allergensLabel')}</Text>
       <Text style={styles.hint}>{t('product.allergenHint')}</Text>
       <View style={styles.allergenWrap}>
-        {EU_ALLERGENS.map((key) => {
-          const state = allergens[key] ?? 'unknown';
-          const c = stateColor(state);
-          return (
-            <Pressable
-              key={key}
-              style={[styles.allergenChip, { backgroundColor: c.bg }]}
-              onPress={() => cycleAllergen(key)}
-            >
-              <Text style={{ color: c.fg, fontWeight: '600', fontSize: 13 }}>{t(`allergens.${key}`)}</Text>
-            </Pressable>
-          );
-        })}
+        {EU_ALLERGENS.map((key) => (
+          <AllergenStateChip
+            key={key}
+            allergenKey={key}
+            state={allergens[key] ?? 'unknown'}
+            onPress={() => cycleAllergen(key)}
+          />
+        ))}
       </View>
 
       <View style={{ height: spacing.l }} />
@@ -393,9 +388,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
   },
   allergenWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.s },
-  allergenChip: {
-    borderRadius: radius.full,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
 });

@@ -39,3 +39,9 @@
 | v1.0.8 | [parent catalog + Dutch seed](v1.0.8-parent-catalog.md) |
 | v1.0.9 | [create product UX](v1.0.9-create-product-ux.md) |
 | v1.0.10 | [diary & search QoL](v1.0.10-diary-search-qol.md) |
+
+## Major / later plans
+
+| Item | Plan |
+|---|---|
+| v1.3 allergen reports | [allergen-reports](allergen-reports.md) |

@@ -87,6 +87,7 @@ Default display version = max(like_count), tie → newest. (View: `current_produ
 | product_version_id | uuid fk null | null for quick-add |
 | grams | numeric | |
 | kcal / carbs / protein / fat | numeric | **snapshot at log time** (history never changes) |
+| allergens | jsonb | quick-add only: `{ gluten: "contains" }` etc.; `{}` for product rows |
 | logged_at | timestamptz | feeds global recents |
 
 Recents = latest distinct products from user's diary_entries.

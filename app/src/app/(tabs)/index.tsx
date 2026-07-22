@@ -7,13 +7,15 @@ import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } 
 import { useTranslation } from 'react-i18next';
 
 import { MacroSummary } from '../../components/MacroSummary';
+import { AllergenStateChip } from '../../components/AllergenBadges';
 import { Loading } from '../../components/ui';
+import { diaryContainsHits } from '../../lib/allergens';
 import { type MacroKey } from '../../lib/macroLabels';
 import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDateString } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
-import type { DiaryEntry } from '../../lib/types';
+import type { AllergenState, DiaryEntry } from '../../lib/types';
 
 /** Right-side / meal-total amount for the focused macro (1A: number + unit). */
 function formatFocusedAmount(value: number, key: MacroKey): string {
@@ -29,6 +31,10 @@ export default function Diary() {
   const [date, setDate] = useState(toDateString(new Date()));
   const [entries, setEntries] = useState<DiaryEntry[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  /** version_id → allergens map for product-linked rows (diary pills). */
+  const [versionAllergens, setVersionAllergens] = useState<
+    Record<string, Record<string, AllergenState>>
+  >({});
   /** Which macro the focus header is on (drives meal row right values). */
   const [focusMacro, setFocusMacro] = useState<MacroKey>('kcal');
 
@@ -46,7 +52,26 @@ export default function Diary() {
       .select('*')
       .eq('date', date)
       .order('logged_at');
-    setEntries((data as DiaryEntry[]) ?? []);
+    const rows = (data as DiaryEntry[]) ?? [];
+    setEntries(rows);
+
+    // Load allergen maps for product versions (contains → red pills)
+    const ids = [
+      ...new Set(rows.map((e) => e.product_version_id).filter((id): id is string => !!id)),
+    ];
+    if (ids.length === 0) {
+      setVersionAllergens({});
+      return;
+    }
+    const { data: versions } = await supabase
+      .from('product_versions')
+      .select('id, allergens')
+      .in('id', ids);
+    const map: Record<string, Record<string, AllergenState>> = {};
+    for (const v of versions ?? []) {
+      map[v.id as string] = (v.allergens ?? {}) as Record<string, AllergenState>;
+    }
+    setVersionAllergens(map);
   }, [date]);
 
   useFocusEffect(
@@ -97,6 +122,12 @@ export default function Diary() {
       ? formatFocusedAmount(Number(entry[focusMacro] ?? 0), focusMacro)
       : fmt(entry.kcal);
 
+    const allergenHits = diaryContainsHits(
+      entry,
+      profile?.allergens ?? [],
+      entry.product_version_id ? versionAllergens[entry.product_version_id] : null
+    );
+
     return (
       <Pressable
         key={entry.id}
@@ -109,12 +140,21 @@ export default function Diary() {
         onLongPress={() => confirmDelete(entry)}
       >
         <View style={{ flex: 1 }}>
-          <Text style={styles.entryName} numberOfLines={1}>
-            {entry.custom_name ?? '…'}
-          </Text>
-          {meta ? <Text style={styles.entryMeta}>{meta}</Text> : null}
+          <View style={styles.entryTop}>
+            <View style={{ flex: 1 }}>
+              <View style={styles.entryNameRow}>
+                <Text style={styles.entryName} numberOfLines={1}>
+                  {entry.custom_name ?? '…'}
+                </Text>
+                {allergenHits.map((key) => (
+                  <AllergenStateChip key={key} allergenKey={key} state="contains" size="compact" />
+                ))}
+              </View>
+              {meta ? <Text style={styles.entryMeta}>{meta}</Text> : null}
+            </View>
+            <Text style={styles.entryKcal}>{rightValue}</Text>
+          </View>
         </View>
-        <Text style={styles.entryKcal}>{rightValue}</Text>
       </Pressable>
     );
   }
@@ -252,13 +292,18 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   entryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: spacing.s,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  entryName: { fontSize: 15, color: colors.text, fontWeight: '600' },
+  entryTop: { flexDirection: 'row', alignItems: 'center' },
+  entryNameRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
+  entryName: { fontSize: 15, color: colors.text, fontWeight: '600', flexShrink: 1 },
   entryMeta: { fontSize: 12, color: colors.faint, marginTop: 1 },
   entryKcal: { fontSize: 15, fontWeight: '700', color: colors.primaryDark, marginLeft: spacing.m },
   addFood: { marginTop: spacing.s },

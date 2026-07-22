@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { stateColor } from '../../components/AllergenBadges';
+import { AllergenStateChip } from '../../components/AllergenBadges';
 import { Button, Card, Loading, SectionTitle } from '../../components/ui';
 import { EU_ALLERGENS } from '../../lib/allergens';
 import { fmt, versionName } from '../../lib/nutrition';
@@ -219,17 +219,11 @@ export default function ProductPage() {
         <Card>
           {sortedAllergens.map((key) => {
             const state: AllergenState = current.allergens?.[key] ?? 'unknown';
-            const c = stateColor(state);
             const mine = userAllergens.includes(key);
             return (
               <View key={key} style={styles.allergenRow}>
-                <Text style={[styles.allergenName, mine && { fontWeight: '800' }]}>
-                  {mine ? '★ ' : ''}
-                  {t(`allergens.${key}`)}
-                </Text>
-                <View style={[styles.allergenState, { backgroundColor: c.bg }]}>
-                  <Text style={{ color: c.fg, fontWeight: '700', fontSize: 12 }}>{t(`allergens.${state}`)}</Text>
-                </View>
+                {mine ? <Text style={styles.allergenMine}>★</Text> : null}
+                <AllergenStateChip allergenKey={key} state={state} size="compact" />
               </View>
             );
           })}
@@ -343,12 +337,11 @@ const styles = StyleSheet.create({
   portionLine: { fontSize: 13, color: colors.muted, marginTop: 4 },
   allergenRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.s,
     paddingVertical: 6,
   },
-  allergenName: { fontSize: 14, color: colors.text },
-  allergenState: { borderRadius: radius.s, paddingHorizontal: 8, paddingVertical: 3 },
+  allergenMine: { color: colors.warn, fontWeight: '800', fontSize: 14 },
   versionRow: {
     flexDirection: 'row',
     alignItems: 'center',

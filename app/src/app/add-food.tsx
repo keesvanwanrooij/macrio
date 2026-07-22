@@ -7,6 +7,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +16,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { BarcodeScannerFrame } from '../components/BarcodeScannerFrame';
+import { AllergenStateChip } from '../components/AllergenBadges';
 import { SelectableProductRow } from '../components/SelectableProductRow';
 import { Button, Field } from '../components/ui';
 import { lookupKeys, toEan13 } from '../lib/barcode';
@@ -23,7 +25,7 @@ import { parseNum } from '../lib/nutrition';
 import { useSession } from '../lib/session';
 import { supabase } from '../lib/supabase';
 import { colors, radius, spacing } from '../lib/theme';
-import type { ProductVersion } from '../lib/types';
+import type { AllergenState, ProductVersion } from '../lib/types';
 
 type Tab = 'scan' | 'search' | 'recent' | 'quick';
 
@@ -86,7 +88,9 @@ export default function AddFood() {
             userAllergens={profile?.allergens ?? []}
           />
         )}
-        {tab === 'quick' && <QuickTab slot={slot} date={date} />}
+        {tab === 'quick' && (
+          <QuickTab slot={slot} date={date} userAllergens={profile?.allergens ?? []} />
+        )}
       </View>
       {selectedIds.length > 0 && (tab === 'search' || tab === 'recent') ? (
         <View style={styles.multiBar}>
@@ -394,7 +398,17 @@ function RecentsTab({
 }
 
 // ---------- Quick add (no product) ----------
-function QuickTab({ slot, date }: { slot: string; date?: string }) {
+const ALLERGEN_CYCLE: AllergenState[] = ['unknown', 'contains', 'free'];
+
+function QuickTab({
+  slot,
+  date,
+  userAllergens,
+}: {
+  slot: string;
+  date?: string;
+  userAllergens: string[];
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const { session } = useSession();
@@ -404,6 +418,19 @@ function QuickTab({ slot, date }: { slot: string; date?: string }) {
   const [protein, setProtein] = useState('');
   const [fat, setFat] = useState('');
   const [busy, setBusy] = useState(false);
+  /** Quick-add allergen map; unknown keys are omitted (default grey). */
+  const [allergens, setAllergens] = useState<Record<string, AllergenState>>({});
+
+  function cycleAllergen(key: string) {
+    setAllergens((cur) => {
+      const state = cur[key] ?? 'unknown';
+      const next = ALLERGEN_CYCLE[(ALLERGEN_CYCLE.indexOf(state) + 1) % ALLERGEN_CYCLE.length];
+      const copy = { ...cur };
+      if (next === 'unknown') delete copy[key];
+      else copy[key] = next;
+      return copy;
+    });
+  }
 
   async function add() {
     if (!session) return;
@@ -417,6 +444,7 @@ function QuickTab({ slot, date }: { slot: string; date?: string }) {
       carbs: parseNum(carbs),
       protein: parseNum(protein),
       fat: parseNum(fat),
+      allergens,
     });
     setBusy(false);
     if (error) Alert.alert(t('common.error'), error.message);
@@ -424,15 +452,31 @@ function QuickTab({ slot, date }: { slot: string; date?: string }) {
   }
 
   return (
-    <View style={{ padding: spacing.l }}>
-      <Text style={styles.quickHint}>{t('addFood.quickHint')}</Text>
+    <ScrollView contentContainerStyle={{ padding: spacing.l }} keyboardShouldPersistTaps="handled">
       <Field label={t('addFood.quickName')} value={name} onChangeText={setName} />
       <Field label={t('macros.kcal')} value={kcal} onChangeText={setKcal} keyboardType="numeric" />
       <Field label={`${t('macros.carbs')} (g)`} value={carbs} onChangeText={setCarbs} keyboardType="numeric" />
       <Field label={`${t('macros.protein')} (g)`} value={protein} onChangeText={setProtein} keyboardType="numeric" />
       <Field label={`${t('macros.fat')} (g)`} value={fat} onChangeText={setFat} keyboardType="numeric" />
+
+      {userAllergens.length > 0 ? (
+        <View style={styles.allergenBlock}>
+          <Text style={styles.allergenTitle}>{t('addFood.quickAllergens')}</Text>
+          <View style={styles.chipWrap}>
+            {userAllergens.map((key) => (
+              <AllergenStateChip
+                key={key}
+                allergenKey={key}
+                state={allergens[key] ?? 'unknown'}
+                onPress={() => cycleAllergen(key)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       <Button title={t('common.add')} onPress={add} loading={busy} disabled={!parseNum(kcal)} />
-    </View>
+    </ScrollView>
   );
 }
 
@@ -470,5 +514,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
-  quickHint: { color: colors.muted, marginBottom: spacing.l, fontSize: 14, lineHeight: 20 },
+  allergenBlock: { marginTop: 4, marginBottom: spacing.l },
+  allergenTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.s,
+  },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.s },
 });

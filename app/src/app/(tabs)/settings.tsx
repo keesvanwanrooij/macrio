@@ -170,6 +170,7 @@ export default function Settings() {
       </View>
 
       <SectionTitle>{t('settings.myAllergens')}</SectionTitle>
+      <Text style={[styles.disclaimer, { marginBottom: spacing.s }]}>{t('settings.myAllergensHint')}</Text>
       <View style={styles.row}>
         {EU_ALLERGENS.map((key) => (
           <Chip key={key} label={t(`allergens.${key}`)} active={profile.allergens.includes(key)} onPress={() => toggleAllergen(key)} />
