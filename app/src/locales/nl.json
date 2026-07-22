@@ -246,7 +246,9 @@
     "avgVsGoalOver": "Gem. {{avg}} {{unit}} · {{over}} {{unit}} boven doel {{goal}}",
     "goalPerMeal": "Doel per maaltijd: {{amount}} {{unit}}",
     "setGoalInSettings": "Stel dit doel in bij Instellingen voor persoonlijke targets (nu defaults).",
-    "snackLabel": "Tussendoortje"
+    "snackLabel": "Tussendoortje",
+    "showAll": "Toon alles",
+    "showFocus": "Toon focus"
   },
   "settings": {
     "title": "Instellingen",

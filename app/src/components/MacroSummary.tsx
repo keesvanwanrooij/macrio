@@ -49,6 +49,11 @@ function formatGoalAmount(key: MacroKey, goal: number): string {
   return `${fmt(goal)} g`;
 }
 
+/** Over goal when consumed is strictly above the target (same as progress bars). */
+function isOverGoal(consumed: number, goal: number | null): boolean {
+  return goal != null && goal > 0 && consumed > goal;
+}
+
 function display(
   profile: Profile,
   totals: MacroTotals,
@@ -152,11 +157,12 @@ export function MacroSummary({
   if (profile.macro_display === 'focus') {
     const key = MACROS[focusIdx];
     const d = display(profile, totals, key);
+    const over = isOverGoal(d.consumed, d.goal);
     return (
       <GestureDetector gesture={focusGesture}>
         <View style={styles.card}>
           <Text style={styles.focusLabel}>{macroDisplayLabel(t, key, false)}</Text>
-          <Text style={styles.focusValue}>{d.value}</Text>
+          <Text style={[styles.focusValue, over && styles.valueOver]}>{d.value}</Text>
           {d.sub != null ? (
             <Text style={styles.focusSub}>
               {d.sub.startsWith('macros.') ? t(d.sub) : d.sub}
@@ -196,10 +202,19 @@ export function MacroSummary({
         {MACROS.map((key) => {
           const d = display(profile, totals, key);
           const isKcal = key === 'kcal';
+          // Overview: only kcal number goes red when over; other macros stay black
+          const kcalOver = isKcal && isOverGoal(d.consumed, d.goal);
           return (
             <View key={key} style={styles.cell}>
               <View style={styles.cellValueSlot}>
-                <Text style={[styles.cellValue, isKcal && styles.cellValueKcal]} numberOfLines={1}>
+                <Text
+                  style={[
+                    styles.cellValue,
+                    isKcal && styles.cellValueKcal,
+                    kcalOver && styles.valueOver,
+                  ]}
+                  numberOfLines={1}
+                >
                   {d.value}
                 </Text>
               </View>
@@ -266,6 +281,8 @@ const styles = StyleSheet.create({
   cellGoalSlot: { height: 16, justifyContent: 'center', alignItems: 'center', width: '100%', marginTop: 4 },
   cellValue: { fontSize: 18, fontWeight: '800', color: colors.text, textAlign: 'center' },
   cellValueKcal: { fontWeight: '900', color: colors.primaryDark },
+  /** Strong red when consumed > goal (kcal in overview; any macro in focus). */
+  valueOver: { color: colors.danger },
   cellLabel: { fontSize: 11, color: colors.muted, fontWeight: '700', textAlign: 'center' },
   cellLabelCompact: { fontSize: 10 },
   cellSub: { fontSize: 10, color: colors.faint, textAlign: 'center' },

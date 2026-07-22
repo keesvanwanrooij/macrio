@@ -1,7 +1,8 @@
 /*
  * SECTION: Reports (day / week)
  * WHAT: Day meal breakdown by selected macro; week bar chart with historical goals.
- * HOW: Tap macro totals to select; ‹ › or swipe L/R shifts day/week; tap week bar → diary.
+ * HOW: Tap macro totals to select (focus); bottom "Toon alles" stacks all four macros.
+ *      ‹ › or swipe L/R shifts day/week; tap week bar → diary.
  * INPUT: diary_entries + goal_revisions for selected day or week
  * OUTPUT: Scrollable report UI; navigation to diary with ?date=
  */
@@ -11,7 +12,7 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } fr
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next';
 
-import { Card, Loading, SectionTitle } from '../../components/ui';
+import { Button, Card, Loading, SectionTitle } from '../../components/ui';
 import { ProgressBar } from '../../components/ProgressBar';
 import {
   fetchGoalRevisionsUpTo,
@@ -36,6 +37,8 @@ export default function Reports() {
   const [mode, setMode] = useState<'day' | 'week'>('day');
   const [anchor, setAnchor] = useState(toDateString(new Date()));
   const [selectedMacro, setSelectedMacro] = useState<MacroKey>('kcal');
+  /** false = one macro (focus); true = all four stacked (user opts into busier scroll). */
+  const [showAll, setShowAll] = useState(false);
   const [entries, setEntries] = useState<DiaryEntry[] | null>(null);
   const [revisions, setRevisions] = useState<GoalSnapshot[]>([]);
 
@@ -137,6 +140,7 @@ export default function Reports() {
               revisions={revisions}
               selected={selectedMacro}
               onSelect={setSelectedMacro}
+              showAll={showAll}
             />
           ) : (
             <WeekReport
@@ -145,21 +149,31 @@ export default function Reports() {
               revisions={revisions}
               selected={selectedMacro}
               onSelect={setSelectedMacro}
+              showAll={showAll}
             />
           )}
         </View>
       </GestureDetector>
+
+      {/* Bottom: opt into all macros, or return to single-macro focus */}
+      <View style={styles.showAllWrap}>
+        <Button
+          title={t(showAll ? 'reports.showFocus' : 'reports.showAll')}
+          variant="secondary"
+          onPress={() => setShowAll((v) => !v)}
+        />
+      </View>
     </ScrollView>
   );
 }
 
 /*
  * SECTION: Day report body
- * WHAT: Totals + day progress + meal/snack bars on one shared scale.
+ * WHAT: Totals + day progress + meal/snack bars (one macro, or all four when showAll).
  * HOW: Day goal from revisions/profile, else default 2000 kcal macros.
  *      Meal goal = (dayGoal − snacks) / 3, or dayGoal/3 if snacks ate the budget.
  *      Meal tracks share max(mealGoal, largest meal/snack) so lengths are comparable.
- * INPUT: date, entries, revisions, selected macro
+ * INPUT: date, entries, revisions, selected macro, showAll
  * OUTPUT: Day UI with mains always shown; snacks only when logged
  */
 function DayReport({
@@ -168,20 +182,68 @@ function DayReport({
   revisions,
   selected,
   onSelect,
+  showAll,
 }: {
   date: string;
   entries: DiaryEntry[];
   revisions: GoalSnapshot[];
   selected: MacroKey;
   onSelect: (key: MacroKey) => void;
+  showAll: boolean;
+}) {
+  const { t } = useTranslation();
+  const totals = sumEntries(entries);
+  const macros = showAll ? MACRO_KEYS : [selected];
+
+  if (entries.length === 0) {
+    return <Text style={styles.empty}>{t('reports.noData')}</Text>;
+  }
+
+  return (
+    <>
+      <Card>
+        <TotalsRow totals={totals} selected={selected} onSelect={onSelect} />
+      </Card>
+      {macros.map((macro) => (
+        <DayMacroBlock
+          key={macro}
+          date={date}
+          entries={entries}
+          revisions={revisions}
+          macro={macro}
+          showHeading={showAll}
+        />
+      ))}
+    </>
+  );
+}
+
+/*
+ * SECTION: One macro’s day progress + meals
+ * WHAT: Progress card + meal list for a single macro key.
+ * HOW: Same share rules as before; optional SectionTitle when showing all.
+ * INPUT: date, entries, revisions, macro, showHeading
+ * OUTPUT: Progress + meal cards
+ */
+function DayMacroBlock({
+  date,
+  entries,
+  revisions,
+  macro,
+  showHeading,
+}: {
+  date: string;
+  entries: DiaryEntry[];
+  revisions: GoalSnapshot[];
+  macro: MacroKey;
+  showHeading: boolean;
 }) {
   const { t } = useTranslation();
   const { profile } = useSession();
-  const totals = sumEntries(entries);
-  const unit = selected === 'kcal' ? t('common.kcal') : 'g';
+  const unit = macro === 'kcal' ? t('common.kcal') : 'g';
 
   const { dayGoal, goalIsDefault } = useMemo(() => {
-    const fromRev = goalValue(resolveGoalForDate(revisions, date), selected);
+    const fromRev = goalValue(resolveGoalForDate(revisions, date), macro);
     if (fromRev != null && fromRev > 0) {
       return { dayGoal: fromRev, goalIsDefault: false };
     }
@@ -194,7 +256,7 @@ function DayReport({
           goal_protein: profile.goal_protein,
           goal_fat: profile.goal_fat,
         },
-        selected
+        macro
       );
       if (fromProfile != null && fromProfile > 0) {
         return { dayGoal: fromProfile, goalIsDefault: false };
@@ -204,20 +266,17 @@ function DayReport({
       profile?.weight_kg != null && Number(profile.weight_kg) > 0
         ? Number(profile.weight_kg)
         : DEFAULT_GOAL_WEIGHT_KG;
-    const macros = macrosFromKcal(DEFAULT_GOAL_KCAL, weight, profile?.weight_goal ?? 'maintain');
+    const macrosCalc = macrosFromKcal(DEFAULT_GOAL_KCAL, weight, profile?.weight_goal ?? 'maintain');
     const defaults = {
       kcal: DEFAULT_GOAL_KCAL,
-      carbs: macros?.carbs ?? 225,
-      protein: macros?.protein ?? 112,
-      fat: macros?.fat ?? 63,
+      carbs: macrosCalc?.carbs ?? 225,
+      protein: macrosCalc?.protein ?? 112,
+      fat: macrosCalc?.fat ?? 63,
     };
-    return { dayGoal: defaults[selected], goalIsDefault: true };
-  }, [revisions, date, selected, profile]);
+    return { dayGoal: defaults[macro], goalIsDefault: true };
+  }, [revisions, date, macro, profile]);
 
-  const snackTotal = useMemo(
-    () => snackMacroTotal(entries, selected),
-    [entries, selected]
-  );
+  const snackTotal = useMemo(() => snackMacroTotal(entries, macro), [entries, macro]);
 
   const mealGoal = useMemo(
     () => mealScaleFromDayGoal(dayGoal, snackTotal),
@@ -229,30 +288,25 @@ function DayReport({
     return MAIN_SLOTS.map((m) => SNACK_AFTER[m]).filter((s) => present.has(s));
   }, [entries]);
 
-  // Per-slot amounts for mains (always) + logged snacks
   const mealRows = useMemo(() => {
     const mains = MAIN_SLOTS.map((slot) => ({
       slot,
-      consumed: sumEntries(entries.filter((e) => Number(e.meal_slot) === slot))[selected],
+      consumed: sumEntries(entries.filter((e) => Number(e.meal_slot) === slot))[macro],
     }));
     const snacks = snackSlotsWithFood.map((slot) => ({
       slot,
-      consumed: sumEntries(entries.filter((e) => Number(e.meal_slot) === slot))[selected],
+      consumed: sumEntries(entries.filter((e) => Number(e.meal_slot) === slot))[macro],
     }));
     return [...mains, ...snacks];
-  }, [entries, selected, snackSlotsWithFood]);
+  }, [entries, macro, snackSlotsWithFood]);
 
-  // One track for all meal/snack bars: at least the meal goal, or the biggest meal if larger
   const mealTrackMax = useMemo(() => {
     const peak = mealRows.reduce((m, row) => Math.max(m, row.consumed), 0);
     return Math.max(mealGoal, peak);
   }, [mealRows, mealGoal]);
 
-  if (entries.length === 0) {
-    return <Text style={styles.empty}>{t('reports.noData')}</Text>;
-  }
-
-  const consumed = totals[selected];
+  const totals = sumEntries(entries);
+  const consumed = totals[macro];
   const dayOver = dayGoal > 0 && consumed > dayGoal;
 
   function slotLabel(slot: number): string {
@@ -263,10 +317,10 @@ function DayReport({
   }
 
   return (
-    <>
-      <Card>
-        <TotalsRow totals={totals} selected={selected} onSelect={onSelect} />
-      </Card>
+    <View style={showHeading ? styles.macroBlock : undefined}>
+      {showHeading ? (
+        <SectionTitle>{macroDisplayLabel(t, macro, false)}</SectionTitle>
+      ) : null}
 
       <Card style={styles.dayProgressCard}>
         <Text style={styles.dayProgressLabel}>
@@ -280,16 +334,14 @@ function DayReport({
         />
       </Card>
 
-      <SectionTitle>{t('diary.title')}</SectionTitle>
-      {goalIsDefault ? (
-        <Text style={styles.mealGoalHint}>{t('reports.setGoalInSettings')}</Text>
-      ) : (
-        <Text style={styles.mealGoalHint}>
-          {t('reports.goalPerMeal', { amount: fmt(mealGoal), unit })}
-        </Text>
-      )}
+      {!showHeading ? <SectionTitle>{t('diary.title')}</SectionTitle> : null}
 
-      <Card>
+      <Card style={showHeading ? styles.mealsCardAfterTotal : undefined}>
+        <Text style={styles.mealGoalHint}>
+          {goalIsDefault
+            ? t('reports.setGoalInSettings')
+            : t('reports.goalPerMeal', { amount: fmt(mealGoal), unit })}
+        </Text>
         {mealRows.map(({ slot, consumed: slotConsumed }) => (
           <View key={slot} style={styles.mealBlock}>
             <View style={styles.mealRow}>
@@ -304,22 +356,21 @@ function DayReport({
               trackMax={mealTrackMax}
               overTone="soft"
               showMarker={false}
-              // Soft-red only if the day is over AND this meal/snack beat the per-meal share
               over={dayOver && mealGoal > 0 && slotConsumed > mealGoal}
             />
           </View>
         ))}
       </Card>
-    </>
+    </View>
   );
 }
 
 /*
  * SECTION: Week report chart
- * WHAT: Macro bars, ghost empty days, historical goal line/ticks, avg vs goal.
- * HOW: Tap totals to change macro; tap bar opens diary; parent swipe shifts week.
- * INPUT: week entries, weekStart, goal revisions, selected macro
- * OUTPUT: Chart + average totals row
+ * WHAT: Macro bars (one or all four), ghost empty days, historical goal line/ticks.
+ * HOW: Tap totals to change focus macro; showAll stacks a chart per macro.
+ * INPUT: week entries, weekStart, goal revisions, selected, showAll
+ * OUTPUT: Chart(s) + average totals row
  */
 function WeekReport({
   entries,
@@ -327,27 +378,77 @@ function WeekReport({
   revisions,
   selected,
   onSelect,
+  showAll,
 }: {
   entries: DiaryEntry[];
   weekStart: string;
   revisions: GoalSnapshot[];
   selected: MacroKey;
   onSelect: (key: MacroKey) => void;
+  showAll: boolean;
 }) {
-  const { t, i18n } = useTranslation();
-  const router = useRouter();
-  const { profile } = useSession();
-
+  const { t } = useTranslation();
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const perDay = useMemo(
     () => days.map((d) => sumEntries(entries.filter((e) => e.date === d))),
     [days, entries]
   );
-  const values = perDay.map((p) => p[selected]);
+
+  const daysWithData = perDay.filter((p) => p.kcal > 0).length || 1;
+  const avg: MacroTotals = {
+    kcal: perDay.reduce((s, p) => s + p.kcal, 0) / daysWithData,
+    carbs: perDay.reduce((s, p) => s + p.carbs, 0) / daysWithData,
+    protein: perDay.reduce((s, p) => s + p.protein, 0) / daysWithData,
+    fat: perDay.reduce((s, p) => s + p.fat, 0) / daysWithData,
+  };
+
+  const macros = showAll ? MACRO_KEYS : [selected];
+
+  return (
+    <>
+      {macros.map((macro) => (
+        <WeekMacroChart
+          key={macro}
+          macro={macro}
+          days={days}
+          perDay={perDay}
+          revisions={revisions}
+        />
+      ))}
+      <SectionTitle>{t('reports.average')}</SectionTitle>
+      <Card>
+        <TotalsRow totals={avg} selected={selected} onSelect={onSelect} />
+      </Card>
+    </>
+  );
+}
+
+/*
+ * SECTION: One week macro chart
+ * WHAT: Bars for seven days of one macro + avg line vs goal.
+ * INPUT: macro key, days, per-day totals, revisions
+ * OUTPUT: Chart card
+ */
+function WeekMacroChart({
+  macro,
+  days,
+  perDay,
+  revisions,
+}: {
+  macro: MacroKey;
+  days: string[];
+  perDay: MacroTotals[];
+  revisions: GoalSnapshot[];
+}) {
+  const { t, i18n } = useTranslation();
+  const router = useRouter();
+  const { profile } = useSession();
+
+  const values = perDay.map((p) => p[macro]);
 
   const dayGoals = useMemo(
-    () => days.map((d) => goalValue(resolveGoalForDate(revisions, d), selected)),
-    [days, revisions, selected]
+    () => days.map((d) => goalValue(resolveGoalForDate(revisions, d), macro)),
+    [days, revisions, macro]
   );
 
   const goalsUniform = useMemo(() => {
@@ -363,17 +464,10 @@ function WeekReport({
 
   const maxVal = Math.max(...values, ...dayGoals.map((g) => g ?? 0), 1);
 
-  const daysWithData = perDay.filter((p) => p.kcal > 0).length || 1;
-  const avg: MacroTotals = {
-    kcal: perDay.reduce((s, p) => s + p.kcal, 0) / daysWithData,
-    carbs: perDay.reduce((s, p) => s + p.carbs, 0) / daysWithData,
-    protein: perDay.reduce((s, p) => s + p.protein, 0) / daysWithData,
-    fat: perDay.reduce((s, p) => s + p.fat, 0) / daysWithData,
-  };
-
   const locale = i18n.language === 'nl' ? 'nl-NL' : 'en-GB';
-  const unit = selected === 'kcal' ? t('common.kcal') : 'g';
-  const avgVal = avg[selected];
+  const unit = macro === 'kcal' ? t('common.kcal') : 'g';
+  const daysWithData = perDay.filter((p) => p.kcal > 0).length || 1;
+  const avgVal = perDay.reduce((s, p) => s + p[macro], 0) / daysWithData;
   const avgGoal =
     uniformGoal ??
     (() => {
@@ -420,59 +514,53 @@ function WeekReport({
       : null;
 
   return (
-    <>
-      <Card>
-        <Text style={styles.chartTitle}>
-          {macroDisplayLabel(t, selected, false)}
-          {selected !== 'kcal' ? ` (${unit})` : ''}
-        </Text>
-        <View style={styles.chart}>
-          {goalLineBottom != null ? (
-            <View
-              pointerEvents="none"
-              style={[styles.goalLine, { bottom: goalLineBottom + 16 }]}
-            />
-          ) : null}
-          {days.map((d, i) => {
-            const v = values[i];
-            const empty = v <= 0;
-            const barH = empty
-              ? GHOST_BAR_HEIGHT
-              : Math.max(2, Math.round((v / maxVal) * CHART_TRACK_HEIGHT));
-            const dayGoal = dayGoals[i];
-            const tickH =
-              !goalsUniform && dayGoal != null && dayGoal > 0
-                ? (dayGoal / maxVal) * CHART_TRACK_HEIGHT
-                : null;
+    <Card style={styles.weekChartCard}>
+      <Text style={styles.chartTitle}>
+        {macroDisplayLabel(t, macro, false)}
+        {macro !== 'kcal' ? ` (${unit})` : ''}
+      </Text>
+      <View style={styles.chart}>
+        {goalLineBottom != null ? (
+          <View
+            pointerEvents="none"
+            style={[styles.goalLine, { bottom: goalLineBottom + 16 }]}
+          />
+        ) : null}
+        {days.map((d, i) => {
+          const v = values[i];
+          const empty = v <= 0;
+          const barH = empty
+            ? GHOST_BAR_HEIGHT
+            : Math.max(2, Math.round((v / maxVal) * CHART_TRACK_HEIGHT));
+          const dayGoal = dayGoals[i];
+          const tickH =
+            !goalsUniform && dayGoal != null && dayGoal > 0
+              ? (dayGoal / maxVal) * CHART_TRACK_HEIGHT
+              : null;
 
-            return (
-              <Pressable key={d} style={styles.chartCol} onPress={() => openDiary(d)}>
-                <Text style={styles.barValue} numberOfLines={1}>
-                  {!empty ? fmt(v) : ''}
-                </Text>
-                <View style={[styles.barTrack, { height: CHART_TRACK_HEIGHT }]}>
-                  {tickH != null ? (
-                    <View
-                      pointerEvents="none"
-                      style={[styles.goalTick, { bottom: tickH - 1 }]}
-                    />
-                  ) : null}
-                  <View style={[styles.bar, empty && styles.barGhost, { height: barH }]} />
-                </View>
-                <Text style={styles.barLabel}>
-                  {new Date(d + 'T12:00:00').toLocaleDateString(locale, { weekday: 'narrow' })}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <Text style={styles.avgLine}>{avgLine()}</Text>
-      </Card>
-      <SectionTitle>{t('reports.average')}</SectionTitle>
-      <Card>
-        <TotalsRow totals={avg} selected={selected} onSelect={onSelect} />
-      </Card>
-    </>
+          return (
+            <Pressable key={d} style={styles.chartCol} onPress={() => openDiary(d)}>
+              <Text style={styles.barValue} numberOfLines={1}>
+                {!empty ? fmt(v) : ''}
+              </Text>
+              <View style={[styles.barTrack, { height: CHART_TRACK_HEIGHT }]}>
+                {tickH != null ? (
+                  <View
+                    pointerEvents="none"
+                    style={[styles.goalTick, { bottom: tickH - 1 }]}
+                  />
+                ) : null}
+                <View style={[styles.bar, empty && styles.barGhost, { height: barH }]} />
+              </View>
+              <Text style={styles.barLabel}>
+                {new Date(d + 'T12:00:00').toLocaleDateString(locale, { weekday: 'narrow' })}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.avgLine}>{avgLine()}</Text>
+    </Card>
   );
 }
 
@@ -544,10 +632,17 @@ const styles = StyleSheet.create({
   navArrow: { fontSize: 26, color: colors.muted, paddingHorizontal: spacing.m },
   navLabel: { fontSize: 15, fontWeight: '800', color: colors.text },
   empty: { color: colors.faint, textAlign: 'center', marginTop: spacing.xxl, fontSize: 15 },
+  showAllWrap: { marginTop: spacing.l, marginBottom: spacing.xl },
+  macroBlock: { marginTop: spacing.m },
+  weekChartCard: { marginBottom: spacing.m },
   dayProgressCard: {
     paddingVertical: spacing.m,
     paddingHorizontal: spacing.l,
     marginTop: spacing.s,
+  },
+  /** Extra gap under day total when stacking all macros (Toon alles). */
+  mealsCardAfterTotal: {
+    marginTop: spacing.m,
   },
   dayProgressLabel: {
     fontSize: 12,
@@ -560,7 +655,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.faint,
     marginBottom: spacing.s,
-    marginTop: -4,
   },
   mealBlock: {
     paddingVertical: spacing.s,

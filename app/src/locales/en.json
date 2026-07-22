@@ -246,7 +246,9 @@
     "avgVsGoalOver": "Avg {{avg}} {{unit}} · {{over}} {{unit}} over goal {{goal}}",
     "goalPerMeal": "Goal per meal: {{amount}} {{unit}}",
     "setGoalInSettings": "Set this goal in Settings for personal targets (using defaults for now).",
-    "snackLabel": "Snack"
+    "snackLabel": "Snack",
+    "showAll": "Show all",
+    "showFocus": "Show focus"
   },
   "settings": {
     "title": "Settings",
