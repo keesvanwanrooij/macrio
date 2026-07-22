@@ -48,10 +48,11 @@ _Note: catalog `products.visibility` public|private (create checkbox, owner togg
 
 - [ ] Meal planning
 - [ ] Save / load / modify **personal** complete meals (templates for the user; planner integration)
-- [ ] Optional onboarding questionnaire
+- [ ] **Skippable onboarding tutorial:** walk through filling profile details (body, goals, allergens as needed) and a short tour of main features; always skippable so the user can use the app immediately; optional resume from Settings later
 - [ ] Quick-log restaurant % macro sliders
 - [ ] Personal add-food tab order
-- [ ] Custom report periods; workout heatmap
+- [ ] **Reports:** month and year screens (same day/week pattern: totals, charts, swipe/‹ ›); then custom report periods
+- [ ] Workout heatmap
 
 ## v1.4 — community
 

@@ -72,6 +72,7 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="add-food" options={{ title: t('addFood.title'), presentation: 'modal' }} />
       <Stack.Screen name="log-entry" options={{ title: t('portion.title') }} />
+      <Stack.Screen name="log-multi" options={{ title: t('addFood.multiReviewTitle') }} />
       <Stack.Screen name="product/[id]" options={{ title: t('product.title') }} />
       <Stack.Screen name="product/create" options={{ title: t('product.createTitle') }} />
       <Stack.Screen name="product/add-barcode" options={{ title: t('product.addBarcodeTitle') }} />

@@ -154,7 +154,14 @@
     "grantPermission": "Grant access",
     "noRecents": "No recent products yet",
     "quickName": "Description (e.g. restaurant pizza)",
-    "quickHint": "Log quickly without a product — enter the macros yourself."
+    "quickHint": "Log quickly without a product — enter the macros yourself.",
+    "reviewSelected": "Review {{count}} selected",
+    "multiReviewTitle": "Review",
+    "addNToMeal": "Add {{count}} to {{meal}}",
+    "changeMeal": "Choose meal",
+    "pickMeal": "Choose meal",
+    "multiEmpty": "No products selected",
+    "multiNeedGrams": "Enter a valid weight (grams) for each product."
   },
   "portion": {
     "title": "Portion",
@@ -248,7 +255,8 @@
     "setGoalInSettings": "Set this goal in Settings for personal targets (using defaults for now).",
     "snackLabel": "Snack",
     "showAll": "Show all",
-    "showFocus": "Show focus"
+    "showFocus": "Show focus",
+    "dayTotal": "Day total"
   },
   "settings": {
     "title": "Settings",

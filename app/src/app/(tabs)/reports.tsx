@@ -27,10 +27,55 @@ import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDate
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
-import type { DiaryEntry, MacroTotals } from '../../lib/types';
+import type { DiaryEntry, MacroTotals, Profile } from '../../lib/types';
 
 const GHOST_BAR_HEIGHT = 10;
 const CHART_TRACK_HEIGHT = 120;
+
+/*
+ * SECTION: Day goal for one macro
+ * WHAT: Revision → profile → default 2000 kcal macros.
+ * INPUT: date, revisions, macro, optional profile
+ * OUTPUT: { dayGoal, goalIsDefault }
+ */
+function dayGoalForMacro(
+  date: string,
+  revisions: GoalSnapshot[],
+  macro: MacroKey,
+  profile: Profile | null | undefined
+): { dayGoal: number; goalIsDefault: boolean } {
+  const fromRev = goalValue(resolveGoalForDate(revisions, date), macro);
+  if (fromRev != null && fromRev > 0) {
+    return { dayGoal: fromRev, goalIsDefault: false };
+  }
+  if (profile) {
+    const fromProfile = goalValue(
+      {
+        effective_date: date,
+        goal_kcal: profile.goal_kcal,
+        goal_carbs: profile.goal_carbs,
+        goal_protein: profile.goal_protein,
+        goal_fat: profile.goal_fat,
+      },
+      macro
+    );
+    if (fromProfile != null && fromProfile > 0) {
+      return { dayGoal: fromProfile, goalIsDefault: false };
+    }
+  }
+  const weight =
+    profile?.weight_kg != null && Number(profile.weight_kg) > 0
+      ? Number(profile.weight_kg)
+      : DEFAULT_GOAL_WEIGHT_KG;
+  const macrosCalc = macrosFromKcal(DEFAULT_GOAL_KCAL, weight, profile?.weight_goal ?? 'maintain');
+  const defaults = {
+    kcal: DEFAULT_GOAL_KCAL,
+    carbs: macrosCalc?.carbs ?? 225,
+    protein: macrosCalc?.protein ?? 112,
+    fat: macrosCalc?.fat ?? 63,
+  };
+  return { dayGoal: defaults[macro], goalIsDefault: true };
+}
 
 export default function Reports() {
   const { t, i18n } = useTranslation();
@@ -192,8 +237,15 @@ function DayReport({
   showAll: boolean;
 }) {
   const { t } = useTranslation();
+  const { profile } = useSession();
   const totals = sumEntries(entries);
   const macros = showAll ? MACRO_KEYS : [selected];
+
+  const selectedGoal = useMemo(
+    () => dayGoalForMacro(date, revisions, selected, profile).dayGoal,
+    [date, revisions, selected, profile]
+  );
+  const selectedOver = selectedGoal > 0 && totals[selected] > selectedGoal;
 
   if (entries.length === 0) {
     return <Text style={styles.empty}>{t('reports.noData')}</Text>;
@@ -202,7 +254,12 @@ function DayReport({
   return (
     <>
       <Card>
-        <TotalsRow totals={totals} selected={selected} onSelect={onSelect} />
+        <TotalsRow
+          totals={totals}
+          selected={selected}
+          onSelect={onSelect}
+          selectedOver={selectedOver}
+        />
       </Card>
       {macros.map((macro) => (
         <DayMacroBlock
@@ -242,39 +299,10 @@ function DayMacroBlock({
   const { profile } = useSession();
   const unit = macro === 'kcal' ? t('common.kcal') : 'g';
 
-  const { dayGoal, goalIsDefault } = useMemo(() => {
-    const fromRev = goalValue(resolveGoalForDate(revisions, date), macro);
-    if (fromRev != null && fromRev > 0) {
-      return { dayGoal: fromRev, goalIsDefault: false };
-    }
-    if (profile) {
-      const fromProfile = goalValue(
-        {
-          effective_date: date,
-          goal_kcal: profile.goal_kcal,
-          goal_carbs: profile.goal_carbs,
-          goal_protein: profile.goal_protein,
-          goal_fat: profile.goal_fat,
-        },
-        macro
-      );
-      if (fromProfile != null && fromProfile > 0) {
-        return { dayGoal: fromProfile, goalIsDefault: false };
-      }
-    }
-    const weight =
-      profile?.weight_kg != null && Number(profile.weight_kg) > 0
-        ? Number(profile.weight_kg)
-        : DEFAULT_GOAL_WEIGHT_KG;
-    const macrosCalc = macrosFromKcal(DEFAULT_GOAL_KCAL, weight, profile?.weight_goal ?? 'maintain');
-    const defaults = {
-      kcal: DEFAULT_GOAL_KCAL,
-      carbs: macrosCalc?.carbs ?? 225,
-      protein: macrosCalc?.protein ?? 112,
-      fat: macrosCalc?.fat ?? 63,
-    };
-    return { dayGoal: defaults[macro], goalIsDefault: true };
-  }, [revisions, date, macro, profile]);
+  const { dayGoal, goalIsDefault } = useMemo(
+    () => dayGoalForMacro(date, revisions, macro, profile),
+    [revisions, date, macro, profile]
+  );
 
   const snackTotal = useMemo(() => snackMacroTotal(entries, macro), [entries, macro]);
 
@@ -323,9 +351,12 @@ function DayMacroBlock({
       ) : null}
 
       <Card style={styles.dayProgressCard}>
-        <Text style={styles.dayProgressLabel}>
-          {fmt(consumed)} / {fmt(dayGoal)} {unit}
-        </Text>
+        <View style={styles.dayTotalRow}>
+          <Text style={styles.dayTotalHint}>{t('reports.dayTotal')}</Text>
+          <Text style={styles.mealValue}>
+            {fmt(consumed)} / {fmt(dayGoal)} {unit}
+          </Text>
+        </View>
         <ProgressBar
           consumed={consumed}
           goal={dayGoal}
@@ -404,6 +435,19 @@ function WeekReport({
 
   const macros = showAll ? MACRO_KEYS : [selected];
 
+  // Soft-red selector when weekly average of the focused macro is over its avg goal
+  const selectedOver = useMemo(() => {
+    const dayGoals = days.map((d) => goalValue(resolveGoalForDate(revisions, d), selected));
+    const defined = dayGoals.filter((g): g is number => g != null && g > 0);
+    if (defined.length === 0) return false;
+    const uniform =
+      dayGoals.every((g) => g == null || g === defined[0]) && defined.every((g) => g === defined[0]);
+    const avgGoal = uniform
+      ? defined[0]
+      : defined.reduce((a, b) => a + b, 0) / defined.length;
+    return avg[selected] > avgGoal;
+  }, [days, revisions, selected, avg[selected]]);
+
   return (
     <>
       {macros.map((macro) => (
@@ -417,7 +461,12 @@ function WeekReport({
       ))}
       <SectionTitle>{t('reports.average')}</SectionTitle>
       <Card>
-        <TotalsRow totals={avg} selected={selected} onSelect={onSelect} />
+        <TotalsRow
+          totals={avg}
+          selected={selected}
+          onSelect={onSelect}
+          selectedOver={selectedOver}
+        />
       </Card>
     </>
   );
@@ -533,6 +582,9 @@ function WeekMacroChart({
             ? GHOST_BAR_HEIGHT
             : Math.max(2, Math.round((v / maxVal) * CHART_TRACK_HEIGHT));
           const dayGoal = dayGoals[i];
+          const goalForBar =
+            dayGoal != null && dayGoal > 0 ? dayGoal : uniformGoal != null && uniformGoal > 0 ? uniformGoal : null;
+          const barOver = !empty && goalForBar != null && v > goalForBar;
           const tickH =
             !goalsUniform && dayGoal != null && dayGoal > 0
               ? (dayGoal / maxVal) * CHART_TRACK_HEIGHT
@@ -550,7 +602,14 @@ function WeekMacroChart({
                     style={[styles.goalTick, { bottom: tickH - 1 }]}
                   />
                 ) : null}
-                <View style={[styles.bar, empty && styles.barGhost, { height: barH }]} />
+                <View
+                  style={[
+                    styles.bar,
+                    empty && styles.barGhost,
+                    barOver && styles.barOver,
+                    { height: barH },
+                  ]}
+                />
               </View>
               <Text style={styles.barLabel}>
                 {new Date(d + 'T12:00:00').toLocaleDateString(locale, { weekday: 'narrow' })}
@@ -568,10 +627,13 @@ function TotalsRow({
   totals,
   selected,
   onSelect,
+  selectedOver = false,
 }: {
   totals: MacroTotals;
   selected: MacroKey;
   onSelect: (key: MacroKey) => void;
+  /** Day focus: soft-red highlight when the selected macro is over its day goal. */
+  selectedOver?: boolean;
 }) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
@@ -581,18 +643,30 @@ function TotalsRow({
     <View style={{ flexDirection: 'row' }}>
       {MACRO_KEYS.map((key) => {
         const active = selected === key;
+        const activeOver = active && selectedOver;
         return (
           <Pressable
             key={key}
-            style={[styles.totalCell, active && styles.totalCellActive]}
+            style={[
+              styles.totalCell,
+              active && (activeOver ? styles.totalCellActiveOver : styles.totalCellActive),
+            ]}
             onPress={() => onSelect(key)}
           >
-            <Text style={[styles.totalValue, active && { color: colors.primaryDark }]}>
+            <Text
+              style={[
+                styles.totalValue,
+                active && { color: activeOver ? colors.danger : colors.primaryDark },
+              ]}
+            >
               {fmt(totals[key])}
               {key === 'kcal' ? '' : ' g'}
             </Text>
             <Text
-              style={[styles.totalLabel, active && styles.totalLabelActive]}
+              style={[
+                styles.totalLabel,
+                active && (activeOver ? styles.totalLabelActiveOver : styles.totalLabelActive),
+              ]}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.75}
@@ -636,7 +710,7 @@ const styles = StyleSheet.create({
   macroBlock: { marginTop: spacing.m },
   weekChartCard: { marginBottom: spacing.m },
   dayProgressCard: {
-    paddingVertical: spacing.m,
+    paddingVertical: spacing.s,
     paddingHorizontal: spacing.l,
     marginTop: spacing.s,
   },
@@ -644,12 +718,17 @@ const styles = StyleSheet.create({
   mealsCardAfterTotal: {
     marginTop: spacing.m,
   },
-  dayProgressLabel: {
-    fontSize: 12,
-    color: colors.muted,
-    fontWeight: '600',
+  dayTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing.s,
-    textAlign: 'center',
+    gap: spacing.s,
+  },
+  /** Same type as “Doel per maaltijd”, no extra bottom margin (row already spaced). */
+  dayTotalHint: {
+    fontSize: 12,
+    color: colors.faint,
   },
   mealGoalHint: {
     fontSize: 12,
@@ -691,6 +770,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   bar: { width: '100%', backgroundColor: colors.primary, borderRadius: 4 },
+  /** Soft coral when that day’s value is over its goal. */
+  barOver: { backgroundColor: colors.dangerMuted },
   barGhost: { backgroundColor: colors.border, opacity: 0.9 },
   barLabel: { fontSize: 11, color: colors.muted, marginTop: 4 },
   goalLine: {
@@ -724,7 +805,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.s,
   },
   totalCellActive: { backgroundColor: colors.primarySoft },
+  totalCellActiveOver: { backgroundColor: colors.dangerSoft },
   totalValue: { fontSize: 17, fontWeight: '800', color: colors.text },
   totalLabel: { fontSize: 12, color: colors.muted, marginTop: 2, fontWeight: '600' },
   totalLabelActive: { color: colors.primaryDark, fontWeight: '800' },
+  totalLabelActiveOver: { color: colors.danger, fontWeight: '800' },
 });

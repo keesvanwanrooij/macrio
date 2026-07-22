@@ -154,7 +154,14 @@
     "grantPermission": "Geef toegang",
     "noRecents": "Nog geen recente producten",
     "quickName": "Omschrijving (bijv. restaurant pizza)",
-    "quickHint": "Snel loggen zonder product — vul de macro's zelf in."
+    "quickHint": "Snel loggen zonder product — vul de macro's zelf in.",
+    "reviewSelected": "Bekijk {{count}} geselecteerd",
+    "multiReviewTitle": "Controleren",
+    "addNToMeal": "Voeg {{count}} toe aan {{meal}}",
+    "changeMeal": "Kies maaltijd",
+    "pickMeal": "Kies maaltijd",
+    "multiEmpty": "Geen producten geselecteerd",
+    "multiNeedGrams": "Vul voor elk product een geldig gewicht in (gram)."
   },
   "portion": {
     "title": "Portie",
@@ -248,7 +255,8 @@
     "setGoalInSettings": "Stel dit doel in bij Instellingen voor persoonlijke targets (nu defaults).",
     "snackLabel": "Tussendoortje",
     "showAll": "Toon alles",
-    "showFocus": "Toon focus"
+    "showFocus": "Toon focus",
+    "dayTotal": "Dagtotaal"
   },
   "settings": {
     "title": "Instellingen",

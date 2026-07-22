@@ -14,12 +14,12 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AllergenBadges } from '../components/AllergenBadges';
 import { BarcodeScannerFrame } from '../components/BarcodeScannerFrame';
+import { SelectableProductRow } from '../components/SelectableProductRow';
 import { Button, Field } from '../components/ui';
 import { lookupKeys, toEan13 } from '../lib/barcode';
 import { fetchFromOpenFoodFacts } from '../lib/off';
-import { fmt, parseNum, versionName } from '../lib/nutrition';
+import { parseNum } from '../lib/nutrition';
 import { useSession } from '../lib/session';
 import { supabase } from '../lib/supabase';
 import { colors, radius, spacing } from '../lib/theme';
@@ -36,9 +36,25 @@ export default function AddFood() {
   const date = params.date;
 
   const [tab, setTab] = useState<Tab>('scan');
+  /** Multi-select across Search + Recents (order = tap order). */
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   function openPortion(versionId: string) {
     router.replace({ pathname: '/log-entry', params: { versionId, slot, date } });
+  }
+
+  const toggleSelect = useCallback((versionId: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(versionId) ? prev.filter((id) => id !== versionId) : [...prev, versionId]
+    );
+  }, []);
+
+  function openMultiReview() {
+    if (selectedIds.length === 0) return;
+    router.push({
+      pathname: '/log-multi',
+      params: { versionIds: selectedIds.join(','), slot, date },
+    });
   }
 
   return (
@@ -50,10 +66,36 @@ export default function AddFood() {
           </Pressable>
         ))}
       </View>
-      {tab === 'scan' && <ScanTab onFound={openPortion} slot={slot} date={date} />}
-      {tab === 'search' && <SearchTab onSelect={openPortion} userAllergens={profile?.allergens ?? []} slot={slot} date={date} />}
-      {tab === 'recent' && <RecentsTab onSelect={openPortion} userAllergens={profile?.allergens ?? []} />}
-      {tab === 'quick' && <QuickTab slot={slot} date={date} />}
+      <View style={styles.tabBody}>
+        {tab === 'scan' && <ScanTab onFound={openPortion} slot={slot} date={date} />}
+        {tab === 'search' && (
+          <SearchTab
+            onOpenDetail={openPortion}
+            selectedIds={selectedIds}
+            onToggle={toggleSelect}
+            userAllergens={profile?.allergens ?? []}
+            slot={slot}
+            date={date}
+          />
+        )}
+        {tab === 'recent' && (
+          <RecentsTab
+            onOpenDetail={openPortion}
+            selectedIds={selectedIds}
+            onToggle={toggleSelect}
+            userAllergens={profile?.allergens ?? []}
+          />
+        )}
+        {tab === 'quick' && <QuickTab slot={slot} date={date} />}
+      </View>
+      {selectedIds.length > 0 && (tab === 'search' || tab === 'recent') ? (
+        <View style={styles.multiBar}>
+          <Button
+            title={t('addFood.reviewSelected', { count: selectedIds.length })}
+            onPress={openMultiReview}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -172,17 +214,21 @@ function ScanTab({ onFound, slot, date }: { onFound: (versionId: string) => void
 
 // ---------- Search ----------
 function SearchTab({
-  onSelect,
+  onOpenDetail,
+  selectedIds,
+  onToggle,
   userAllergens,
   slot,
   date,
 }: {
-  onSelect: (versionId: string) => void;
+  onOpenDetail: (versionId: string) => void;
+  selectedIds: string[];
+  onToggle: (versionId: string) => void;
   userAllergens: string[];
   slot: string;
   date?: string;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProductVersion[]>([]);
@@ -218,18 +264,13 @@ function SearchTab({
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
-          <Pressable style={styles.resultRow} onPress={() => onSelect(item.id)}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.resultName} numberOfLines={1}>
-                {versionName(item, i18n.language)}
-                {item.brand ? <Text style={styles.resultBrand}> · {item.brand}</Text> : null}
-              </Text>
-              <Text style={styles.resultMeta}>
-                {fmt(item.kcal_100g)} {t('common.kcal')} / 100 g
-              </Text>
-              <AllergenBadges allergens={item.allergens} userAllergens={userAllergens} />
-            </View>
-          </Pressable>
+          <SelectableProductRow
+            item={item}
+            selected={selectedIds.includes(item.id)}
+            userAllergens={userAllergens}
+            onToggle={() => onToggle(item.id)}
+            onOpenDetail={() => onOpenDetail(item.id)}
+          />
         )}
         ListEmptyComponent={
           searched ? (
@@ -252,24 +293,28 @@ function SearchTab({
 // ---------- Recents (global across meals) ----------
 /*
  * SECTION: Recents list
- * WHAT: Shows foods this user logged recently, for one-tap re-add.
+ * WHAT: Shows foods this user logged recently; checkbox multi-select or name → portion.
  * HOW: 1) load own diary rows (newest first) 2) resolve product_versions
  *      3) dedupe by product_id, keeping the version from the newest log
  * INPUT: authenticated diary_entries (RLS = own rows only)
- * OUTPUT: up to 20 ProductVersion rows → onSelect(versionId)
+ * OUTPUT: up to 20 ProductVersion rows
  *
  * Why product_id (not version_id): if you later log v2 (e.g. gluten free),
  * your recents show v2. Another user who still prefers v1 keeps seeing v1.
  * Past diary rows are never rewritten (macro snapshots stay honest).
  */
 function RecentsTab({
-  onSelect,
+  onOpenDetail,
+  selectedIds,
+  onToggle,
   userAllergens,
 }: {
-  onSelect: (versionId: string) => void;
+  onOpenDetail: (versionId: string) => void;
+  selectedIds: string[];
+  onToggle: (versionId: string) => void;
   userAllergens: string[];
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [items, setItems] = useState<ProductVersion[] | null>(null);
 
   useEffect(() => {
@@ -331,18 +376,13 @@ function RecentsTab({
       data={items}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
-        <Pressable style={styles.resultRow} onPress={() => onSelect(item.id)}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.resultName} numberOfLines={1}>
-              {versionName(item, i18n.language)}
-              {item.brand ? <Text style={styles.resultBrand}> · {item.brand}</Text> : null}
-            </Text>
-            <Text style={styles.resultMeta}>
-              {fmt(item.kcal_100g)} {t('common.kcal')} / 100 g
-            </Text>
-            <AllergenBadges allergens={item.allergens} userAllergens={userAllergens} />
-          </View>
-        </Pressable>
+        <SelectableProductRow
+          item={item}
+          selected={selectedIds.includes(item.id)}
+          userAllergens={userAllergens}
+          onToggle={() => onToggle(item.id)}
+          onOpenDetail={() => onOpenDetail(item.id)}
+        />
       )}
       ListEmptyComponent={
         <View style={styles.center}>
@@ -399,6 +439,7 @@ function QuickTab({ slot, date }: { slot: string; date?: string }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   tabs: { flexDirection: 'row', padding: spacing.s, gap: spacing.xs },
+  tabBody: { flex: 1 },
   tab: {
     flex: 1,
     paddingVertical: 10,
@@ -408,6 +449,12 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: colors.primarySoft },
   tabText: { color: colors.muted, fontWeight: '600', fontSize: 13 },
   tabTextActive: { color: colors.primaryDark, fontWeight: '800' },
+  multiBar: {
+    padding: spacing.l,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    backgroundColor: colors.card,
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.m },
   centerText: { color: colors.muted, textAlign: 'center', fontSize: 15, lineHeight: 21 },
   notFoundTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
@@ -423,17 +470,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
-  resultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.l,
-    paddingVertical: spacing.m,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  resultName: { fontSize: 15, fontWeight: '700', color: colors.text },
-  resultBrand: { fontWeight: '400', color: colors.muted },
-  resultMeta: { fontSize: 12, color: colors.faint, marginTop: 1 },
   quickHint: { color: colors.muted, marginBottom: spacing.l, fontSize: 14, lineHeight: 20 },
 });
