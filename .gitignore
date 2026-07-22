@@ -36,8 +36,9 @@ yarn-error.log*
 # Cursor (local only: rules, plans, personal settings)
 .cursorrules
 .cursor/
+
 # Founder scratchpad + product boards (local only; not published with the app)
-docs/founder/
+docs/context/
 docs/product/ROADMAP.md
 docs/product/ROADMAP_MINOR.md
 docs/product/plans/
