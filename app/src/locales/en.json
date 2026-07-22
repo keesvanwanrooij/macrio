@@ -212,7 +212,9 @@
     "count": "Number of portions",
     "addTo": "Add to {{meal}}",
     "saveChanges": "Save changes",
-    "viewProduct": "View product"
+    "viewProduct": "View product",
+    "missingDate": "Can't save because the diary day is unknown. Go back and open Add food from a day in your diary.",
+    "loadFailed": "Couldn't load this food. Go back and try again."
   },
   "product": {
     "title": "Product",

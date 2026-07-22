@@ -212,7 +212,9 @@
     "count": "Aantal porties",
     "addTo": "Toevoegen aan {{meal}}",
     "saveChanges": "Wijzigingen opslaan",
-    "viewProduct": "Bekijk product"
+    "viewProduct": "Bekijk product",
+    "missingDate": "Kan niet opslaan omdat de dagboekdag onbekend is. Ga terug en open Voedsel toevoegen vanuit een dag in je dagboek.",
+    "loadFailed": "Kon dit voedsel niet laden. Ga terug en probeer opnieuw."
   },
   "product": {
     "title": "Product",

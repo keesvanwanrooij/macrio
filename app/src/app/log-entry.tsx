@@ -1,10 +1,12 @@
 /*
  * SECTION: Log / edit diary portion
  * WHAT: Pick a named portion (with optional fractional count) or raw grams, then save macros.
- * HOW: 1) load version (+ entry if edit) 2) new log: prefer last logged grams for this version
+ * HOW: 1) load version (+ entry if edit); show error if load fails
+ *      2) new log: prefer last logged grams for this version
  *      3) else first named portion / 100 g 4) macrosForGrams → insert/update diary_entries
+ *      5) on save/delete: check Supabase error; stay on screen if it failed
  * INPUT: route versionId | entryId, meal slot, date; session
- * OUTPUT: diary row; navigate back
+ * OUTPUT: diary row; navigate back on success only
  *
  * Fractional counts: stepper uses 0.5 steps (½ pack); count field accepts 0.25 etc.
  */
@@ -35,6 +37,12 @@ function fmtAmount(n: number): string {
   return fmt(n, digits);
 }
 
+/** Expo Router may pass a string or string[]; we only need one value. */
+function paramOne(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 export default function LogEntry() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -53,6 +61,8 @@ export default function LogEntry() {
   const [countText, setCountText] = useState('1');
   const [gramsText, setGramsText] = useState(String(FALLBACK_LOG_GRAMS));
   const [busy, setBusy] = useState(false);
+  /** Set when entry/version fetch fails so we do not spin forever. */
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   function applyCount(n: number, fromStepper = false) {
     const min = fromStepper ? COUNT_STEP : COUNT_MIN_TYPED;
@@ -61,53 +71,76 @@ export default function LogEntry() {
     setCountText(String(next).replace('.', ','));
   }
 
-  const isEdit = !!params.entryId;
+  const entryId = paramOne(params.entryId);
+  const versionIdParam = paramOne(params.versionId);
+  const dateParam = paramOne(params.date);
+  const isEdit = !!entryId;
 
   useEffect(() => {
     (async () => {
-      let versionId = params.versionId;
-      if (params.entryId) {
-        const { data: e } = await supabase.from('diary_entries').select('*').eq('id', params.entryId).single();
-        if (e) {
-          setEntry(e as DiaryEntry);
-          setGramsText(String(e.grams ?? FALLBACK_LOG_GRAMS));
-          setPortionIdx(null);
-          versionId = e.product_version_id ?? undefined;
+      setLoadError(null);
+      let versionId = versionIdParam;
+
+      if (entryId) {
+        const { data: e, error: entryErr } = await supabase
+          .from('diary_entries')
+          .select('*')
+          .eq('id', entryId)
+          .single();
+        if (entryErr || !e) {
+          setLoadError(entryErr?.message ?? t('portion.loadFailed'));
+          return;
         }
+        setEntry(e as DiaryEntry);
+        setGramsText(String(e.grams ?? FALLBACK_LOG_GRAMS));
+        setPortionIdx(null);
+        versionId = e.product_version_id ?? undefined;
       }
-      if (versionId) {
-        const { data: v } = await supabase.from('product_versions').select('*').eq('id', versionId).single();
-        if (v) {
-          const pv = v as ProductVersion;
-          setVersion(pv);
-          // New log (not edit): restore last grams for this version (Recents / Search / Scan)
-          if (!params.entryId) {
-            const lastMap = await lastGramsByVersionIds([versionId]);
-            const last = lastMap.get(versionId);
-            if (last != null && last > 0) {
-              // Prefer matching named portion when grams equal a defined portion
-              const matchIdx = pv.portions.findIndex((p) => Math.abs(p.grams - last) < 0.05);
-              if (matchIdx >= 0) {
-                setPortionIdx(matchIdx);
-                setCount(1);
-                setCountText('1');
-                setGramsText(String(pv.portions[matchIdx].grams));
-              } else {
-                setPortionIdx(null);
-                setGramsText(String(last));
-              }
-            } else if (pv.portions.length > 0) {
-              setPortionIdx(0);
-              setGramsText(String(pv.portions[0].grams));
-            } else {
-              setPortionIdx(null);
-              setGramsText(String(FALLBACK_LOG_GRAMS));
-            }
+
+      if (!versionId) {
+        setLoadError(t('portion.loadFailed'));
+        return;
+      }
+
+      const { data: v, error: versionErr } = await supabase
+        .from('product_versions')
+        .select('*')
+        .eq('id', versionId)
+        .single();
+      if (versionErr || !v) {
+        setLoadError(versionErr?.message ?? t('portion.loadFailed'));
+        return;
+      }
+
+      const pv = v as ProductVersion;
+      setVersion(pv);
+
+      // New log (not edit): restore last grams for this version (Recents / Search / Scan)
+      if (!entryId) {
+        const lastMap = await lastGramsByVersionIds([versionId]);
+        const last = lastMap.get(versionId);
+        if (last != null && last > 0) {
+          // Prefer matching named portion when grams equal a defined portion
+          const matchIdx = pv.portions.findIndex((p) => Math.abs(p.grams - last) < 0.05);
+          if (matchIdx >= 0) {
+            setPortionIdx(matchIdx);
+            setCount(1);
+            setCountText('1');
+            setGramsText(String(pv.portions[matchIdx].grams));
+          } else {
+            setPortionIdx(null);
+            setGramsText(String(last));
           }
+        } else if (pv.portions.length > 0) {
+          setPortionIdx(0);
+          setGramsText(String(pv.portions[0].grams));
+        } else {
+          setPortionIdx(null);
+          setGramsText(String(FALLBACK_LOG_GRAMS));
         }
       }
     })();
-  }, [params.versionId, params.entryId]);
+  }, [versionIdParam, entryId]);
 
   const grams = useMemo(() => {
     if (portionIdx !== null && version && version.portions[portionIdx]) {
@@ -123,18 +156,28 @@ export default function LogEntry() {
 
   async function save() {
     if (!session || !version || !macros || grams <= 0) return;
+
+    // New logs need a diary day; without it the database would reject the row
+    if (!isEdit && !dateParam) {
+      Alert.alert(t('common.error'), t('portion.missingDate'));
+      return;
+    }
+
     setBusy(true);
     const name = versionName(version, i18n.language);
+    let errorMessage: string | null = null;
+
     if (isEdit && entry) {
-      await supabase
+      const { error } = await supabase
         .from('diary_entries')
         .update({ grams, kcal: macros.kcal, carbs: macros.carbs, protein: macros.protein, fat: macros.fat })
         .eq('id', entry.id);
+      if (error) errorMessage = error.message;
     } else {
-      await supabase.from('diary_entries').insert({
+      const { error } = await supabase.from('diary_entries').insert({
         user_id: session.user.id,
-        date: params.date,
-        meal_slot: Number(params.slot ?? 0),
+        date: dateParam,
+        meal_slot: Number(paramOne(params.slot) ?? 0),
         product_version_id: version.id,
         custom_name: name,
         grams,
@@ -143,8 +186,14 @@ export default function LogEntry() {
         protein: macros.protein,
         fat: macros.fat,
       });
+      if (error) errorMessage = error.message;
     }
+
     setBusy(false);
+    if (errorMessage) {
+      Alert.alert(t('common.error'), errorMessage);
+      return;
+    }
     router.back();
   }
 
@@ -156,16 +205,29 @@ export default function LogEntry() {
         text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
-          await supabase.from('diary_entries').delete().eq('id', entry.id);
+          const { error } = await supabase.from('diary_entries').delete().eq('id', entry.id);
+          if (error) {
+            Alert.alert(t('common.error'), error.message);
+            return;
+          }
           router.back();
         },
       },
     ]);
   }
 
+  if (loadError) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.loadErrorText}>{loadError}</Text>
+        <Button title={t('common.back')} onPress={() => router.back()} />
+      </View>
+    );
+  }
+
   if (!version || !macros) return <Loading />;
 
-  const mealLabel = t(slotLabelKey(Number(params.slot ?? entry?.meal_slot ?? 0)));
+  const mealLabel = t(slotLabelKey(Number(paramOne(params.slot) ?? entry?.meal_slot ?? 0)));
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.l }}>
@@ -260,6 +322,15 @@ export default function LogEntry() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  center: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+    gap: spacing.l,
+  },
+  loadErrorText: { fontSize: 15, color: colors.muted, textAlign: 'center', lineHeight: 22 },
   name: { fontSize: 24, fontWeight: '900', color: colors.text },
   brand: { fontSize: 15, color: colors.muted, marginTop: 2 },
   portionChips: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.l },
