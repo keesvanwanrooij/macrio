@@ -12,14 +12,11 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next';
 
 import { fmt } from '../lib/nutrition';
+import { MACRO_COMPACT_WIDTH, macroDisplayLabel, type MacroKey } from '../lib/macroLabels';
 import { colors, radius, spacing } from '../lib/theme';
 import type { MacroTotals, Profile } from '../lib/types';
 
 const MACROS = ['kcal', 'carbs', 'protein', 'fat'] as const;
-type MacroKey = (typeof MACROS)[number];
-
-/** Below this width the diary header uses short macro labels. */
-const COMPACT_LABEL_WIDTH = 380;
 
 function goalFor(profile: Profile, key: MacroKey): number | null {
   switch (key) {
@@ -76,18 +73,6 @@ function ProgressBar({ ratio, highlight }: { ratio: number; highlight?: boolean 
   );
 }
 
-/** Diary header label: full words on wider screens, short forms when narrow. */
-function diaryMacroLabel(
-  t: (k: string) => string,
-  key: MacroKey,
-  compact: boolean
-): string {
-  if (key === 'kcal') {
-    return compact ? t('macros.kcalShort') : t('macros.calories');
-  }
-  return compact ? t(`macros.${key}Short`) : t(`macros.${key}`);
-}
-
 export function MacroSummary({
   totals,
   profile,
@@ -99,7 +84,7 @@ export function MacroSummary({
 }) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
-  const compactLabels = width < COMPACT_LABEL_WIDTH;
+  const compactLabels = width < MACRO_COMPACT_WIDTH;
   const [focusIdx, setFocusIdx] = useState(0);
 
   const goNext = useCallback(() => {
@@ -142,7 +127,7 @@ export function MacroSummary({
     return (
       <GestureDetector gesture={focusGesture}>
         <View style={styles.card}>
-          <Text style={styles.focusLabel}>{diaryMacroLabel(t, key, false)}</Text>
+          <Text style={styles.focusLabel}>{macroDisplayLabel(t, key, false)}</Text>
           <Text style={styles.focusValue}>{d.value}</Text>
           <Text style={styles.focusSub}>{d.sub.startsWith('macros.') ? t(d.sub) : d.sub}</Text>
           {d.goal != null ? (
@@ -181,7 +166,7 @@ export function MacroSummary({
                   adjustsFontSizeToFit
                   minimumFontScale={0.75}
                 >
-                  {diaryMacroLabel(t, key, compactLabels)}
+                  {macroDisplayLabel(t, key, compactLabels)}
                 </Text>
               </View>
               <View style={styles.cellSubSlot}>

@@ -9,6 +9,7 @@ import { GoalCalculator } from '../components/GoalCalculator';
 import { Button, Chip, Field } from '../components/ui';
 import { EU_ALLERGENS } from '../lib/allergens';
 import { macrosFromKcal, type BodyMetricsDraft } from '../lib/goalCalculator';
+import { upsertTodayGoalRevision } from '../lib/goalRevisions';
 import { parseNum } from '../lib/nutrition';
 import { useSession } from '../lib/session';
 import { colors, spacing } from '../lib/theme';
@@ -44,12 +45,15 @@ export default function Onboarding() {
   async function finish(withGoals: boolean) {
     setBusy(true);
     try {
-      const { error } = await updateProfile({
-        allergens: selected,
+      const goals = {
         goal_kcal: withGoals ? parseNum(kcal) || null : null,
         goal_carbs: withGoals ? parseNum(carbs) || null : null,
         goal_protein: withGoals ? parseNum(protein) || null : null,
         goal_fat: withGoals ? parseNum(fat) || null : null,
+      };
+      const { error } = await updateProfile({
+        allergens: selected,
+        ...goals,
         ...(bodyDraft
           ? {
               date_of_birth: bodyDraft.date_of_birth,
@@ -70,6 +74,8 @@ export default function Onboarding() {
             ? t('settings.bodyMetricsMigrationHint')
             : error;
         Alert.alert(t('common.error'), hint);
+      } else if (withGoals) {
+        await upsertTodayGoalRevision(goals);
       }
     } catch (e) {
       Alert.alert(t('common.error'), e instanceof Error ? e.message : String(e));

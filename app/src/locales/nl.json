@@ -238,7 +238,11 @@
     "week": "Week",
     "average": "Gemiddeld per dag",
     "thisWeek": "Deze week",
-    "noData": "Nog geen gegevens voor deze periode"
+    "noData": "Nog geen gegevens voor deze periode",
+    "avgOnly": "Gem. {{avg}} {{unit}}",
+    "avgVsGoal": "Gem. {{avg}} {{unit}} · doel {{goal}} {{unit}}",
+    "avgVsGoalLeft": "Gem. {{avg}} {{unit}} · {{left}} {{unit}} over vs doel {{goal}}",
+    "avgVsGoalOver": "Gem. {{avg}} {{unit}} · {{over}} {{unit}} boven doel {{goal}}"
   },
   "settings": {
     "title": "Instellingen",

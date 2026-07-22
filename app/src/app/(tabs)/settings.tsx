@@ -11,6 +11,7 @@ import { EU_ALLERGENS } from '../../lib/allergens';
 import { APP_VERSION } from '../../lib/appMeta';
 import type { BodyMetricsDraft } from '../../lib/goalCalculator';
 import { macrosFromKcal } from '../../lib/goalCalculator';
+import { upsertTodayGoalRevision } from '../../lib/goalRevisions';
 import { parseNum } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
@@ -62,7 +63,7 @@ export default function Settings() {
   }
 
   async function saveGoals() {
-    const { error } = await updateProfile({
+    const patch = {
       goal_kcal: parseNum(goals.kcal) || null,
       goal_carbs: parseNum(goals.carbs) || null,
       goal_protein: parseNum(goals.protein) || null,
@@ -77,11 +78,19 @@ export default function Settings() {
             weight_goal: bodyDraft.weight_goal,
           }
         : {}),
-    });
+    };
+    const { error } = await updateProfile(patch);
     if (error) {
       Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
       return;
     }
+    // Snapshot today's goals so past report days keep old targets
+    await upsertTodayGoalRevision({
+      goal_kcal: patch.goal_kcal,
+      goal_carbs: patch.goal_carbs,
+      goal_protein: patch.goal_protein,
+      goal_fat: patch.goal_fat,
+    });
     setGoalDraft(null);
     setBodyDraft(null);
   }

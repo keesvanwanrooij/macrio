@@ -36,6 +36,15 @@ product_versions ── allergen fields (EU-14)
 
 Email addresses are unique per account via **Supabase Auth** (`auth.users.email`).
 
+### goal_revisions (historical goals for reports)
+| column | type | notes |
+|---|---|---|
+| user_id | uuid fk | |
+| effective_date | date | unique per user; goals apply from this date until next revision |
+| goal_kcal / goal_carbs / goal_protein / goal_fat | numeric null | snapshot of targets on that date |
+
+`profiles.goal_*` remain the live editable goals. Reports resolve the latest revision with `effective_date <= day`. Upsert via RPC `upsert_goal_revision_for_today` when Settings/onboarding saves goals.
+
 ### products
 | column | type | notes |
 |---|---|---|

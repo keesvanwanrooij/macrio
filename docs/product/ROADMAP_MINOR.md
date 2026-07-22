@@ -65,6 +65,7 @@
 - [ ] Macro totals per meal
 - [ ] Progress toward daily kcal/macros on diary (meal-level remaining)
 - [x] Diary header progress bars + stronger totals; focus swipe L/R; long-press → overview; overview does not tap-toggle — early in 1.0.0 testing
+- [x] Reports: selectable macros, ghost bars, historical goals, zoned swipes (mode / macros / date), tap bar → diary (migration `014`)
 
 
 

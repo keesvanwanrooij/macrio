@@ -238,7 +238,11 @@
     "week": "Week",
     "average": "Daily average",
     "thisWeek": "This week",
-    "noData": "No data for this period yet"
+    "noData": "No data for this period yet",
+    "avgOnly": "Avg {{avg}} {{unit}}",
+    "avgVsGoal": "Avg {{avg}} {{unit}} · goal {{goal}} {{unit}}",
+    "avgVsGoalLeft": "Avg {{avg}} {{unit}} · {{left}} {{unit}} left vs goal {{goal}}",
+    "avgVsGoalOver": "Avg {{avg}} {{unit}} · {{over}} {{unit}} over goal {{goal}}"
   },
   "settings": {
     "title": "Settings",

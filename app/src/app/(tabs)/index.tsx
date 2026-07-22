@@ -1,8 +1,8 @@
 // Diary — the home screen. Date navigation, macro summary, meal sections
 // (breakfast/lunch/dinner + snack slots between and after).
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -17,10 +17,19 @@ import type { DiaryEntry } from '../../lib/types';
 export default function Diary() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const params = useLocalSearchParams<{ date?: string }>();
   const { profile, updateProfile } = useSession();
   const [date, setDate] = useState(toDateString(new Date()));
   const [entries, setEntries] = useState<DiaryEntry[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Reports (and others) can open a specific diary day via ?date=YYYY-MM-DD
+  useEffect(() => {
+    const raw = typeof params.date === 'string' ? params.date : Array.isArray(params.date) ? params.date[0] : '';
+    if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      setDate(raw);
+    }
+  }, [params.date]);
 
   const load = useCallback(async () => {
     const { data } = await supabase
