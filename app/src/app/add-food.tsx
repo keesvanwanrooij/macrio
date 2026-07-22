@@ -77,13 +77,17 @@ function ScanTab({ onFound, slot, date }: { onFound: (versionId: string) => void
       const keys = lookupKeys(barcode);
       setLastBarcode(canonical);
       try {
-        // 1. Our own database (match either stored form)
-        const { data } = await supabase
+        // 1. Our DB: prefer public community match over own private
+        const { data: rows } = await supabase
           .from('current_product_versions')
           .select('*')
           .in('barcode', keys)
-          .limit(1)
-          .maybeSingle();
+          .limit(10);
+        const list = (rows as ProductVersion[] | null) ?? [];
+        const data =
+          list.find((r) => r.visibility === 'public') ??
+          list[0] ??
+          null;
         if (data) {
           onFound(data.id);
           return;
@@ -105,6 +109,7 @@ function ScanTab({ onFound, slot, date }: { onFound: (versionId: string) => void
             p_fat: off.fat,
             p_allergens: off.allergens,
             p_portions: off.portions,
+            p_visibility: 'public',
           });
           if (!error && versionId) {
             onFound(versionId as string);

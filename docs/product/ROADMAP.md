@@ -35,12 +35,14 @@ Scope locked in `MVP_SCOPE.md`. Triage founder notes → [`ROADMAP_MINOR.md`](RO
 
 - [ ] Weighted trust graph; community report voting
 - [ ] Version hygiene (trim/archive low-like old versions)
-- [ ] **Version ownership:** each version has an owner; owner may edit in place for **30 days** after creation; after 30 days an edit forks a **new version** that **copies likes** so both stay; users can unlike the new one and the old top version can rise again
+- [ ] **Version ownership:** each version has an owner; owner may edit in place for **30 days** after creation; after 30 days an edit forks a **new version** that **copies likes** so both stay; users can unlike the new one and the old top version can rise again. Same rule for public and private products.
 - [ ] **Duplicate from any version:** pick e.g. v2 as base while current is v5 → create v6 (not only prefill from most-liked)
 - [ ] Product page: show **owner name and/or date** instead of bare “version N”, respecting profile privacy / visibility
-- [ ] **Community visibility slider** (private → balanced → public): e.g. show username + profile link on versions / meals as incentive for good contributions
+- [ ] **Profile community visibility slider** (private → balanced → public): e.g. show username + profile link on versions / meals as incentive for good contributions
 - [ ] **Product merge (admin governance):** duplicate catalog entries are common; **admin** role; merge when a **majority of admins** agree (founder should not need a part-time job moderating merges alone)
 - [ ] Health sync (Health Connect, HealthKit, Samsung)
+
+_Note: catalog `products.visibility` public|private (create checkbox, owner toggle, RLS) shipped during 1.0.0 testing (migration 013)._
 
 ## v1.3 — planning & personalization
 
@@ -64,6 +66,18 @@ Scope locked in `MVP_SCOPE.md`. Triage founder notes → [`ROADMAP_MINOR.md`](RO
 
 - [ ] Analytics integration to measure success metrics (`SUCCESS_METRICS.md`) and spot when targets are missed
 - [ ] Founder/ops dashboards or exports as needed (privacy-aware; no PII in public docs)
+
+## v1.6 — funding & supporter (pay-what-you-want)
+
+Spirit: only ask people who **enjoy Macrio long-term**; they set the price based on value and what they can spare. Core app stays free.
+
+- [ ] **In-app notice** (not push): ~**4 times per year**, scheduled on a **random interval between 2 and 4 months** so messages spread out across users
+- [ ] Content: comparison table vs paid apps (e.g. MyFitnessPal, FatSecret, Yazio) - what they charge for vs what Macrio offers free
+- [ ] CTA: upgrade from free → **Supporter**; user sets monthly amount (even **€1**/month), framed against typical competitor monthly prices
+- [ ] **One-time donation** button alongside subscription
+- [ ] **Supporter** active → no funding notices
+- [ ] **One-time donor** → mute notices for **6 months**
+- [ ] Payments/backend TBD (e.g. Stripe / RevenueCat / GitHub Sponsors bridge); Settings “Support the project” remains the always-available path
 
 ## v2.x — intelligence (paid)
 

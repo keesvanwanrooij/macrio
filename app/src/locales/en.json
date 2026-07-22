@@ -20,12 +20,13 @@
   },
   "macros": {
     "kcal": "Calories",
+    "calories": "Calories",
     "carbs": "Carbs",
     "protein": "Protein",
     "fat": "Fat",
     "kcalShort": "kcal",
     "carbsShort": "Carbs",
-    "proteinShort": "Protein",
+    "proteinShort": "Prot",
     "fatShort": "Fat",
     "remaining": "left",
     "consumed": "eaten",
@@ -132,7 +133,8 @@
     "yesterday": "Yesterday",
     "empty": "Nothing logged yet",
     "deleteEntry": "Remove from diary?",
-    "focusHint": "Tap for next macro"
+    "focusHint": "Tap for next macro",
+    "focusSwipeHint": "Swipe for next macro · long-press for all four"
   },
   "addFood": {
     "title": "Add food",
@@ -220,6 +222,13 @@
     "barcodeWrongLength": "Use 8, 12 or 13 digits (EAN-8, UPC-A or EAN-13). Not a longer code.",
     "barcodeGs1128": "That looks like a GS1-128 / logistics code. Use the short EAN-13 or UPC-A printed for the product, without expiry or lot data.",
     "barcodeBadCheck": "Those digits are not a valid barcode (check digit failed). Double-check the numbers under the bars.",
+    "sharedWithEveryone": "This product is shared with everyone using Macrio.",
+    "keepPrivate": "Keep this ingredient private (only I can see it)",
+    "visibilityPublic": "Public · community",
+    "visibilityPrivate": "Private · only you",
+    "makePublic": "Make public",
+    "makePrivate": "Make private",
+    "visibilityOwnerOnly": "Only the creator can change visibility.",
     "likes": "{{count}} likes",
     "perPortion": "per {{name}}"
   },
@@ -258,13 +267,14 @@
     "goalFat": "Fat (g)",
     "feedback": "Send feedback",
     "about": "About Macrio",
-    "aboutText": "Macrio is open source (AGPL-3.0) and free, funded by donations. Product data partly from Open Food Facts (ODbL).",
-    "sponsor": "Support the project ❤",
+    "aboutText": "Macrio is open source and free. Your donations help keep the app free.",
+    "sponsor": "Support the project",
     "signOut": "Sign out",
     "deleteAccount": "Delete account",
     "deleteConfirmTitle": "Delete account?",
     "deleteConfirmBody": "All your diary data will be permanently erased. Products you created remain anonymously for the community.",
-    "version": "Version"
+    "version": "Version",
+    "license": "License: AGPL-3.0"
   },
   "feedback": {
     "title": "Feedback",

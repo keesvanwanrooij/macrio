@@ -216,8 +216,10 @@ export default function Settings() {
       <SectionTitle>{t('settings.about')}</SectionTitle>
       <Card>
         <Text style={styles.aboutText}>{t('settings.aboutText')}</Text>
-        <Text style={styles.aboutVersion}>
+        <Text style={styles.aboutMeta}>
           {t('settings.version')} {APP_VERSION}
+          {'  ·  '}
+          {t('settings.license')}
         </Text>
         <View style={{ height: spacing.m }} />
         <Button title={t('settings.sponsor')} onPress={() => Linking.openURL(SPONSOR_URL)} />
@@ -238,5 +240,5 @@ const styles = StyleSheet.create({
   profileValue: { fontSize: 20, color: colors.text, fontWeight: '700', marginBottom: spacing.m },
   disclaimer: { fontSize: 12, color: colors.faint, lineHeight: 17, marginTop: spacing.xs },
   aboutText: { fontSize: 13, color: colors.muted, lineHeight: 19 },
-  aboutVersion: { fontSize: 12, color: colors.faint, marginTop: spacing.s },
+  aboutMeta: { fontSize: 12, color: colors.faint, marginTop: spacing.s },
 });

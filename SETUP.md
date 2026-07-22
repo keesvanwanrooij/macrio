@@ -18,11 +18,12 @@ Three steps, ~15 minutes total. You only do steps 1–2 once.
 11. Same way, run `backend/supabase/migrations/010_set_product_barcode.sql` (add barcode later to products created without one).
 12. Same way, run `backend/supabase/migrations/011_barcode_normalize_and_edit.sql` (EAN-13 normalize, edit/clear barcode).
 13. Same way, run `backend/supabase/migrations/012_barcode_check_digit.sql` (reject invalid check digits / GS1-128-style codes).
-14. **Authentication → URL Configuration** (fixes broken confirm-email links):
+14. Same way, run `backend/supabase/migrations/013_product_visibility.sql` (public/private products + RLS).
+15. **Authentication → URL Configuration** (fixes broken confirm-email links):
    - **Site URL:** `http://localhost:3000` (do **not** use your `*.supabase.co` project URL here)
    - **Redirect URLs:** add `http://localhost:3000` (and keep it in `app/.env` as `EXPO_PUBLIC_AUTH_REDIRECT_URL`)
-15. **Authentication → Providers → Email** → **Confirm email** may be **OFF** while founder-testing (faster sign-up). Turn it **ON** before public release — see `docs/product/ROADMAP_MINOR.md` (v1.0.2). Set **minimum password length** to **8**.
-16. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
+16. **Authentication → Providers → Email** → **Confirm email** may be **OFF** while founder-testing (faster sign-up). Turn it **ON** before public release — see `docs/product/ROADMAP_MINOR.md` (v1.0.2). Set **minimum password length** to **8**.
+17. **Project Settings → API** → copy the *Project URL* and the *anon public* key.
 
 
 

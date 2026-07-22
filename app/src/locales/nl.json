@@ -20,11 +20,12 @@
   },
   "macros": {
     "kcal": "Calorieën",
+    "calories": "Calorieën",
     "carbs": "Koolhydraten",
     "protein": "Eiwitten",
     "fat": "Vetten",
     "kcalShort": "kcal",
-    "carbsShort": "KH",
+    "carbsShort": "Koolh.",
     "proteinShort": "Eiwit",
     "fatShort": "Vet",
     "remaining": "over",
@@ -132,7 +133,8 @@
     "yesterday": "Gisteren",
     "empty": "Nog niets gelogd",
     "deleteEntry": "Verwijderen uit dagboek?",
-    "focusHint": "Tik voor volgende macro"
+    "focusHint": "Tik voor volgende macro",
+    "focusSwipeHint": "Veeg voor volgende macro · lang indrukken voor alle vier"
   },
   "addFood": {
     "title": "Eten toevoegen",
@@ -220,6 +222,13 @@
     "barcodeWrongLength": "Gebruik 8, 12 of 13 cijfers (EAN-8, UPC-A of EAN-13). Geen langere code.",
     "barcodeGs1128": "Dit lijkt op een GS1-128 / logistieke code. Gebruik de korte EAN-13 of UPC-A van het product, zonder houdbaarheid of partijnummer.",
     "barcodeBadCheck": "Die cijfers vormen geen geldige barcode (controlecijfer klopt niet). Controleer de cijfers onder de streepjes.",
+    "sharedWithEveryone": "Dit product wordt gedeeld met iedereen die Macrio gebruikt.",
+    "keepPrivate": "Houd dit ingrediënt privé (alleen ik zie het)",
+    "visibilityPublic": "Openbaar · community",
+    "visibilityPrivate": "Privé · alleen jij",
+    "makePublic": "Maak openbaar",
+    "makePrivate": "Maak privé",
+    "visibilityOwnerOnly": "Alleen de maker kan de zichtbaarheid wijzigen.",
     "likes": "{{count}} likes",
     "perPortion": "per {{name}}"
   },
@@ -258,13 +267,14 @@
     "goalFat": "Vetten (g)",
     "feedback": "Feedback sturen",
     "about": "Over Macrio",
-    "aboutText": "Macrio is open source (AGPL-3.0) en gratis, betaald door donaties. Productdata deels van Open Food Facts (ODbL).",
-    "sponsor": "Steun het project ❤",
+    "aboutText": "Macrio is open source en gratis. Jouw donaties helpen bij het gratis houden van de app.",
+    "sponsor": "Steun het project",
     "signOut": "Uitloggen",
     "deleteAccount": "Account verwijderen",
     "deleteConfirmTitle": "Account verwijderen?",
     "deleteConfirmBody": "Al je dagboekdata wordt permanent gewist. Producten die je maakte blijven anoniem bestaan voor de community.",
-    "version": "Versie"
+    "version": "Versie",
+    "license": "Licentie: AGPL-3.0"
   },
   "feedback": {
     "title": "Feedback",

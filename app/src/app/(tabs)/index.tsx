@@ -159,7 +159,9 @@ export default function Diary() {
             totals={totals}
             profile={profile}
             onToggleMode={() =>
-              updateProfile({ macro_display: profile.macro_display === 'focus' ? 'overview' : 'focus' })
+              updateProfile({
+                macro_display: profile.macro_display === 'focus' ? 'overview' : 'focus',
+              })
             }
           />
           <View style={{ paddingHorizontal: spacing.l, paddingBottom: spacing.xxl }}>

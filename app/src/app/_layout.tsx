@@ -9,6 +9,7 @@ import { SessionProvider, useSession } from '../lib/session';
 import { supabase } from '../lib/supabase';
 import { colors, spacing } from '../lib/theme';
 import { Button, Loading } from '../components/ui';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function RootNavigator() {
   const { session, profile, profileError, loading, refreshProfile } = useSession();
@@ -81,10 +82,12 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <SessionProvider>
-      <StatusBar style="dark" />
-      <RootNavigator />
-    </SessionProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SessionProvider>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </SessionProvider>
+    </GestureHandlerRootView>
   );
 }
 

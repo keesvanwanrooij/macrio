@@ -43,6 +43,8 @@ export type ProductVersion = {
   barcode?: string | null;
   source?: string;
   is_generic?: boolean;
+  visibility?: 'public' | 'private';
+  product_created_by?: string | null;
 };
 
 export type DiaryEntry = {

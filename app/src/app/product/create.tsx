@@ -50,6 +50,8 @@ export default function CreateProduct() {
   const [allergens, setAllergens] = useState<Record<string, AllergenState>>({});
   const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Keep local = private; default public (shared with community). */
+  const [keepPrivate, setKeepPrivate] = useState(false);
 
   // Prefill when suggesting a new version of an existing product.
   useEffect(() => {
@@ -184,6 +186,7 @@ export default function CreateProduct() {
         p_source: 'community',
         p_is_generic: false,
         ...common,
+        p_visibility: keepPrivate ? 'private' : 'public',
       });
       if (error) throw error;
       const versionId = data as string;
@@ -205,6 +208,23 @@ export default function CreateProduct() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.l, paddingBottom: spacing.xxl }}>
       {isNewVersion && <Text style={styles.editBanner}>{t('product.editTitle')}</Text>}
+
+      {!isNewVersion ? (
+        <View style={styles.shareBox}>
+          <Text style={styles.shareCopy}>{t('product.sharedWithEveryone')}</Text>
+          <Pressable
+            style={styles.checkRow}
+            onPress={() => setKeepPrivate((v) => !v)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: keepPrivate }}
+          >
+            <View style={[styles.checkbox, keepPrivate && styles.checkboxOn]}>
+              {keepPrivate ? <Text style={styles.checkMark}>✓</Text> : null}
+            </View>
+            <Text style={styles.checkLabel}>{t('product.keepPrivate')}</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <Field label={`${t('product.name')} *`} value={name} onChangeText={setName} />
       <Field label={t('product.brand')} value={brand} onChangeText={setBrand} />
@@ -319,6 +339,28 @@ const styles = StyleSheet.create({
     marginBottom: spacing.l,
     overflow: 'hidden',
   },
+  shareBox: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.m,
+    padding: spacing.m,
+    marginBottom: spacing.l,
+    gap: spacing.m,
+  },
+  shareCopy: { fontSize: 14, color: colors.primaryDark, lineHeight: 20, fontWeight: '600' },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.m },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxOn: { backgroundColor: colors.primary },
+  checkMark: { color: '#fff', fontWeight: '900', fontSize: 14 },
+  checkLabel: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '600' },
   section: {
     fontSize: 13,
     fontWeight: '800',

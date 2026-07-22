@@ -48,7 +48,10 @@ export default function ProductPage() {
   const [current, setCurrent] = useState<ProductVersion | null>(null);
   const [source, setSource] = useState<string>('community');
   const [barcode, setBarcode] = useState<string | null>(null);
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
+  const [productCreatedBy, setProductCreatedBy] = useState<string | null>(null);
   const [myLikes, setMyLikes] = useState<Set<string>>(new Set());
+  const [visibilityBusy, setVisibilityBusy] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
 
@@ -60,7 +63,7 @@ export default function ProductPage() {
         .eq('product_id', id)
         .order('like_count', { ascending: false })
         .order('created_at', { ascending: false }),
-      supabase.from('products').select('source, barcode').eq('id', id).single(),
+      supabase.from('products').select('source, barcode, visibility, created_by').eq('id', id).single(),
     ]);
     const list = (vs as ProductVersion[]) ?? [];
     setVersions(list);
@@ -68,6 +71,8 @@ export default function ProductPage() {
     if (prod) {
       setSource(prod.source);
       setBarcode(prod.barcode);
+      setVisibility((prod.visibility as 'public' | 'private') ?? 'public');
+      setProductCreatedBy(prod.created_by ?? null);
     }
     if (session && list.length > 0) {
       const { data: likes } = await supabase
@@ -84,6 +89,22 @@ export default function ProductPage() {
       load();
     }, [load])
   );
+
+  async function toggleVisibility() {
+    if (!session || productCreatedBy !== session.user.id || visibilityBusy) return;
+    const next = visibility === 'public' ? 'private' : 'public';
+    setVisibilityBusy(true);
+    try {
+      const { error } = await supabase.rpc('set_product_visibility', {
+        p_product_id: id,
+        p_visibility: next,
+      });
+      if (error) Alert.alert(t('common.error'), friendlyVisError(error.message, t));
+      else setVisibility(next);
+    } finally {
+      setVisibilityBusy(false);
+    }
+  }
 
   async function toggleLike(version: ProductVersion) {
     if (!session) return;
@@ -127,6 +148,7 @@ export default function ProductPage() {
   ];
   const sourceKey =
     source === 'openfoodfacts' ? 'product.sourceOff' : source === 'seed' ? 'product.sourceSeed' : 'product.sourceCommunity';
+  const isOwner = !!session && productCreatedBy === session.user.id;
 
   return (
     <View style={styles.container}>
@@ -142,6 +164,16 @@ export default function ProductPage() {
               {t('product.source')}: {t(sourceKey)}
               {barcode ? ` · ${barcode}` : ''}
             </Text>
+            <Text style={styles.visibilityBadge}>
+              {visibility === 'private' ? t('product.visibilityPrivate') : t('product.visibilityPublic')}
+            </Text>
+            {isOwner ? (
+              <Pressable style={styles.addBarcodeBtn} onPress={toggleVisibility} disabled={visibilityBusy}>
+                <Text style={styles.addBarcodeText}>
+                  {visibility === 'private' ? t('product.makePublic') : t('product.makePrivate')}
+                </Text>
+              </Pressable>
+            ) : null}
             {!barcode ? (
               <Pressable
                 style={styles.addBarcodeBtn}
@@ -282,12 +314,20 @@ function MacroCell({ label, value, highlight }: { label: string; value: string; 
   );
 }
 
+function friendlyVisError(raw: string, t: (k: string) => string): string {
+  const lower = raw.toLowerCase();
+  if (lower.includes('already used')) return t('product.barcodeTaken');
+  if (lower.includes('not product owner')) return t('product.visibilityOwnerOnly');
+  return raw;
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   photo: { width: 84, height: 84, borderRadius: radius.m, backgroundColor: colors.border },
   name: { fontSize: 22, fontWeight: '900', color: colors.text },
   brand: { fontSize: 15, color: colors.muted, marginTop: 2 },
   source: { fontSize: 12, color: colors.faint, marginTop: 4 },
+  visibilityBadge: { fontSize: 12, fontWeight: '700', color: colors.primaryDark, marginTop: 6 },
   addBarcodeBtn: {
     marginTop: spacing.s,
     alignSelf: 'flex-start',
