@@ -1,12 +1,14 @@
 /*
- * SECTION: Meal goal shares for a day
- * WHAT: Split a daily macro goal across meals/snacks for progress bars.
- * HOW: Each main meal = 2 parts; each snack slot that has food = 1 part.
- *      No snacks logged → each main gets 1/3 of the day goal.
- * INPUT: day goal number, list of meal_slot ids that have entries
- * OUTPUT: goal amount for one slot, or null if slot should not get a share
+ * SECTION: Meal goal scale for reports day
+ * WHAT: One shared scale for breakfast/lunch/dinner (+ snacks) progress bars.
+ * HOW: mealScale = (dayGoal − snackSum) / 3 when remainder > 0; else dayGoal / 3.
+ *      Snacks use the same scale so bars are comparable.
+ * INPUT: day goal, total of selected macro in snack slots
+ * OUTPUT: per-meal scale number
  */
 import { MAIN_SLOTS, SNACK_AFTER } from './nutrition';
+import type { DiaryEntry } from './types';
+import type { MacroKey } from './macroLabels';
 
 const SNACK_SLOTS = MAIN_SLOTS.map((m) => SNACK_AFTER[m]);
 
@@ -18,26 +20,26 @@ export function isSnackSlot(slot: number): boolean {
   return SNACK_SLOTS.includes(slot);
 }
 
-/**
- * Goal for one meal_slot given the day's total goal and which slots have food.
- * Empty snack slots are not in slotsWithFood → they get null (no bar).
- */
-export function mealSlotGoal(
-  dayGoal: number,
-  slot: number,
-  slotsWithFood: readonly number[]
-): number | null {
-  if (dayGoal <= 0) return null;
-
-  const snackCount = SNACK_SLOTS.filter((s) => slotsWithFood.includes(s)).length;
-  const totalParts = MAIN_SLOTS.length * 2 + snackCount;
-  if (totalParts <= 0) return null;
-
-  if (isMainMealSlot(slot)) {
-    return (dayGoal * 2) / totalParts;
-  }
-  if (isSnackSlot(slot) && slotsWithFood.includes(slot)) {
-    return dayGoal / totalParts;
-  }
-  return null;
+/** Sum of one macro across all snack entries for the day. */
+export function snackMacroTotal(entries: readonly DiaryEntry[], key: MacroKey): number {
+  return entries.reduce((sum, e) => {
+    if (!isSnackSlot(Number(e.meal_slot))) return sum;
+    return sum + Number(e[key] ?? 0);
+  }, 0);
 }
+
+/**
+ * Shared bar scale for all meal/snack rows that day.
+ * Deduct snacks from the day goal, split the rest across 3 mains.
+ * If snacks already used up the day goal, fall back to dayGoal / 3.
+ */
+export function mealScaleFromDayGoal(dayGoal: number, snackTotal: number): number {
+  if (!(dayGoal > 0)) return 0;
+  const remainder = dayGoal - Math.max(0, snackTotal);
+  if (remainder > 0) return remainder / 3;
+  return dayGoal / 3;
+}
+
+/** Fallback when the user has no goal for this macro: 2000 kcal + maintain split at 70 kg. */
+export const DEFAULT_GOAL_KCAL = 2000;
+export const DEFAULT_GOAL_WEIGHT_KG = 70;

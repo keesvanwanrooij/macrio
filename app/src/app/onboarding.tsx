@@ -36,7 +36,12 @@ export default function Onboarding() {
     const weightKg = bodyDraft?.weight_kg ?? profile?.weight_kg ?? 0;
     const goal = bodyDraft?.weight_goal ?? profile?.weight_goal ?? 'maintain';
     const macros = macrosFromKcal(parseNum(value), weightKg, goal);
-    if (!macros) return;
+    if (!macros) {
+      setCarbs('');
+      setProtein('');
+      setFat('');
+      return;
+    }
     setCarbs(String(macros.carbs));
     setProtein(String(macros.protein));
     setFat(String(macros.fat));

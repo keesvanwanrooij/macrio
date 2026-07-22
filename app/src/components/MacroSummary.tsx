@@ -115,7 +115,7 @@ export function MacroSummary({
           <Text style={styles.focusSub}>{d.sub.startsWith('macros.') ? t(d.sub) : d.sub}</Text>
           {d.goal != null ? (
             <View style={styles.focusBarWrap}>
-              <ProgressBar ratio={d.consumed / d.goal} highlight />
+              <ProgressBar consumed={d.consumed} goal={d.goal} overTone="soft" />
             </View>
           ) : null}
           <View style={styles.dots}>
@@ -159,7 +159,7 @@ export function MacroSummary({
               </View>
               <View style={styles.cellBarSlot}>
                 {d.goal != null ? (
-                  <ProgressBar ratio={d.consumed / d.goal} highlight={isKcal} />
+                  <ProgressBar consumed={d.consumed} goal={d.goal} overTone="soft" />
                 ) : (
                   <View style={styles.barSpacer} />
                 )}

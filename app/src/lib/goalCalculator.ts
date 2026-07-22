@@ -31,11 +31,11 @@ export const WEIGHT_GOAL_KCAL_DELTA: Record<WeightGoal, number> = {
   gain: 300,
 };
 
-/** Protein g/kg: higher on cut/gain to support muscle. */
+/** Protein g/kg: higher on cut/gain to support muscle; capped so macros stay realistic. */
 export const PROTEIN_G_PER_KG_BY_GOAL: Record<WeightGoal, number> = {
-  lose: 2.0,
-  maintain: 1.6,
-  gain: 2.0,
+  lose: 1.8,
+  maintain: 1.2,
+  gain: 1.6,
 };
 
 /** Fat g/kg (common adequate-fat midpoint). */
@@ -126,6 +126,8 @@ export function estimateBmr(input: Pick<GoalCalcInput, 'weightKg' | 'heightCm' |
  * - Protein from goal-specific g/kg
  * - Fat 0.9 g/kg
  * - Carbs = leftover energy
+ * All macro grams use Math.floor (no rounding up leftover crumbs to 1 g).
+ * Returns null when kcal is empty/zero or weight is missing (caller should clear macros).
  */
 export function macrosFromKcal(
   kcal: number,
@@ -135,20 +137,21 @@ export function macrosFromKcal(
   if (!(kcal > 0) || !(weightKg > 0 && weightKg < 400)) return null;
 
   const proteinPerKg = PROTEIN_G_PER_KG_BY_GOAL[weightGoal];
-  let protein = Math.round(weightKg * proteinPerKg);
-  let fat = Math.round(weightKg * FAT_G_PER_KG);
-  let leftover = kcal - protein * 4 - fat * 9;
+  let protein = Math.floor(weightKg * proteinPerKg);
+  let fat = Math.floor(weightKg * FAT_G_PER_KG);
+  let proteinKcal = protein * 4;
+  let fatKcal = fat * 9;
 
-  if (leftover < 0) {
-    const denom = protein * 4 + fat * 9;
-    if (denom <= 0) return { protein: 0, fat: 0, carbs: 0 };
-    const scale = kcal / denom;
-    protein = Math.max(0, Math.round(protein * scale));
-    fat = Math.max(0, Math.round(fat * scale));
-    leftover = kcal - protein * 4 - fat * 9;
+  // Kcal too low for the g/kg targets: scale P+F down so they fit (carbs usually 0)
+  if (proteinKcal + fatKcal > kcal) {
+    const scale = kcal / (proteinKcal + fatKcal);
+    protein = Math.floor(protein * scale);
+    fat = Math.floor(fat * scale);
+    proteinKcal = protein * 4;
+    fatKcal = fat * 9;
   }
 
-  const carbs = Math.max(0, Math.round(leftover / 4));
+  const carbs = Math.floor(Math.max(0, kcal - proteinKcal - fatKcal) / 4);
   return { protein, fat, carbs };
 }
 

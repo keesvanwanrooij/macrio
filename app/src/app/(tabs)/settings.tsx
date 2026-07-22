@@ -95,24 +95,6 @@ export default function Settings() {
     setBodyDraft(null);
   }
 
-  async function persistBodyMetrics(body: BodyMetricsDraft) {
-    setSavingBody(true);
-    const { error } = await updateProfile({
-      date_of_birth: body.date_of_birth,
-      height_cm: body.height_cm,
-      weight_kg: body.weight_kg,
-      gender: body.gender,
-      activity_level: body.activity_level,
-      weight_goal: body.weight_goal,
-    });
-    setSavingBody(false);
-    if (error) {
-      Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
-      return false;
-    }
-    return true;
-  }
-
   function setGoalKcal(value: string) {
     const weightKg = profile!.weight_kg ?? 0;
     const weightGoal = profile!.weight_goal ?? 'maintain';
@@ -125,7 +107,8 @@ export default function Settings() {
         fat: String(macros.fat),
       });
     } else {
-      setGoal('kcal', value);
+      // Empty/0 kcal or no weight: clear auto macros (do not leave stale 1 g carbs)
+      setGoalDraft({ kcal: value, carbs: '', protein: '', fat: '' });
     }
   }
 
@@ -198,17 +181,43 @@ export default function Settings() {
       <GoalCalculator
         profile={profile}
         onCalculated={async ({ goals: calcGoals, body }) => {
-          setBodyDraft(body);
-          setGoalDraft({
-            kcal: String(calcGoals.kcal),
-            carbs: String(calcGoals.carbs),
-            protein: String(calcGoals.protein),
-            fat: String(calcGoals.fat),
-          });
-          const ok = await persistBodyMetrics(body);
-          if (ok) {
-            Alert.alert(t('settings.bodySavedTitle'), t('settings.bodySavedBody'));
+          // One tap: persist body metrics + calculated macro goals (no second Save)
+          setSavingBody(true);
+          const patch = {
+            goal_kcal: calcGoals.kcal,
+            goal_carbs: calcGoals.carbs,
+            goal_protein: calcGoals.protein,
+            goal_fat: calcGoals.fat,
+            date_of_birth: body.date_of_birth,
+            height_cm: body.height_cm,
+            weight_kg: body.weight_kg,
+            gender: body.gender,
+            activity_level: body.activity_level,
+            weight_goal: body.weight_goal,
+          };
+          const { error } = await updateProfile(patch);
+          setSavingBody(false);
+          if (error) {
+            // Keep draft so the user can edit and tap Save
+            setBodyDraft(body);
+            setGoalDraft({
+              kcal: String(calcGoals.kcal),
+              carbs: String(calcGoals.carbs),
+              protein: String(calcGoals.protein),
+              fat: String(calcGoals.fat),
+            });
+            Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
+            return;
           }
+          await upsertTodayGoalRevision({
+            goal_kcal: patch.goal_kcal,
+            goal_carbs: patch.goal_carbs,
+            goal_protein: patch.goal_protein,
+            goal_fat: patch.goal_fat,
+          });
+          setGoalDraft(null);
+          setBodyDraft(null);
+          Alert.alert(t('settings.bodySavedTitle'), t('settings.bodySavedBody'));
         }}
       />
       {savingBody ? <Text style={styles.disclaimer}>{t('common.loading')}</Text> : null}

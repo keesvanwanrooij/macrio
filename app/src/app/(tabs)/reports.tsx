@@ -20,7 +20,8 @@ import {
   type GoalSnapshot,
 } from '../../lib/goalRevisions';
 import { MACRO_COMPACT_WIDTH, MACRO_KEYS, macroDisplayLabel, type MacroKey } from '../../lib/macroLabels';
-import { mealSlotGoal, isSnackSlot } from '../../lib/mealGoalShare';
+import { mealScaleFromDayGoal, snackMacroTotal, isSnackSlot, DEFAULT_GOAL_KCAL, DEFAULT_GOAL_WEIGHT_KG } from '../../lib/mealGoalShare';
+import { macrosFromKcal } from '../../lib/goalCalculator';
 import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDateString } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
@@ -154,11 +155,12 @@ export default function Reports() {
 
 /*
  * SECTION: Day report body
- * WHAT: Totals + full-width day progress card + meal list for selected macro.
- * HOW: Day goal from revisions (else profile). Meals: mains 2 parts, logged snacks 1.
- *      Day bar uses strong over color; meal bars use soft coral when over.
+ * WHAT: Totals + day progress + meal/snack bars on one shared scale.
+ * HOW: Day goal from revisions/profile, else default 2000 kcal macros.
+ *      Meal goal = (dayGoal − snacks) / 3, or dayGoal/3 if snacks ate the budget.
+ *      Meal tracks share max(mealGoal, largest meal/snack) so lengths are comparable.
  * INPUT: date, entries, revisions, selected macro
- * OUTPUT: Calmer day UI with share hint under Dagboek
+ * OUTPUT: Day UI with mains always shown; snacks only when logged
  */
 function DayReport({
   date,
@@ -176,43 +178,89 @@ function DayReport({
   const { t } = useTranslation();
   const { profile } = useSession();
   const totals = sumEntries(entries);
-  const slots = MAIN_SLOTS.flatMap((m) => [m, SNACK_AFTER[m]]);
   const unit = selected === 'kcal' ? t('common.kcal') : 'g';
 
-  const dayGoal = useMemo(() => {
+  const { dayGoal, goalIsDefault } = useMemo(() => {
     const fromRev = goalValue(resolveGoalForDate(revisions, date), selected);
-    if (fromRev != null && fromRev > 0) return fromRev;
-    if (!profile) return null;
-    return goalValue(
-      {
-        effective_date: date,
-        goal_kcal: profile.goal_kcal,
-        goal_carbs: profile.goal_carbs,
-        goal_protein: profile.goal_protein,
-        goal_fat: profile.goal_fat,
-      },
-      selected
-    );
+    if (fromRev != null && fromRev > 0) {
+      return { dayGoal: fromRev, goalIsDefault: false };
+    }
+    if (profile) {
+      const fromProfile = goalValue(
+        {
+          effective_date: date,
+          goal_kcal: profile.goal_kcal,
+          goal_carbs: profile.goal_carbs,
+          goal_protein: profile.goal_protein,
+          goal_fat: profile.goal_fat,
+        },
+        selected
+      );
+      if (fromProfile != null && fromProfile > 0) {
+        return { dayGoal: fromProfile, goalIsDefault: false };
+      }
+    }
+    const weight =
+      profile?.weight_kg != null && Number(profile.weight_kg) > 0
+        ? Number(profile.weight_kg)
+        : DEFAULT_GOAL_WEIGHT_KG;
+    const macros = macrosFromKcal(DEFAULT_GOAL_KCAL, weight, profile?.weight_goal ?? 'maintain');
+    const defaults = {
+      kcal: DEFAULT_GOAL_KCAL,
+      carbs: macros?.carbs ?? 225,
+      protein: macros?.protein ?? 112,
+      fat: macros?.fat ?? 63,
+    };
+    return { dayGoal: defaults[selected], goalIsDefault: true };
   }, [revisions, date, selected, profile]);
 
-  const slotsWithFood = useMemo(() => {
+  const snackTotal = useMemo(
+    () => snackMacroTotal(entries, selected),
+    [entries, selected]
+  );
+
+  const mealGoal = useMemo(
+    () => mealScaleFromDayGoal(dayGoal, snackTotal),
+    [dayGoal, snackTotal]
+  );
+
+  const snackSlotsWithFood = useMemo(() => {
     const present = new Set(entries.map((e) => Number(e.meal_slot)));
-    return MAIN_SLOTS.flatMap((m) => [m, SNACK_AFTER[m]]).filter((s) => present.has(s));
+    return MAIN_SLOTS.map((m) => SNACK_AFTER[m]).filter((s) => present.has(s));
   }, [entries]);
 
-  const mealShareGoal =
-    dayGoal != null ? mealSlotGoal(dayGoal, MAIN_SLOTS[0], slotsWithFood) : null;
-  const firstSnackWithFood = slotsWithFood.find((s) => isSnackSlot(s));
-  const snackShareGoal =
-    dayGoal != null && firstSnackWithFood != null
-      ? mealSlotGoal(dayGoal, firstSnackWithFood, slotsWithFood)
-      : null;
+  // Per-slot amounts for mains (always) + logged snacks
+  const mealRows = useMemo(() => {
+    const mains = MAIN_SLOTS.map((slot) => ({
+      slot,
+      consumed: sumEntries(entries.filter((e) => Number(e.meal_slot) === slot))[selected],
+    }));
+    const snacks = snackSlotsWithFood.map((slot) => ({
+      slot,
+      consumed: sumEntries(entries.filter((e) => Number(e.meal_slot) === slot))[selected],
+    }));
+    return [...mains, ...snacks];
+  }, [entries, selected, snackSlotsWithFood]);
+
+  // One track for all meal/snack bars: at least the meal goal, or the biggest meal if larger
+  const mealTrackMax = useMemo(() => {
+    const peak = mealRows.reduce((m, row) => Math.max(m, row.consumed), 0);
+    return Math.max(mealGoal, peak);
+  }, [mealRows, mealGoal]);
 
   if (entries.length === 0) {
     return <Text style={styles.empty}>{t('reports.noData')}</Text>;
   }
 
   const consumed = totals[selected];
+  const dayOver = dayGoal > 0 && consumed > dayGoal;
+
+  function slotLabel(slot: number): string {
+    if (isSnackSlot(slot)) {
+      return t('reports.snackLabel');
+    }
+    return t(slotLabelKey(slot));
+  }
 
   return (
     <>
@@ -220,50 +268,47 @@ function DayReport({
         <TotalsRow totals={totals} selected={selected} onSelect={onSelect} />
       </Card>
 
-      {dayGoal != null && dayGoal > 0 ? (
-        <Card style={styles.dayProgressCard}>
-          <Text style={styles.dayProgressLabel}>
-            {fmt(consumed)} / {fmt(dayGoal)} {unit}
-          </Text>
-          <ProgressBar ratio={consumed / dayGoal} highlight overTone="strong" />
-        </Card>
-      ) : null}
+      <Card style={styles.dayProgressCard}>
+        <Text style={styles.dayProgressLabel}>
+          {fmt(consumed)} / {fmt(dayGoal)} {unit}
+        </Text>
+        <ProgressBar
+          consumed={consumed}
+          goal={dayGoal}
+          highlight
+          overTone="strong"
+        />
+      </Card>
 
       <SectionTitle>{t('diary.title')}</SectionTitle>
-      {mealShareGoal != null ? (
+      {goalIsDefault ? (
+        <Text style={styles.mealGoalHint}>{t('reports.setGoalInSettings')}</Text>
+      ) : (
         <Text style={styles.mealGoalHint}>
-          {snackShareGoal != null
-            ? t('reports.goalPerMealWithSnacks', {
-                meal: fmt(mealShareGoal),
-                snack: fmt(snackShareGoal),
-                unit,
-              })
-            : t('reports.goalPerMeal', { amount: fmt(mealShareGoal), unit })}
+          {t('reports.goalPerMeal', { amount: fmt(mealGoal), unit })}
         </Text>
-      ) : null}
+      )}
 
       <Card>
-        {slots.map((slot) => {
-          const slotEntries = entries.filter((e) => Number(e.meal_slot) === slot);
-          if (slotEntries.length === 0) return null;
-          const st = sumEntries(slotEntries);
-          const slotConsumed = st[selected];
-          const slotGoal =
-            dayGoal != null ? mealSlotGoal(dayGoal, slot, slotsWithFood) : null;
-          return (
-            <View key={slot} style={styles.mealBlock}>
-              <View style={styles.mealRow}>
-                <Text style={styles.mealName}>{t(slotLabelKey(slot))}</Text>
-                <Text style={styles.mealValue}>
-                  {fmt(slotConsumed)} {unit}
-                </Text>
-              </View>
-              {slotGoal != null && slotGoal > 0 ? (
-                <ProgressBar ratio={slotConsumed / slotGoal} overTone="soft" />
-              ) : null}
+        {mealRows.map(({ slot, consumed: slotConsumed }) => (
+          <View key={slot} style={styles.mealBlock}>
+            <View style={styles.mealRow}>
+              <Text style={styles.mealName}>{slotLabel(slot)}</Text>
+              <Text style={styles.mealValue}>
+                {fmt(slotConsumed)} {unit}
+              </Text>
             </View>
-          );
-        })}
+            <ProgressBar
+              consumed={slotConsumed}
+              goal={mealGoal}
+              trackMax={mealTrackMax}
+              overTone="soft"
+              showMarker={false}
+              // Soft-red only if the day is over AND this meal/snack beat the per-meal share
+              over={dayOver && mealGoal > 0 && slotConsumed > mealGoal}
+            />
+          </View>
+        ))}
       </Card>
     </>
   );

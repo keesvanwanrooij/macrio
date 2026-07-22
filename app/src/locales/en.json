@@ -244,7 +244,8 @@
     "avgVsGoalLeft": "Avg {{avg}} {{unit}} · {{left}} {{unit}} left vs goal {{goal}}",
     "avgVsGoalOver": "Avg {{avg}} {{unit}} · {{over}} {{unit}} over goal {{goal}}",
     "goalPerMeal": "Goal per meal: {{amount}} {{unit}}",
-    "goalPerMealWithSnacks": "Goal per meal: {{meal}} {{unit}}, snacks: {{snack}} {{unit}}"
+    "setGoalInSettings": "Set this goal in Settings for personal targets (using defaults for now).",
+    "snackLabel": "Snack"
   },
   "settings": {
     "title": "Settings",
@@ -253,7 +254,7 @@
     "fullName": "Full name",
     "fullNameOptional": "Optional",
     "bodySavedTitle": "Body details saved",
-    "bodySavedBody": "Height, date of birth, weight, gender, activity, and goal were written to your profile.",
+    "bodySavedBody": "Height, date of birth, weight, gender, activity, and daily goals (kcal/macros) were written to your profile.",
     "bodyMetricsMigrationHint": "Could not save body details. In Supabase SQL Editor, run migrations 006_profile_body_metrics.sql and 007_profile_weight_goal.sql, then try again.",
     "language": "Language",
     "dutch": "Dutch",
