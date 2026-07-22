@@ -1,7 +1,8 @@
 /*
  * SECTION: Reports (day / week)
  * WHAT: Day meal breakdown by selected macro; week bar chart with historical goals.
- * HOW: Tap macro totals to select (focus); bottom "Toon alles" stacks all four macros.
+ * HOW: Tap macro totals to select (focus). Day "Toon alles": one card with four day bars,
+ *      then meal cards per macro. Week "Toon alles" still stacks four charts. Focus unchanged.
  *      ‹ › or swipe L/R shifts day/week; tap week bar → diary.
  * INPUT: diary_entries + goal_revisions for selected day or week
  * OUTPUT: Scrollable report UI; navigation to diary with ?date=
@@ -215,9 +216,8 @@ export default function Reports() {
 /*
  * SECTION: Day report body
  * WHAT: Totals + day progress + meal/snack bars (one macro, or all four when showAll).
- * HOW: Day goal from revisions/profile, else default 2000 kcal macros.
- *      Meal goal = (dayGoal − snacks) / 3, or dayGoal/3 if snacks ate the budget.
- *      Meal tracks share max(mealGoal, largest meal/snack) so lengths are comparable.
+ * HOW: Focus: one macro day bar + meals. Show-all: totals row → one card with four day bars
+ *      → meal cards per macro. Week show-all unchanged elsewhere.
  * INPUT: date, entries, revisions, selected macro, showAll
  * OUTPUT: Day UI with mains always shown; snacks only when logged
  */
@@ -239,7 +239,6 @@ function DayReport({
   const { t } = useTranslation();
   const { profile } = useSession();
   const totals = sumEntries(entries);
-  const macros = showAll ? MACRO_KEYS : [selected];
 
   const selectedGoal = useMemo(
     () => dayGoalForMacro(date, revisions, selected, profile).dayGoal,
@@ -261,26 +260,92 @@ function DayReport({
           selectedOver={selectedOver}
         />
       </Card>
-      {macros.map((macro) => (
+
+      {showAll ? (
+        <>
+          <View style={styles.macroBlock}>
+            <SectionTitle>{t('reports.dayTotal')}</SectionTitle>
+            <DayAllTotalsCard date={date} entries={entries} revisions={revisions} />
+          </View>
+          {MACRO_KEYS.map((macro) => (
+            <DayMacroBlock
+              key={macro}
+              date={date}
+              entries={entries}
+              revisions={revisions}
+              macro={macro}
+              showHeading
+              showDayTotal={false}
+            />
+          ))}
+        </>
+      ) : (
         <DayMacroBlock
-          key={macro}
           date={date}
           entries={entries}
           revisions={revisions}
-          macro={macro}
-          showHeading={showAll}
+          macro={selected}
+          showHeading={false}
+          showDayTotal
         />
-      ))}
+      )}
     </>
   );
 }
 
 /*
+ * SECTION: Show-all day totals (four macros in one card)
+ * WHAT: Calorieën / koolhydraten / eiwitten / vetten day progress bars together.
+ * HOW: Same dayGoalForMacro + ProgressBar as the focus day-total card, stacked.
+ * INPUT: date, entries, revisions
+ * OUTPUT: Single card with four labeled bars
+ */
+function DayAllTotalsCard({
+  date,
+  entries,
+  revisions,
+}: {
+  date: string;
+  entries: DiaryEntry[];
+  revisions: GoalSnapshot[];
+}) {
+  const { t } = useTranslation();
+  const { profile } = useSession();
+  const totals = sumEntries(entries);
+
+  return (
+    <Card style={styles.dayAllTotalsCard}>
+      {MACRO_KEYS.map((macro) => {
+        const { dayGoal } = dayGoalForMacro(date, revisions, macro, profile);
+        const consumed = totals[macro];
+        const unit = macro === 'kcal' ? t('common.kcal') : 'g';
+        return (
+          <View key={macro}>
+            <View style={styles.dayTotalRow}>
+              <Text style={styles.dayTotalHint}>{macroDisplayLabel(t, macro, false)}</Text>
+              <Text style={styles.mealValue}>
+                {fmt(consumed)} / {fmt(dayGoal)} {unit}
+              </Text>
+            </View>
+            <ProgressBar
+              consumed={consumed}
+              goal={dayGoal}
+              overTone="strong"
+            />
+          </View>
+        );
+      })}
+    </Card>
+  );
+}
+
+/*
  * SECTION: One macro’s day progress + meals
- * WHAT: Progress card + meal list for a single macro key.
- * HOW: Same share rules as before; optional SectionTitle when showing all.
- * INPUT: date, entries, revisions, macro, showHeading
- * OUTPUT: Progress + meal cards
+ * WHAT: Optional day-total card + meal list for a single macro key.
+ * HOW: Same share rules as before; showHeading for Toon alles meal sections;
+ *      showDayTotal false when the four day bars already live in DayAllTotalsCard.
+ * INPUT: date, entries, revisions, macro, showHeading, showDayTotal
+ * OUTPUT: Progress (optional) + meal cards
  */
 function DayMacroBlock({
   date,
@@ -288,12 +353,14 @@ function DayMacroBlock({
   revisions,
   macro,
   showHeading,
+  showDayTotal = true,
 }: {
   date: string;
   entries: DiaryEntry[];
   revisions: GoalSnapshot[];
   macro: MacroKey;
   showHeading: boolean;
+  showDayTotal?: boolean;
 }) {
   const { t } = useTranslation();
   const { profile } = useSession();
@@ -350,24 +417,23 @@ function DayMacroBlock({
         <SectionTitle>{macroDisplayLabel(t, macro, false)}</SectionTitle>
       ) : null}
 
-      <Card style={styles.dayProgressCard}>
-        <View style={styles.dayTotalRow}>
-          <Text style={styles.dayTotalHint}>{t('reports.dayTotal')}</Text>
-          <Text style={styles.mealValue}>
-            {fmt(consumed)} / {fmt(dayGoal)} {unit}
-          </Text>
-        </View>
-        <ProgressBar
-          consumed={consumed}
-          goal={dayGoal}
-          highlight
-          overTone="strong"
-        />
-      </Card>
+      {showDayTotal ? (
+        <Card style={styles.dayProgressCard}>
+          <View style={styles.dayTotalRow}>
+            <Text style={styles.dayTotalHint}>{t('reports.dayTotal')}</Text>
+            <Text style={styles.mealValue}>
+              {fmt(consumed)} / {fmt(dayGoal)} {unit}
+            </Text>
+          </View>
+          <ProgressBar
+            consumed={consumed}
+            goal={dayGoal}
+            overTone="strong"
+          />
+        </Card>
+      ) : null}
 
-      {!showHeading ? <SectionTitle>{t('diary.title')}</SectionTitle> : null}
-
-      <Card style={showHeading ? styles.mealsCardAfterTotal : undefined}>
+      <Card style={showDayTotal ? styles.mealsCardAfterTotal : undefined}>
         <Text style={styles.mealGoalHint}>
           {goalIsDefault
             ? t('reports.setGoalInSettings')
@@ -714,7 +780,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.l,
     marginTop: spacing.s,
   },
-  /** Extra gap under day total when stacking all macros (Toon alles). */
+  /** Toon alles: four day-total bars in one card (title spacing via macroBlock + SectionTitle). */
+  dayAllTotalsCard: {
+    gap: spacing.m,
+  },
+  /** Extra gap under day total when stacking meals in focus mode. */
   mealsCardAfterTotal: {
     marginTop: spacing.m,
   },
