@@ -102,7 +102,11 @@ export default function Diary() {
         text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
-          await supabase.from('diary_entries').delete().eq('id', entry.id);
+          const { error } = await supabase.from('diary_entries').delete().eq('id', entry.id);
+          if (error) {
+            Alert.alert(t('common.error'), error.message);
+            return;
+          }
           load();
         },
       },
@@ -116,7 +120,7 @@ export default function Diary() {
       ? entry.grams
         ? `${fmt(entry.grams)} g`
         : null
-      : `${entry.grams ? `${fmt(entry.grams)} g · ` : ''}${t('macros.carbsShort')} ${fmt(entry.carbs)} · ${t('macros.proteinShort')} ${fmt(entry.protein)} · ${t('macros.fatShort')} ${fmt(entry.fat)}`;
+      : `${entry.grams ? `${fmt(entry.grams)} g · ` : ''}${t('macros.carbsShort')} ${fmt(entry.carbs)} g · ${t('macros.proteinShort')} ${fmt(entry.protein)} g · ${t('macros.fatShort')} ${fmt(entry.fat)} g`;
 
     const rightValue = focusMode
       ? formatFocusedAmount(Number(entry[focusMacro] ?? 0), focusMacro)
@@ -181,7 +185,7 @@ export default function Diary() {
         ? `${fmt(slotTotals.kcal)} ${t('common.kcal')}`
         : `${fmt(slotTotals[focusMacro])} g`
       : // Overview: total weight · macros · kcal (same muted grey)
-        `${fmt(mealGrams)} g · ${t('macros.carbsShort')} ${fmt(slotTotals.carbs)} · ${t('macros.proteinShort')} ${fmt(slotTotals.protein)} · ${t('macros.fatShort')} ${fmt(slotTotals.fat)} · ${fmt(slotTotals.kcal)} ${t('common.kcal')}`;
+        `${fmt(mealGrams)} g · ${t('macros.carbsShort')} ${fmt(slotTotals.carbs)} g · ${t('macros.proteinShort')} ${fmt(slotTotals.protein)} g · ${t('macros.fatShort')} ${fmt(slotTotals.fat)} g · ${fmt(slotTotals.kcal)} ${t('common.kcal')}`;
 
     return (
       <View key={slot} style={styles.mealCard}>
