@@ -114,13 +114,13 @@ export default function Diary() {
   }
 
   function renderEntry(entry: DiaryEntry) {
-    // Overview: grams + koolh/eiwit/vet under name, kcal on the right
+    // Overview: grams · KH · Eiwit · Vet under name, kcal on the right
     // Focus: grams only under name; right side = focused macro amount
     const meta = focusMode
       ? entry.grams
         ? `${fmt(entry.grams)} g`
         : null
-      : `${entry.grams ? `${fmt(entry.grams)} g · ` : ''}${t('macros.carbsShort')} ${fmt(entry.carbs)} g · ${t('macros.proteinShort')} ${fmt(entry.protein)} g · ${t('macros.fatShort')} ${fmt(entry.fat)} g`;
+      : `${fmt(Number(entry.grams ?? 0))} g · ${t('macros.carbsShort')} ${fmt(entry.carbs)} g · ${t('macros.proteinShort')} ${fmt(entry.protein)} g · ${t('macros.fatShort')} ${fmt(entry.fat)} g`;
 
     const rightValue = focusMode
       ? formatFocusedAmount(Number(entry[focusMacro] ?? 0), focusMacro)
@@ -145,7 +145,7 @@ export default function Diary() {
       >
         <View style={{ flex: 1 }}>
           <View style={styles.entryTop}>
-            <View style={{ flex: 1 }}>
+            <View style={styles.entryMain}>
               <View style={styles.entryNameRow}>
                 <Text style={styles.entryName} numberOfLines={1}>
                   {entry.custom_name ?? '…'}
@@ -156,7 +156,13 @@ export default function Diary() {
               </View>
               {meta ? <Text style={styles.entryMeta}>{meta}</Text> : null}
             </View>
-            <Text style={styles.entryKcal}>{rightValue}</Text>
+            {focusMode ? (
+              <Text style={styles.entryKcal}>{rightValue}</Text>
+            ) : (
+              <View style={styles.mealFooterKcalCol}>
+                <Text style={styles.entryKcal}>{rightValue}</Text>
+              </View>
+            )}
           </View>
         </View>
       </Pressable>
@@ -180,29 +186,40 @@ export default function Diary() {
 
     const mealGrams = slotEntries.reduce((s, e) => s + Number(e.grams ?? 0), 0);
 
-    const mealTotal = focusMode
-      ? focusMacro === 'kcal'
-        ? `${fmt(slotTotals.kcal)} ${t('common.kcal')}`
-        : `${fmt(slotTotals[focusMacro])} g`
-      : // Overview: total weight · macros · kcal (same muted grey)
-        `${fmt(mealGrams)} g · ${t('macros.carbsShort')} ${fmt(slotTotals.carbs)} g · ${t('macros.proteinShort')} ${fmt(slotTotals.protein)} g · ${t('macros.fatShort')} ${fmt(slotTotals.fat)} g · ${fmt(slotTotals.kcal)} ${t('common.kcal')}`;
-
     return (
       <View key={slot} style={styles.mealCard}>
-        <View style={styles.mealHeader}>
-          <Text style={styles.mealTitle}>{t(slotLabelKey(slot))}</Text>
-          {slotEntries.length > 0 && (
-            <Text
-              style={styles.mealKcal}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
-            >
-              {mealTotal}
-            </Text>
-          )}
-        </View>
+        <Text style={styles.mealTitle}>{t(slotLabelKey(slot))}</Text>
         {slotEntries.map(renderEntry)}
+
+        {/* Meal sum sits under foods, above add-food, so the title stays readable */}
+        {slotEntries.length > 0 ? (
+          <View style={styles.mealFooter}>
+            {focusMode ? (
+              <View style={styles.mealFooterRow}>
+                <Text style={styles.mealFooterLabel}>{t('meals.total')}</Text>
+                <Text style={styles.mealFooterValue}>
+                  {focusMacro === 'kcal'
+                    ? `${fmt(slotTotals.kcal)} ${t('common.kcal')}`
+                    : `${fmt(slotTotals[focusMacro])} g`}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.entryTop}>
+                <View style={styles.entryMain}>
+                  <Text style={styles.mealFooterLabel}>{t('meals.total')}</Text>
+                  <Text style={styles.entryMeta}>
+                    {`${fmt(mealGrams)} g · ${t('macros.carbsShort')} ${fmt(slotTotals.carbs)} g · ${t('macros.proteinShort')} ${fmt(slotTotals.protein)} g · ${t('macros.fatShort')} ${fmt(slotTotals.fat)} g`}
+                  </Text>
+                </View>
+                <View style={styles.mealFooterKcalCol}>
+                  <Text style={styles.entryKcal}>{fmt(slotTotals.kcal)}</Text>
+                  <Text style={styles.mealFooterKcalHint}>{t('common.kcal')}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        ) : null}
+
         <Pressable
           style={styles.addFood}
           onPress={() => router.push({ pathname: '/add-food', params: { slot: String(slot), date } })}
@@ -286,21 +303,29 @@ const styles = StyleSheet.create({
     padding: spacing.l,
     marginBottom: spacing.s,
   },
-  mealHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.s },
-  mealTitle: { fontSize: 15, fontWeight: '800', color: colors.text, flexShrink: 0 },
-  mealKcal: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.muted,
-    textAlign: 'right',
+  mealTitle: { fontSize: 15, fontWeight: '800', color: colors.text, marginBottom: 2 },
+  mealFooter: {
+    marginTop: spacing.s,
+    paddingTop: spacing.s,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
+  mealFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  mealFooterLabel: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase' },
+  mealFooterValue: { fontSize: 13, fontWeight: '700', color: colors.muted },
+  mealFooterKcalCol: { alignItems: 'flex-end', minWidth: 44 },
+  mealFooterKcalHint: { fontSize: 11, color: colors.faint, marginTop: 1, fontWeight: '600' },
   entryRow: {
     paddingVertical: spacing.s,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
   entryTop: { flexDirection: 'row', alignItems: 'center' },
+  entryMain: { flex: 1, minWidth: 0, marginRight: spacing.s },
   entryNameRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -309,7 +334,7 @@ const styles = StyleSheet.create({
   },
   entryName: { fontSize: 15, color: colors.text, fontWeight: '600', flexShrink: 1 },
   entryMeta: { fontSize: 12, color: colors.faint, marginTop: 1 },
-  entryKcal: { fontSize: 15, fontWeight: '700', color: colors.primaryDark, marginLeft: spacing.m },
+  entryKcal: { fontSize: 15, fontWeight: '700', color: colors.primaryDark },
   addFood: { marginTop: spacing.s },
   addFoodText: { color: colors.primaryDark, fontWeight: '700', fontSize: 14 },
   addSnack: { paddingVertical: spacing.s, paddingLeft: spacing.s, marginBottom: spacing.s },

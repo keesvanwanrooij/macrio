@@ -39,7 +39,8 @@
     "dinner": "Dinner",
     "snack": "Snack",
     "addSnack": "+ snack",
-    "addFood": "+ add food"
+    "addFood": "+ add food",
+    "total": "Total"
   },
   "auth": {
     "welcomeTitle": "Macrio",

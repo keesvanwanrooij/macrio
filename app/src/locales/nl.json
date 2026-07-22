@@ -39,7 +39,8 @@
     "dinner": "Diner",
     "snack": "Tussendoortje",
     "addSnack": "+ tussendoortje",
-    "addFood": "+ voeg eten toe"
+    "addFood": "+ voeg eten toe",
+    "total": "Totaal"
   },
   "auth": {
     "welcomeTitle": "Macrio",
