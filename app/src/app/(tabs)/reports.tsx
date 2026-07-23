@@ -42,6 +42,8 @@ import type { DiaryEntry, MacroTotals, Profile } from '../../lib/types';
 
 const GHOST_BAR_HEIGHT = 10;
 const CHART_TRACK_HEIGHT = 120;
+/** Space under the bar track for weekday labels (keeps goal overlay aligned with bars). */
+const CHART_LABEL_OFFSET = 16;
 
 /*
  * SECTION: Day goal for one macro
@@ -573,6 +575,116 @@ function WeekReport({
 }
 
 /*
+ * SECTION: Week goal overlay (full-width line or zigzag)
+ * WHAT: Draws the historical goal across the week chart.
+ * HOW: One flat line when all day goals match; otherwise merged horizontal runs
+ *      (no per-day seams) + vertical jumps where the goal changes. Segments overlap
+ *      by 2px so float rounding cannot leave white gaps.
+ * INPUT: seven day goals, maxVal for scale, uniformity flag
+ * OUTPUT: Absolute overlay inside the chart (pointerEvents none)
+ */
+function buildGoalRuns(dayGoals: readonly (number | null)[]): { start: number; end: number; goal: number }[] {
+  const runs: { start: number; end: number; goal: number }[] = [];
+  for (let i = 0; i < dayGoals.length; i++) {
+    const g = dayGoals[i];
+    if (g == null || !(g > 0)) continue;
+    const last = runs[runs.length - 1];
+    if (last && last.end === i - 1 && last.goal === g) {
+      last.end = i;
+    } else {
+      runs.push({ start: i, end: i, goal: g });
+    }
+  }
+  return runs;
+}
+
+function WeekGoalOverlay({
+  dayGoals,
+  maxVal,
+  goalsUniform,
+  uniformGoal,
+}: {
+  dayGoals: (number | null)[];
+  maxVal: number;
+  goalsUniform: boolean;
+  uniformGoal: number | null;
+}) {
+  const [width, setWidth] = useState(0);
+
+  function bottomForGoal(goal: number): number {
+    return (goal / maxVal) * CHART_TRACK_HEIGHT + CHART_LABEL_OFFSET;
+  }
+
+  // Same goal all week: one full horizontal line (classic look)
+  if (goalsUniform && uniformGoal != null && uniformGoal > 0) {
+    return (
+      <View
+        pointerEvents="none"
+        style={[styles.goalLine, { bottom: bottomForGoal(uniformGoal) }]}
+      />
+    );
+  }
+
+  const n = Math.max(dayGoals.length, 1);
+  const colW = width > 0 ? width / n : 0;
+  const runs = buildGoalRuns(dayGoals);
+  /** Overlap so adjacent/adjacent-run joints never show a 1px white seam. */
+  const SEAM = 2;
+
+  return (
+    <View
+      pointerEvents="none"
+      style={styles.goalOverlay}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+    >
+      {width > 0
+        ? runs.flatMap((run, ri) => {
+            const bottom = bottomForGoal(run.goal);
+            const left = run.start * colW;
+            const span = (run.end - run.start + 1) * colW;
+            const nodes: React.ReactNode[] = [
+              <View
+                key={`h-${run.start}-${run.end}`}
+                style={[
+                  styles.goalStepH,
+                  {
+                    left,
+                    // Extend slightly past the run so seams with the next piece disappear
+                    width: Math.min(width - left, span + SEAM),
+                    bottom,
+                  },
+                ]}
+              />,
+            ];
+            const next = runs[ri + 1];
+            // Vertical jump only when the next run starts on the following day
+            if (next && next.start === run.end + 1) {
+              const nextBottom = bottomForGoal(next.goal);
+              const lo = Math.min(bottom, nextBottom);
+              const hi = Math.max(bottom, nextBottom);
+              const jointX = (run.end + 1) * colW;
+              nodes.push(
+                <View
+                  key={`v-${run.end}`}
+                  style={[
+                    styles.goalStepV,
+                    {
+                      left: jointX - 1,
+                      bottom: lo,
+                      height: Math.max(SEAM, hi - lo + SEAM),
+                    },
+                  ]}
+                />
+              );
+            }
+            return nodes;
+          })
+        : null}
+    </View>
+  );
+}
+
+/*
  * SECTION: One week macro chart
  * WHAT: Bars for seven days of one macro + avg line vs goal.
  * INPUT: macro key, days, per-day totals, revisions
@@ -644,11 +756,6 @@ function WeekMacroChart({
     });
   }
 
-  const goalLineBottom =
-    uniformGoal != null && uniformGoal > 0
-      ? (uniformGoal / maxVal) * CHART_TRACK_HEIGHT
-      : null;
-
   return (
     <Card style={styles.weekChartCard}>
       <Text style={styles.chartTitle}>
@@ -656,12 +763,6 @@ function WeekMacroChart({
         {macro !== 'kcal' ? ` (${unit})` : ''}
       </Text>
       <View style={styles.chart}>
-        {goalLineBottom != null ? (
-          <View
-            pointerEvents="none"
-            style={[styles.goalLine, { bottom: goalLineBottom + 16 }]}
-          />
-        ) : null}
         {days.map((d, i) => {
           const v = values[i];
           const empty = v <= 0;
@@ -670,12 +771,12 @@ function WeekMacroChart({
             : Math.max(2, Math.round((v / maxVal) * CHART_TRACK_HEIGHT));
           const dayGoal = dayGoals[i];
           const goalForBar =
-            dayGoal != null && dayGoal > 0 ? dayGoal : uniformGoal != null && uniformGoal > 0 ? uniformGoal : null;
+            dayGoal != null && dayGoal > 0
+              ? dayGoal
+              : uniformGoal != null && uniformGoal > 0
+                ? uniformGoal
+                : null;
           const barOver = !empty && goalForBar != null && v > goalForBar;
-          const tickH =
-            !goalsUniform && dayGoal != null && dayGoal > 0
-              ? (dayGoal / maxVal) * CHART_TRACK_HEIGHT
-              : null;
 
           return (
             <Pressable key={d} style={styles.chartCol} onPress={() => openDiary(d)}>
@@ -683,12 +784,6 @@ function WeekMacroChart({
                 {!empty ? fmt(v) : ''}
               </Text>
               <View style={[styles.barTrack, { height: CHART_TRACK_HEIGHT }]}>
-                {tickH != null ? (
-                  <View
-                    pointerEvents="none"
-                    style={[styles.goalTick, { bottom: tickH - 1 }]}
-                  />
-                ) : null}
                 <View
                   style={[
                     styles.bar,
@@ -704,6 +799,13 @@ function WeekMacroChart({
             </Pressable>
           );
         })}
+        {/* Draw after bars so the goal line stays continuous on top */}
+        <WeekGoalOverlay
+          dayGoals={dayGoals}
+          maxVal={maxVal}
+          goalsUniform={goalsUniform}
+          uniformGoal={uniformGoal}
+        />
       </View>
       <Text style={styles.avgLine}>{avgLine()}</Text>
     </Card>
@@ -865,22 +967,27 @@ const styles = StyleSheet.create({
   barOver: { backgroundColor: colors.dangerMuted },
   barGhost: { backgroundColor: colors.border, opacity: 0.9 },
   barLabel: { fontSize: 11, color: colors.muted, marginTop: 4 },
+  goalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 3,
+  },
+  goalStepH: {
+    position: 'absolute',
+    height: 2,
+    backgroundColor: colors.warn,
+  },
+  goalStepV: {
+    position: 'absolute',
+    width: 2,
+    backgroundColor: colors.warn,
+  },
   goalLine: {
     position: 'absolute',
     left: 0,
     right: 0,
-    height: StyleSheet.hairlineWidth * 2,
-    backgroundColor: colors.warn,
-    zIndex: 2,
-  },
-  goalTick: {
-    position: 'absolute',
-    left: -2,
-    right: -2,
     height: 2,
     backgroundColor: colors.warn,
-    borderRadius: 1,
-    zIndex: 2,
+    zIndex: 3,
   },
   avgLine: {
     marginTop: spacing.m,

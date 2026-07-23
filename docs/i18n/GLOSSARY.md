@@ -18,6 +18,10 @@
 | product | product | product |
 | diary | diary | dagboek |
 | goal | goal | doel |
+| macro style | macro style | macrostijl |
+| simple (macros) | Simple | Simpel |
+| athlete (macros) | Athlete | Sporter |
+| keto | Keto | Keto |
 | recents | recent | recent |
 | staple | staple | standaard |
 | product | product | product |

@@ -40,6 +40,9 @@ yarn-error.log*
 # Founder scratchpad (local only; not published with the app)
 docs/context/
 
+# Agent prompts (local only; copy into chat when needed)
+/prompts/
+
 
 # Accidental root lockfile (app/ is the Expo package)
 /package-lock.json

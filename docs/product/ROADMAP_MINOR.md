@@ -6,7 +6,7 @@
 
 Patches are **grouped** below. Some plan filenames still use older `v1.0.x` names; the **heading is the ship identity**.
 
-**After each group is fully shipped:** run a **simplify / DRY / prune** pass (see checkbox under each group). Use **Prompt 2** in `[Prompts.md](../../Prompts.md)`. Goal: cleaner code for the next group, not new features.
+**After each group is fully shipped:** run a **simplify / DRY / prune** pass (see checkbox under each group). Use **Prompt 2** in `[prompts/02-after-group-simplify.md](../../prompts/02-after-group-simplify.md)`. Goal: cleaner code for the next group, not new features.
 
 ---
 
@@ -56,7 +56,7 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 ### After Group A — simplify / DRY / prune
 
 - [x] Signup: taken username shows `auth.usernameTaken` (no silent `user_<id>`); migration `018` + `is_username_available`
-- [x] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on areas touched by Group A (auth, settings/account, crash ops). Simplify duplicates, share helpers, remove dead/obsolete code paths. No new features.
+- [x] Run **Prompt 2** in `[prompts/02-after-group-simplify.md](../../prompts/02-after-group-simplify.md)` on areas touched by Group A (auth, settings/account, crash ops). Simplify duplicates, share helpers, remove dead/obsolete code paths. No new features.
 
 ---
 
@@ -75,9 +75,24 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 - [x] **Goal macro sliders** (onboarding + Settings): set kcal (or calculate), then protein/carbs/fat on logical g/kg ranges (e.g. protein ~0.8–2.2 g/kg); show **grams and kcal** for each macro so targets are understandable
 - [ ] *(Later)* Auto-calc from **health-synced weight** + g/kg sliders (carbs fill rest) → `ROADMAP.md` v1.2
 
+### v0.4.1 — goal macro modes (Simple / Athlete / Keto)
+
+**Plan:** `[plans/v0.4.1-macro-modes.md](plans/v0.4.1-macro-modes.md)`
+
+**Status:** Shipped, then **superseded** by a unified % editor (default 50/20/30; no mode chips). `goal_macro_mode` column unused by UI. See `docs/context/protein-g-per-kg.md` for deferred g/kg calculator ideas.
+
+**Progress (historical):**
+
+- [x] Mode selector: Simple / Athlete / Keto (nl: Simpel / Sporter / Keto)
+- [x] Simple + Keto: % sliders, ring cascade (C→P→F→C), kcal fixed; scale `max(floor, highest %)` (Simple floor 60, Keto floor 70)
+- [x] Athlete: protein 0.8–2.0 g/kg (defaults 1.5 / 1.3 / 1.4 by goal); fat as %; carbs fill; edit carbs → fat
+- [x] Mode switch resets defaults from current kcal; persist `goal_macro_mode`
+- [x] Migration `019`; version **0.4.1**
+- [x] *(Follow-up)* Unified % editor replaces modes; calculator always seeds 50/20/30
+
 ### After Group B — simplify / DRY / prune
 
-- [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on onboarding + goals/calculator paths. DRY shared goal math/UI; prune superseded calculator/onboarding code.
+- [ ] Run **Prompt 2** in `[prompts/02-after-group-simplify.md](../../prompts/02-after-group-simplify.md)` on onboarding + goals/calculator paths. DRY shared goal math/UI; prune superseded calculator/onboarding code.
 
 ---
 
@@ -94,6 +109,7 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 - [x] Diary header progress bars + stronger totals; focus swipe L/R; long-press → overview; overview does not tap-toggle — early founder testing
 - [x] Reports: selectable macros (tap), ghost bars, historical goals, swipe/‹ › for day·week, tap bar → diary (migration `014`)
 - [x] Reports day: selected-macro progress bars; snacks deducted then ÷3; over = total + goal marker
+- [ ] **Reports meal order:** show snack meals in **chronological diary order** (e.g. snack between breakfast and lunch stays between those mains). Do not dump all snacks at the end of the day report
 - [ ] Reports: pie chart for macro distribution (carbs / protein / fat of the day or week)
 
 ### v0.6.0 — rule-based report coaching texts
@@ -116,10 +132,11 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 - [ ] **Recents restore last grams** (including custom amounts like 130 g), not only product/version
 - [ ] **Version picker on log-entry** (portion screen): default = most likes → **completeness score** → newest; remember **last version this user used** for that product when possible. Plan: `[plans/version-completeness-ranking.md](plans/version-completeness-ranking.md)`
 - [ ] **Star / favorite** products (or versions): save for quick filter in **Search**
+- [ ] **Search synonyms on versions:** version owner sets one **primary name** + optional **synonyms** (nl/en as fits); search matches primary and synonyms so foods are easier to find
 
 ### After Group C — simplify / DRY / prune
 
-- [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on diary, reports, search/recents. Merge duplicate macro/progress helpers; remove obsolete UI paths.
+- [ ] Run **Prompt 2** in `[prompts/02-after-group-simplify.md](../../prompts/02-after-group-simplify.md)` on diary, reports, search/recents. Merge duplicate macro/progress helpers; remove obsolete UI paths.
 
 ---
 
@@ -147,7 +164,7 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 
 ### After Group D — simplify / DRY / prune
 
-- [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on portion/unit logging UI + related seed helpers. One clear portion model; drop dead amount/unit code.
+- [ ] Run **Prompt 2** in `[prompts/02-after-group-simplify.md](../../prompts/02-after-group-simplify.md)` on portion/unit logging UI + related seed helpers. One clear portion model; drop dead amount/unit code.
 
 ---
 
@@ -214,12 +231,13 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 - [ ] Schema + create/edit/log/reports for **fiber, sugars, salt/sodium, saturated + unsaturated fat** (and related fat fields as agreed)
 - [ ] **Micronutrients** (vitamins/minerals) in DB + UI (honest unknown when missing)
 - [ ] Seed / OFF mapping where available; diary snapshots include new fields when logging
+- [ ] **Settings: Macro / Micro display toggle** - choose **macros only** vs **macros + micros** on **reports** and **product / food** screens. **Diary stays macros-only** always (tracker stays focused)
 - [ ] **Admin staple seed:** backfill curated seed versions with accurate macro + micro nutrition (same quality bar as v0.11 seed; unknown only when data truly missing) (this is a founder 10hour task)
 - [ ] Pre-public blocker (moved forward from old v1.4 salt/micros line)
 
 ### After Group E — simplify / DRY / prune
 
-- [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on catalog, create/edit product, nutrition fields, quality badge helpers. DRY shared product/version logic; remove obsolete catalog paths before public **1.0.0**.
+- [ ] Run **Prompt 2** in `[prompts/02-after-group-simplify.md](../../prompts/02-after-group-simplify.md)` on catalog, create/edit product, nutrition fields, quality badge helpers. DRY shared product/version logic; remove obsolete catalog paths before public **1.0.0**.
 
 ---
 
@@ -242,7 +260,7 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 
 ### After Group F — simplify / DRY / prune
 
-- [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on analytics wiring + forgot-password / abuse helpers before public **1.0.0**.
+- [ ] Run **Prompt 2** in `[prompts/02-after-group-simplify.md](../../prompts/02-after-group-simplify.md)` on analytics wiring + forgot-password / abuse helpers before public **1.0.0**.
 
 ---
 
@@ -264,7 +282,7 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 
 ### After Group G — simplify / DRY / prune
 
-- [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on allergen/diet chip UI + profile preference helpers.
+- [ ] Run **Prompt 2** in `[prompts/02-after-group-simplify.md](../../prompts/02-after-group-simplify.md)` on allergen/diet chip UI + profile preference helpers.
 
 ---
 
@@ -322,6 +340,8 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 | Item                                                                                                 | Reason                                                                                  |
 | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | Feedback: multiple screenshots (max 5)                                                               | Keep single image for now. Also listed under Old notes.                                 |
+| Refer a friend / invite                                                                              | `ROADMAP.md` v1.4                                                                       |
+| App Store / Play review prompt after ~7 days use                                                     | `ROADMAP.md` v1.0.0 launch                                                              |
 | Health-synced weight → auto kcal + g/kg macros (carbs fill rest)                                     | `ROADMAP.md` v1.2 (after Health sync)                                                   |
 | Quick-log % macro sliders (restaurant)                                                               | `ROADMAP.md` v1.3                                                                       |
 | Personal reorder of add-food tabs                                                                    | `ROADMAP.md` v1.3                                                                       |

@@ -9,7 +9,7 @@ module.exports = {
   expo: {
     name: 'Macrio',
     slug: 'macrio',
-    version: '0.4.0',
+    version: '0.4.1',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'macrio',

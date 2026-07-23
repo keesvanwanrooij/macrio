@@ -1,7 +1,7 @@
 /*
  * SECTION: Responsive macro labels
- * WHAT: Full vs short diary/report labels by screen width (same rules everywhere).
- * HOW: width >= 380 → full words; below → short forms (i18n macros.* / *Short).
+ * WHAT: Diary/report macro labels (kcal may shorten; C/P/F always full words).
+ * HOW: kcal uses short on narrow screens; carbs/protein/fat always macros.* full form.
  * INPUT: i18n t, macro key, compact flag
  * OUTPUT: Localized label string
  */
@@ -18,5 +18,6 @@ export function macroDisplayLabel(
   if (key === 'kcal') {
     return compact ? t('macros.kcalShort') : t('macros.calories');
   }
-  return compact ? t(`macros.${key}Short`) : t(`macros.${key}`);
+  // Always full: NL Koolhydraten / Eiwitten / Vetten
+  return t(`macros.${key}`);
 }

@@ -205,9 +205,9 @@ export default function ProductPage() {
         <Card>
           <View style={styles.macroRow}>
             <MacroCell label={t('macros.kcalShort')} value={fmt(current.kcal_100g)} highlight />
-            <MacroCell label={t('macros.carbsShort')} value={`${fmt(current.carbs_100g, 1)} g`} />
-            <MacroCell label={t('macros.proteinShort')} value={`${fmt(current.protein_100g, 1)} g`} />
-            <MacroCell label={t('macros.fatShort')} value={`${fmt(current.fat_100g, 1)} g`} />
+            <MacroCell label={t('macros.carbs')} value={`${fmt(current.carbs_100g, 1)} g`} />
+            <MacroCell label={t('macros.protein')} value={`${fmt(current.protein_100g, 1)} g`} />
+            <MacroCell label={t('macros.fat')} value={`${fmt(current.fat_100g, 1)} g`} />
           </View>
           {current.portions.map((p, i) => (
             <Text key={i} style={styles.portionLine}>

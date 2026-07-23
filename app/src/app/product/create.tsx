@@ -261,19 +261,14 @@ export default function CreateProduct() {
       ) : null}
 
       <Text style={styles.section}>{t('product.per100g')} *</Text>
-      <View style={styles.macroGrid}>
-        <View style={styles.macroCell}>
-          <Field label={t('macros.kcalShort')} value={kcal} onChangeText={setKcal} keyboardType="numeric" />
-        </View>
-        <View style={styles.macroCell}>
-          <Field label={`${t('macros.carbsShort')} (g)`} value={carbs} onChangeText={setCarbs} keyboardType="numeric" />
-        </View>
-        <View style={styles.macroCell}>
-          <Field label={`${t('macros.proteinShort')} (g)`} value={protein} onChangeText={setProtein} keyboardType="numeric" />
-        </View>
-        <View style={styles.macroCell}>
-          <Field label={`${t('macros.fatShort')} (g)`} value={fat} onChangeText={setFat} keyboardType="numeric" />
-        </View>
+      <Field label={t('macros.calories')} value={kcal} onChangeText={setKcal} keyboardType="numeric" />
+      <Field label={`${t('macros.fat')} (g)`} value={fat} onChangeText={setFat} keyboardType="numeric" />
+      <Field label={`${t('macros.protein')} (g)`} value={protein} onChangeText={setProtein} keyboardType="numeric" />
+      <Field label={`${t('macros.carbs')} (g)`} value={carbs} onChangeText={setCarbs} keyboardType="numeric" />
+
+      <Text style={styles.section}>{t('product.microsLabel')}</Text>
+      <View style={styles.microsPlaceholder}>
+        <Text style={styles.microsPlaceholderText}>{t('product.microsPlaceholder')}</Text>
       </View>
 
       <Text style={styles.section}>{t('product.portionLabel')}</Text>
@@ -373,8 +368,22 @@ const styles = StyleSheet.create({
     marginTop: -spacing.s,
     marginBottom: spacing.m,
   },
-  macroGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.m },
-  macroCell: { flexBasis: '47%', flexGrow: 1 },
+  microsPlaceholder: {
+    borderRadius: radius.m,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingVertical: spacing.l,
+    paddingHorizontal: spacing.m,
+    marginBottom: spacing.s,
+  },
+  microsPlaceholderText: {
+    fontSize: 13,
+    color: colors.faint,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   photo: { width: 120, height: 120, borderRadius: radius.m },
   photoPlaceholder: {
     height: 80,

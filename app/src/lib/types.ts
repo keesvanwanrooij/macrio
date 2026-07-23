@@ -23,6 +23,8 @@ export type Profile = {
   gender: 'male' | 'female' | 'other' | null;
   activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active' | null;
   weight_goal: 'lose' | 'maintain' | 'gain' | null;
+  /** Editing lens for daily macros (migration 019). Default simple. */
+  goal_macro_mode?: 'simple' | 'athlete' | 'keto' | null;
   allergens: string[];
   onboarded: boolean;
   /** Set when soft-delete requested; purge after 30 days (migration 017). */

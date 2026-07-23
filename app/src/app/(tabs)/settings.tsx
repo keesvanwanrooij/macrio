@@ -26,7 +26,7 @@ import {
 import { DATE_FORMATS, resolveDateFormat } from '../../lib/dates';
 import { fetchMyDataExport, shareDataExport } from '../../lib/dataExport';
 import type { BodyMetricsDraft, GoalFields } from '../../lib/goalCalculator';
-import { isWeightGoal } from '../../lib/goalCalculator';
+import { goalsFieldsAllEmpty, goalsFieldsComplete, goalsFromPercents } from '../../lib/goalCalculator';
 import { upsertTodayGoalRevision } from '../../lib/goalRevisions';
 import { parseNum } from '../../lib/nutrition';
 import { captureException, isSentryEnabled } from '../../lib/sentry';
@@ -43,7 +43,7 @@ const SETTINGS_SECTIONS: SettingsSection[] = ['preferences', 'account', 'privacy
 
 function profileSaveErrorMessage(raw: string, t: (k: string) => string): string {
   const m = raw.toLowerCase();
-  if (m.includes('date_of_birth') || m.includes('height_cm') || m.includes('weight_kg') || m.includes('weight_goal') || m.includes('schema cache')) {
+  if (m.includes('date_of_birth') || m.includes('height_cm') || m.includes('weight_kg') || m.includes('weight_goal') || m.includes('goal_macro_mode') || m.includes('schema cache')) {
     return t('settings.bodyMetricsMigrationHint');
   }
   if (m.includes('date_format')) {
@@ -255,11 +255,17 @@ export default function Settings() {
   }
 
   async function saveGoals() {
+    // All empty = clear goals to null. Partial = block. Complete = save.
+    if (!goalsFieldsAllEmpty(goals) && !goalsFieldsComplete(goals)) {
+      Alert.alert(t('common.error'), t('goalsCalc.goalsIncomplete'));
+      return;
+    }
+    const clearing = goalsFieldsAllEmpty(goals);
     const patch = {
-      goal_kcal: parseNum(goals.kcal) || null,
-      goal_carbs: parseNum(goals.carbs) || null,
-      goal_protein: parseNum(goals.protein) || null,
-      goal_fat: parseNum(goals.fat) || null,
+      goal_kcal: clearing ? null : parseNum(goals.kcal) || null,
+      goal_carbs: clearing ? null : parseNum(goals.carbs) || null,
+      goal_protein: clearing ? null : parseNum(goals.protein) || null,
+      goal_fat: clearing ? null : parseNum(goals.fat) || null,
       ...(bodyDraft
         ? {
             date_of_birth: bodyDraft.date_of_birth,
@@ -561,11 +567,12 @@ export default function Settings() {
             defaultOpen={false}
             onCalculated={async ({ goals: calcGoals, body }) => {
               setSavingBody(true);
+              const styled = goalsFromPercents(calcGoals.kcal);
               const patch = {
                 goal_kcal: calcGoals.kcal,
-                goal_carbs: calcGoals.carbs,
-                goal_protein: calcGoals.protein,
-                goal_fat: calcGoals.fat,
+                goal_carbs: parseNum(styled.carbs) || calcGoals.carbs,
+                goal_protein: parseNum(styled.protein) || calcGoals.protein,
+                goal_fat: parseNum(styled.fat) || calcGoals.fat,
                 date_of_birth: body.date_of_birth,
                 height_cm: body.height_cm,
                 weight_kg: body.weight_kg,
@@ -577,12 +584,7 @@ export default function Settings() {
               setSavingBody(false);
               if (error) {
                 setBodyDraft(body);
-                setGoalDraft({
-                  kcal: String(calcGoals.kcal),
-                  carbs: String(calcGoals.carbs),
-                  protein: String(calcGoals.protein),
-                  fat: String(calcGoals.fat),
-                });
+                setGoalDraft(styled);
                 Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
                 return;
               }
@@ -601,10 +603,6 @@ export default function Settings() {
             value={goals}
             onChange={onGoalsChange}
             weightKg={bodyDraft?.weight_kg ?? profile.weight_kg ?? 0}
-            weightGoal={
-              bodyDraft?.weight_goal ??
-              (isWeightGoal(profile.weight_goal) ? profile.weight_goal : 'maintain')
-            }
           />
           {goalDraft && <Button title={t('common.save')} onPress={saveGoals} />}
         </>

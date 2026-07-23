@@ -36,6 +36,7 @@
 | v0.3.0 | [Settings identity + dates + GDPR](v0.3.0-settings-identity-gdpr.md) _(stubs: [identity](v1.0.3-settings-identity.md), [GDPR](v1.0.3-gdpr-account.md))_
 | **Group B — goals** | |
 | v0.4.0 | [onboarding & goals](v0.4.0-onboarding-goals.md) |
+| v0.4.1 | [macro modes Simple / Athlete / Keto](v0.4.1-macro-modes.md) |
 | **Group C — diary & reports** | |
 | v0.5.0 | [diary progress](v0.5.0-diary-progress.md) |
 | v0.6.0 | [report coaching texts](v0.6.0-report-coaching.md) |

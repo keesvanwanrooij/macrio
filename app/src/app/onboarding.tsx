@@ -12,7 +12,9 @@ import { EU_ALLERGENS } from '../lib/allergens';
 import {
   type BodyMetricsDraft,
   type GoalFields,
-  isWeightGoal,
+  goalsFieldsAllEmpty,
+  goalsFieldsComplete,
+  goalsFromPercents,
 } from '../lib/goalCalculator';
 import { upsertTodayGoalRevision } from '../lib/goalRevisions';
 import { parseNum } from '../lib/nutrition';
@@ -39,13 +41,22 @@ export default function Onboarding() {
   }
 
   async function finish(withGoals: boolean, allergens: string[] = selected) {
+    let persistGoals = withGoals;
+    if (withGoals) {
+      if (goalsFieldsAllEmpty(goals)) {
+        persistGoals = false;
+      } else if (!goalsFieldsComplete(goals)) {
+        Alert.alert(t('common.error'), t('goalsCalc.goalsIncomplete'));
+        return;
+      }
+    }
     setBusy(true);
     try {
       const goalPatch = {
-        goal_kcal: withGoals ? parseNum(goals.kcal) || null : null,
-        goal_carbs: withGoals ? parseNum(goals.carbs) || null : null,
-        goal_protein: withGoals ? parseNum(goals.protein) || null : null,
-        goal_fat: withGoals ? parseNum(goals.fat) || null : null,
+        goal_kcal: persistGoals ? parseNum(goals.kcal) || null : null,
+        goal_carbs: persistGoals ? parseNum(goals.carbs) || null : null,
+        goal_protein: persistGoals ? parseNum(goals.protein) || null : null,
+        goal_fat: persistGoals ? parseNum(goals.fat) || null : null,
       };
       const { error } = await updateProfile({
         allergens,
@@ -70,8 +81,13 @@ export default function Onboarding() {
             ? t('settings.bodyMetricsMigrationHint')
             : error;
         Alert.alert(t('common.error'), hint);
-      } else if (withGoals) {
-        await upsertTodayGoalRevision(goalPatch);
+      } else if (persistGoals) {
+        await upsertTodayGoalRevision({
+          goal_kcal: goalPatch.goal_kcal,
+          goal_carbs: goalPatch.goal_carbs,
+          goal_protein: goalPatch.goal_protein,
+          goal_fat: goalPatch.goal_fat,
+        });
       }
     } catch (e) {
       Alert.alert(t('common.error'), e instanceof Error ? e.message : String(e));
@@ -81,7 +97,6 @@ export default function Onboarding() {
   }
 
   const weightKg = bodyDraft?.weight_kg ?? profile?.weight_kg ?? 0;
-  const weightGoal = bodyDraft?.weight_goal ?? (isWeightGoal(profile?.weight_goal) ? profile!.weight_goal : 'maintain');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -127,21 +142,11 @@ export default function Onboarding() {
               profile={profile}
               defaultOpen={false}
               onCalculated={({ goals: calcGoals, body }) => {
-                setGoals({
-                  kcal: String(calcGoals.kcal),
-                  carbs: String(calcGoals.carbs),
-                  protein: String(calcGoals.protein),
-                  fat: String(calcGoals.fat),
-                });
+                setGoals(goalsFromPercents(calcGoals.kcal));
                 setBodyDraft(body);
               }}
             />
-            <GoalMacroEditor
-              value={goals}
-              onChange={setGoals}
-              weightKg={weightKg}
-              weightGoal={weightGoal}
-            />
+            <GoalMacroEditor value={goals} onChange={setGoals} weightKg={weightKg} />
             <Button title={t('onboarding.start')} onPress={() => finish(true)} loading={busy} />
             <Text style={styles.skip} onPress={() => finish(false)}>
               {t('common.skip')}

@@ -25,7 +25,7 @@
     "protein": "Eiwitten",
     "fat": "Vetten",
     "kcalShort": "kcal",
-    "carbsShort": "KH",
+    "carbsShort": "Koolh.",
     "proteinShort": "Eiwit",
     "fatShort": "Vet",
     "remaining": "over",
@@ -132,11 +132,11 @@
     "softHeight": "Die lengte lijkt ongebruikelijk. Gebruik een waarde tussen 100 en 230 cm.",
     "softWeight": "Dat gewicht lijkt ongebruikelijk. Gebruik een waarde tussen 30 en 250 kg.",
     "softNonPositive": "Lengte en gewicht moeten groter zijn dan nul.",
-    "disclaimer": "kcal: onderhoud ± doel (−500 / 0 / +300). Eiwit naar doel, vet 0,9 g/kg, koolhydraten de rest. Geen medisch advies.",
-    "kcalDrivesMacros": "Pas kcal aan: eiwit, vet en koolhydraten worden mee herberekend (als gewicht bekend is).",
-    "needWeightForSliders": "Vul je gewicht in (berekening hierboven) voor g/kg-sliders. Je kunt wel al grammen typen.",
+    "disclaimer": "kcal: onderhoud ± doel (−500 / 0 / +300). Macro's standaard 50/20/30 (koolhydraten/eiwit/vet). Geen medisch advies.",
     "macroKcal": "{{kcal}} kcal",
-    "kcalBalanceWarn": "De macro-kcal wijken meer dan 5% af van je kcal-doel."
+    "percentOfKcal": "{{value}}%",
+    "perKg": "{{value}} g/kg",
+    "goalsIncomplete": "Vul kcal en alle macro’s in (groter dan 0)."
   },
   "allergens": {
     "gluten": "Gluten",
@@ -271,6 +271,8 @@
     "name": "Productnaam",
     "brand": "Merk (optioneel)",
     "per100g": "Voedingswaarde per 100 gram",
+    "microsLabel": "Micronutriënten",
+    "microsPlaceholder": "Vezels, suikers, zout, vitaminen en meer komen hier later.",
     "portionLabel": "Portie",
     "portionName": "Portienaam (bijv. 1 burger)",
     "portionGrams": "Gewicht (gram)",

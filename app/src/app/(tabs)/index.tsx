@@ -124,13 +124,13 @@ export default function Diary() {
   }
 
   function renderEntry(entry: DiaryEntry) {
-    // Overview: grams · KH · Eiwit · Vet under name, kcal on the right
+    // Overview: grams · koolhydraten · eiwitten · vetten under name, kcal on the right
     // Focus: grams only under name; right side = focused macro amount
     const meta = focusMode
       ? entry.grams
         ? `${fmt(entry.grams)} g`
         : null
-      : `${fmt(Number(entry.grams ?? 0))} g · ${t('macros.carbsShort')} ${fmt(entry.carbs)} g · ${t('macros.proteinShort')} ${fmt(entry.protein)} g · ${t('macros.fatShort')} ${fmt(entry.fat)} g`;
+      : `${fmt(Number(entry.grams ?? 0))} g · ${t('macros.carbs')} ${fmt(entry.carbs)} g · ${t('macros.protein')} ${fmt(entry.protein)} g · ${t('macros.fat')} ${fmt(entry.fat)} g`;
 
     const rightValue = focusMode
       ? formatFocusedAmount(Number(entry[focusMacro] ?? 0), focusMacro)
@@ -218,7 +218,7 @@ export default function Diary() {
                 <View style={styles.entryMain}>
                   <Text style={styles.mealFooterLabel}>{t('meals.total')}</Text>
                   <Text style={styles.entryMeta}>
-                    {`${fmt(mealGrams)} g · ${t('macros.carbsShort')} ${fmt(slotTotals.carbs)} g · ${t('macros.proteinShort')} ${fmt(slotTotals.protein)} g · ${t('macros.fatShort')} ${fmt(slotTotals.fat)} g`}
+                    {`${fmt(mealGrams)} g · ${t('macros.carbs')} ${fmt(slotTotals.carbs)} g · ${t('macros.protein')} ${fmt(slotTotals.protein)} g · ${t('macros.fat')} ${fmt(slotTotals.fat)} g`}
                   </Text>
                 </View>
                 <View style={styles.mealFooterKcalCol}>

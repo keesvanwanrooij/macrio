@@ -132,11 +132,11 @@
     "softHeight": "Height looks unusual. Use a value between 100 and 230 cm.",
     "softWeight": "Weight looks unusual. Use a value between 30 and 250 kg.",
     "softNonPositive": "Height and weight must be greater than zero.",
-    "disclaimer": "kcal: maintenance ± goal (−500 / 0 / +300). Protein by goal, fat 0.9 g/kg, carbs the rest. Not medical advice.",
-    "kcalDrivesMacros": "Change kcal and protein, fat, and carbs recalculate (when weight is known).",
-    "needWeightForSliders": "Add your weight (calculator above) to use g/kg sliders. You can still type grams.",
+    "disclaimer": "kcal: maintenance ± goal (−500 / 0 / +300). Macros default to 50/20/30 (carbs/protein/fat). Not medical advice.",
     "macroKcal": "{{kcal}} kcal",
-    "kcalBalanceWarn": "Macro calories differ from your kcal goal by more than 5%."
+    "percentOfKcal": "{{value}}%",
+    "perKg": "{{value}} g/kg",
+    "goalsIncomplete": "Enter kcal and all macros (greater than 0)."
   },
   "allergens": {
     "gluten": "Gluten",
@@ -271,6 +271,8 @@
     "name": "Product name",
     "brand": "Brand (optional)",
     "per100g": "Nutrition per 100 grams",
+    "microsLabel": "Micronutrients",
+    "microsPlaceholder": "Fiber, sugars, salt, vitamins and more will come here later.",
     "portionLabel": "Portion",
     "portionName": "Portion name (e.g. 1 burger)",
     "portionGrams": "Weight (grams)",

@@ -2,13 +2,29 @@
 
 All notable changes to Macrio. Format: [Keep a Changelog](https://keepachangelog.com/), versioning per `docs/process/VERSIONING.md`.
 
-## [0.4.0] — 2026-07-23
+## [0.4.1] - 2026-07-23
+
+### Added
+
+- Unified goal **% macro editor** (default carbs 50 / protein 20 / fat 30): gram boxes, kcal + % + g/kg hints, % sliders with ring cascade (carbs?protein?fat)
+- Two-way editing: change kcal keeps %; change one gram updates kcal and %; move slider keeps kcal
+- Save validation: partial goals blocked; all-empty clears goals
+- Migration `019_goal_macro_mode.sql` (column unused by UI after unify; kept for now)
+
+### Changed
+
+- Removed Simple / Athlete / Keto mode chips; calculator always seeds 50/20/30
+- Reports week goal line + diary/create-product macro label polish
+- Agent prompts moved to local `/prompts/` (gitignored); root `Prompts.md` removed
+- App version **0.4.1**
+
+## [0.4.0] - 2026-07-23
 
 ### Added
 
 - Onboarding **Niets / Nothing** allergen chip (Skip also saves `allergens: []`)
-- Soft height/weight validation messages (100–230 cm, 30–250 kg); block = 0; no age soft message
-- Shared **GoalMacroEditor**: kcal + g/kg sliders + gram fields with cascade (kcal?macros, P/F?carbs, carbs?kcal), 5% balance warn, empty-field fill
+- Soft height/weight validation messages (100-230 cm, 30-250 kg); block <= 0; no age soft message
+- Shared **GoalMacroEditor**: kcal + g/kg sliders + gram fields with cascade, 5% balance warn, empty-field fill
 - `@react-native-community/slider` dependency
 
 ### Changed
@@ -17,7 +33,7 @@ All notable changes to Macrio. Format: [Keep a Changelog](https://keepachangelog
 - Plan files renamed from legacy `v1.0.x` to matching `v0.N.0-*` ship names
 - App version **0.4.0**
 
-## [0.3.0] â€” 2026-07-22
+## [0.3.0] - 2026-07-22
 
 ### Added
 
@@ -30,10 +46,10 @@ All notable changes to Macrio. Format: [Keep a Changelog](https://keepachangelog
 
 ### Changed
 
-- Diary / reports: tap date label opens picker (â€¹ â€º still step); cannot navigate past today
+- Diary / reports: tap date label opens picker (  still step); cannot navigate past today
 - App version **0.3.0**
 
-## [0.2.0] â€” 2026-07-22
+## [0.2.0] - 2026-07-22
 
 ### Added
 
@@ -46,7 +62,7 @@ All notable changes to Macrio. Format: [Keep a Changelog](https://keepachangelog
 - Supabase client uses PKCE (`flowType: 'pkce'`) for email recovery links
 - App version **0.2.0**
 
-## [0.1.0] â€” 2026-07-22
+## [0.1.0] - 2026-07-22
 
 First pre-public patch under the **0.x** scheme (`docs/process/VERSIONING.md`).
 
@@ -61,14 +77,14 @@ First pre-public patch under the **0.x** scheme (`docs/process/VERSIONING.md`).
 
 - App config moved from `app.json` to `app.config.js` (version **0.1.0**)
 
-## [Unreleased] â€” founder MVP history (was labeled 1.0.0)
+## [Unreleased] - founder MVP history (was labeled 1.0.0)
 
 Partial work toward later 0.x patches is tracked in `docs/product/ROADMAP_MINOR.md`.
 
 ### Added
 - Food diary: breakfast/lunch/dinner + snack slots between and after meals, date navigation, pull-to-refresh
 - Macro summary: overview (all 4) and focus (one big, tap to cycle) modes; count up or down vs optional goals
-- Add food: barcode scan (camera) â†’ own DB â†’ live Open Food Facts import â†’ create-product fallback
+- Add food: barcode scan (camera) ? own DB ? live Open Food Facts import ? create-product fallback
 - Search with generic-first ranking; global recents across meals; quick add without product
 - Product creation: natural portion prefill (never 1 gram), photo upload, tri-state allergen tagging
 - Product pages: macros per 100 g and per portion, full EU-14 allergen table (user's allergens pinned), version history with likes, report button, suggest-improvement flow

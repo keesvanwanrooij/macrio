@@ -1,10 +1,13 @@
 /*
- * SECTION: Goal macro editor (kcal + g/kg sliders + grams)
- * WHAT: Shared onboarding/Settings control for daily kcal and P/C/F targets.
- * HOW: Cascade via applyGoalFieldChange; local drag g/kg so thumbs do not fight Math.floor;
- *      remount carbs slider only after P/F/kcal finish (not every drag tick).
- * INPUT: field strings, weightKg, weightGoal, onChange
- * OUTPUT: updated GoalFields (parent persists)
+ * SECTION: Goal macro editor (unified % model)
+ * WHAT: Shared onboarding/Settings control for daily kcal + macros.
+ * HOW:
+ *   1) lockedPercents = source of truth for sliders (default 50/20/30 C/P/F)
+ *   2) Edit kcal → keep % → rescale all grams (bars stay)
+ *   3) Edit one gram → other grams stay; kcal = P×4+C×4+F×9; recompute %
+ *   4) Move slider → ring C→P→F→C; kcal fixed; grams follow %
+ * INPUT: GoalFields, weightKg (for g/kg hints), onChange
+ * OUTPUT: updated GoalFields (parent persists on Save)
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
@@ -13,15 +16,18 @@ import { useTranslation } from 'react-i18next';
 
 import { Field } from './ui';
 import {
-  FAT_G_PER_KG_RANGE,
-  PROTEIN_G_PER_KG_RANGE,
-  applyGoalFieldChange,
+  DEFAULT_MACRO_PERCENTS,
+  applyPercentRingChange,
   gPerKg,
+  gramsFromPercents,
   gramsToKcal,
-  isKcalOutOfBalance,
+  isReliablePercentSplit,
+  macroGramsToKcal,
+  percentScaleMax,
+  percentsFromGrams,
   type GoalFieldKey,
   type GoalFields,
-  type WeightGoal,
+  type MacroPercents,
 } from '../lib/goalCalculator';
 import { parseNum } from '../lib/nutrition';
 import { colors, radius, spacing } from '../lib/theme';
@@ -30,132 +36,187 @@ type Props = {
   value: GoalFields;
   onChange: (next: GoalFields) => void;
   weightKg: number;
-  weightGoal?: WeightGoal;
 };
 
-type MacroKey = 'protein' | 'carbs' | 'fat';
+type PercentMacro = 'protein' | 'carbs' | 'fat';
 
-const RAILS: Record<MacroKey, { min: number; max: number }> = {
-  protein: PROTEIN_G_PER_KG_RANGE,
-  fat: FAT_G_PER_KG_RANGE,
-  carbs: { min: 2, max: 8 },
-};
-
-/** Slider → grams: round so the thumb does not snap back against floor(). */
-function gramsFromSlider(gPerKgValue: number, weightKg: number): number {
-  return Math.max(0, Math.round(gPerKgValue * weightKg));
-}
-
-export function GoalMacroEditor({ value, onChange, weightKg, weightGoal = 'maintain' }: Props) {
+export function GoalMacroEditor({ value, onChange, weightKg }: Props) {
   const { t } = useTranslation();
   const hasWeight = weightKg > 0;
-  // Keep latest fields for rapid slider ticks (avoid stale closure overwrites).
   const valueRef = useRef(value);
   useEffect(() => {
     valueRef.current = value;
   }, [value]);
-  // While dragging, drive the thumb from this local g/kg (avoids controlled snap-back).
-  const [dragGPerKg, setDragGPerKg] = useState<Partial<Record<MacroKey, number>>>({});
-  // Remount carbs once after external cascade, not on every P/F tick (that caused glitch).
-  const [carbsSliderEpoch, setCarbsSliderEpoch] = useState(0);
 
-  function setField(key: GoalFieldKey, raw: string, syncCarbsSlider = false) {
-    const trimmed = raw.trim();
-    if (trimmed !== '') {
-      const n = Number(String(trimmed).replace(',', '.'));
-      if (Number.isFinite(n) && n <= 0) return;
-    }
-    const prevCarbs = valueRef.current.carbs;
-    const next = applyGoalFieldChange(valueRef.current, key, raw, weightKg, weightGoal);
-    valueRef.current = next;
-    if (syncCarbsSlider && key !== 'carbs' && next.carbs !== prevCarbs) {
-      setCarbsSliderEpoch((e) => e + 1);
-    }
-    onChange(next);
-  }
+  const [lockedPercents, setLockedPercents] = useState<MacroPercents | null>(null);
+  const [dragPercent, setDragPercent] = useState<Partial<Record<PercentMacro, number>>>({});
 
-  function gramsToSlider(macro: MacroKey): number {
-    const grams = parseNum(value[macro]);
-    const current = gPerKg(grams, weightKg);
-    const rail = RAILS[macro];
-    return Math.min(rail.max, Math.max(rail.min, current || rail.min));
-  }
-
-  function sliderDisplayValue(macro: MacroKey): number {
-    const dragged = dragGPerKg[macro];
-    if (dragged != null) return dragged;
-    return gramsToSlider(macro);
-  }
-
-  function onSliderChange(macro: MacroKey, gPerKgValue: number) {
-    setDragGPerKg((prev) => ({ ...prev, [macro]: gPerKgValue }));
-    // Live update numbers + cascade; do not remount carbs mid-drag.
-    setField(macro, String(gramsFromSlider(gPerKgValue, weightKg)), false);
-  }
-
-  function onSliderComplete(macro: MacroKey, gPerKgValue: number) {
-    setDragGPerKg((prev) => {
-      const next = { ...prev };
-      delete next[macro];
-      return next;
-    });
-    setField(macro, String(gramsFromSlider(gPerKgValue, weightKg)), false);
-    // Sync carbs thumb once after P/F drag (numbers already cascaded during drag).
-    if (macro === 'protein' || macro === 'fat') {
-      setCarbsSliderEpoch((e) => e + 1);
-    }
-  }
-
+  const kcal = parseNum(value.kcal);
   const protein = parseNum(value.protein);
   const carbs = parseNum(value.carbs);
   const fat = parseNum(value.fat);
-  const kcal = parseNum(value.kcal);
-  const balanceWarn =
-    value.protein.trim() !== '' &&
-    value.carbs.trim() !== '' &&
-    value.fat.trim() !== '' &&
-    isKcalOutOfBalance(kcal, protein, carbs, fat);
 
-  function macroRow(macro: MacroKey, labelKey: string) {
+  // Seed locked % once from reliable grams, else default 50/20/30
+  useEffect(() => {
+    setLockedPercents((prev) => {
+      if (prev) return prev;
+      if (kcal > 0 && (protein > 0 || carbs > 0 || fat > 0)) {
+        const fromGrams = percentsFromGrams(kcal, protein, carbs, fat);
+        if (isReliablePercentSplit(fromGrams)) return fromGrams;
+      }
+      return DEFAULT_MACRO_PERCENTS;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once on mount
+  }, []);
+
+  const activePercents: MacroPercents = lockedPercents ?? DEFAULT_MACRO_PERCENTS;
+
+  const scaleMax = Math.max(
+    percentScaleMax(activePercents),
+    dragPercent.protein ?? 0,
+    dragPercent.carbs ?? 0,
+    dragPercent.fat ?? 0
+  );
+
+  function commitFields(next: GoalFields) {
+    valueRef.current = next;
+    onChange(next);
+  }
+
+  function gramsFieldsFromPercents(kcalValue: number, percents: MacroPercents, kcalRaw: string): GoalFields {
+    if (!(kcalValue > 0)) {
+      return { kcal: kcalRaw, protein: '0', carbs: '0', fat: '0' };
+    }
+    const grams = gramsFromPercents(kcalValue, percents);
+    return {
+      kcal: kcalRaw,
+      protein: String(grams.protein),
+      carbs: String(grams.carbs),
+      fat: String(grams.fat),
+    };
+  }
+
+  function setField(key: GoalFieldKey, raw: string) {
+    const trimmed = raw.trim();
+    if (trimmed !== '') {
+      const n = Number(String(trimmed).replace(',', '.'));
+      if (Number.isFinite(n) && n < 0) return;
+    }
+
+    // Edit kcal → keep locked % → rescale grams (bars stay)
+    if (key === 'kcal') {
+      const n = trimmed === '' ? NaN : Number(String(trimmed).replace(',', '.'));
+      const split = lockedPercents ?? DEFAULT_MACRO_PERCENTS;
+      if (!lockedPercents) setLockedPercents(split);
+      if (trimmed !== '' && Number.isFinite(n) && n > 0) {
+        commitFields(gramsFieldsFromPercents(n, split, raw));
+        return;
+      }
+      // Empty or 0 kcal → gram fields 0; sliders keep locked %
+      commitFields({ kcal: raw, protein: '0', carbs: '0', fat: '0' });
+      return;
+    }
+
+    // Edit one gram → other two grams stay; kcal = sum; recompute locked %
+    if (key === 'protein' || key === 'carbs' || key === 'fat') {
+      const cur = valueRef.current;
+      if (trimmed === '') {
+        // Empty → treat as 0 for math; leave field empty for typing; recompute kcal + %
+        const p = key === 'protein' ? 0 : parseNum(cur.protein);
+        const c = key === 'carbs' ? 0 : parseNum(cur.carbs);
+        const f = key === 'fat' ? 0 : parseNum(cur.fat);
+        const nextKcal = Math.round(macroGramsToKcal(p, c, f));
+        const next: GoalFields = {
+          kcal: nextKcal > 0 ? String(nextKcal) : cur.kcal,
+          protein: key === 'protein' ? raw : cur.protein,
+          carbs: key === 'carbs' ? raw : cur.carbs,
+          fat: key === 'fat' ? raw : cur.fat,
+        };
+        if (nextKcal > 0) {
+          setLockedPercents(percentsFromGrams(nextKcal, p, c, f));
+        }
+        commitFields(next);
+        return;
+      }
+      const n = Number(String(raw).replace(',', '.'));
+      if (!Number.isFinite(n) || n < 0) return;
+      const p = key === 'protein' ? n : parseNum(cur.protein);
+      const c = key === 'carbs' ? n : parseNum(cur.carbs);
+      const f = key === 'fat' ? n : parseNum(cur.fat);
+      const nextKcal = Math.round(macroGramsToKcal(p, c, f));
+      const next: GoalFields = {
+        kcal: String(nextKcal),
+        protein: key === 'protein' ? raw : String(Math.round(p)),
+        carbs: key === 'carbs' ? raw : String(Math.round(c)),
+        fat: key === 'fat' ? raw : String(Math.round(f)),
+      };
+      // Keep typed raw in the edited box; round the other two for display consistency
+      if (key === 'protein') next.protein = raw;
+      if (key === 'carbs') next.carbs = raw;
+      if (key === 'fat') next.fat = raw;
+      if (nextKcal > 0) {
+        setLockedPercents(percentsFromGrams(nextKcal, p, c, f));
+      }
+      commitFields(next);
+    }
+  }
+
+  function percentDisplay(macro: PercentMacro): number {
+    if (dragPercent[macro] != null) return dragPercent[macro]!;
+    return Math.min(scaleMax, Math.max(0, activePercents[macro]));
+  }
+
+  function onPercentChange(macro: PercentMacro, pct: number) {
+    const base = lockedPercents ?? activePercents;
+    const ring = applyPercentRingChange(base, macro, pct);
+    setLockedPercents(ring);
+    setDragPercent((prev) => ({ ...prev, [macro]: pct }));
+    if (kcal > 0) {
+      commitFields(gramsFieldsFromPercents(kcal, ring, value.kcal));
+    }
+  }
+
+  function onPercentComplete(macro: PercentMacro, pct: number) {
+    setDragPercent((prev) => {
+      const n = { ...prev };
+      delete n[macro];
+      return n;
+    });
+    const base = lockedPercents ?? activePercents;
+    const ring = applyPercentRingChange(base, macro, pct);
+    setLockedPercents(ring);
+    if (kcal > 0) {
+      commitFields(gramsFieldsFromPercents(kcal, ring, value.kcal));
+    }
+  }
+
+  function macroHeader(macro: PercentMacro, labelKey: string) {
     const grams = parseNum(value[macro]);
     const kcalPart = gramsToKcal(macro, grams);
+    const pct = activePercents[macro];
     const perKg = hasWeight && grams > 0 ? gPerKg(grams, weightKg) : null;
-    const rail = RAILS[macro];
 
     return (
-      <View key={macro} style={styles.macroBlock}>
+      <>
         <View style={styles.macroHeader}>
           <Text style={styles.macroLabel} numberOfLines={1}>
             {t(labelKey)}
           </Text>
           <TextInput
             value={value[macro]}
-            onChangeText={(v) => setField(macro, v, macro !== 'carbs')}
+            onChangeText={(v) => setField(macro, v)}
             keyboardType="numeric"
             placeholderTextColor={colors.faint}
             style={styles.macroInput}
+            accessibilityLabel={t(labelKey)}
           />
         </View>
         <Text style={styles.kcalHint}>
           {t('goalsCalc.macroKcal', { kcal: Math.round(kcalPart) })}
-          {perKg != null ? ` · ${perKg.toFixed(1)} g/kg` : ''}
+          {` · ${t('goalsCalc.percentOfKcal', { value: pct.toFixed(0) })}`}
+          {perKg != null ? ` · ${t('goalsCalc.perKg', { value: perKg.toFixed(1) })}` : ''}
         </Text>
-        {hasWeight ? (
-          <Slider
-            key={macro === 'carbs' ? `carbs-${carbsSliderEpoch}` : macro}
-            style={styles.slider}
-            minimumValue={rail.min}
-            maximumValue={rail.max}
-            step={0.1}
-            value={sliderDisplayValue(macro)}
-            onValueChange={(v) => onSliderChange(macro, v)}
-            onSlidingComplete={(v) => onSliderComplete(macro, v)}
-            minimumTrackTintColor={colors.primary}
-            maximumTrackTintColor={colors.border}
-            thumbTintColor={colors.primaryDark}
-          />
-        ) : null}
-      </View>
+      </>
     );
   }
 
@@ -164,30 +225,66 @@ export function GoalMacroEditor({ value, onChange, weightKg, weightGoal = 'maint
       <Field
         label={t('settings.goalKcal')}
         value={value.kcal}
-        onChangeText={(v) => setField('kcal', v, true)}
+        onChangeText={(v) => setField('kcal', v)}
         keyboardType="numeric"
       />
-      <Text style={styles.hint}>{t('goalsCalc.kcalDrivesMacros')}</Text>
-      {!hasWeight ? <Text style={styles.hint}>{t('goalsCalc.needWeightForSliders')}</Text> : null}
 
-      {macroRow('protein', 'settings.goalProtein')}
-      {macroRow('fat', 'settings.goalFat')}
-      {macroRow('carbs', 'settings.goalCarbs')}
+      <View style={styles.macroBlock}>
+        {macroHeader('carbs', 'settings.goalCarbs')}
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={scaleMax}
+          step={1}
+          value={percentDisplay('carbs')}
+          onValueChange={(v) => onPercentChange('carbs', v)}
+          onSlidingComplete={(v) => onPercentComplete('carbs', v)}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primaryDark}
+          accessibilityLabel={t('settings.goalCarbs')}
+        />
+      </View>
 
-      {balanceWarn ? <Text style={styles.warn}>{t('goalsCalc.kcalBalanceWarn')}</Text> : null}
+      <View style={styles.macroBlock}>
+        {macroHeader('protein', 'settings.goalProtein')}
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={scaleMax}
+          step={1}
+          value={percentDisplay('protein')}
+          onValueChange={(v) => onPercentChange('protein', v)}
+          onSlidingComplete={(v) => onPercentComplete('protein', v)}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primaryDark}
+          accessibilityLabel={t('settings.goalProtein')}
+        />
+      </View>
+
+      <View style={styles.macroBlock}>
+        {macroHeader('fat', 'settings.goalFat')}
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={scaleMax}
+          step={1}
+          value={percentDisplay('fat')}
+          onValueChange={(v) => onPercentChange('fat', v)}
+          onSlidingComplete={(v) => onPercentComplete('fat', v)}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primaryDark}
+          accessibilityLabel={t('settings.goalFat')}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: spacing.s },
-  hint: {
-    fontSize: 12,
-    color: colors.muted,
-    marginBottom: spacing.m,
-    lineHeight: 16,
-    marginTop: -spacing.s,
-  },
   macroBlock: { marginBottom: spacing.m },
   macroHeader: {
     flexDirection: 'row',
@@ -216,7 +313,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'center',
   },
-  kcalHint: { fontSize: 11, color: colors.faint, marginTop: 4, marginBottom: 0 },
-  slider: { width: '100%', height: 28, marginTop: 2 },
-  warn: { fontSize: 13, color: colors.warn, marginTop: spacing.xs },
+  // Compact: ~4–6 px between hint and slider; keep margin between macro blocks
+  kcalHint: { fontSize: 11, color: colors.faint, marginTop: 2, marginBottom: 0 },
+  slider: { width: '100%', height: 28, marginTop: 4 },
 });

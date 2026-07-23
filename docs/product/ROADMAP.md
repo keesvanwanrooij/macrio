@@ -58,6 +58,7 @@ Must include before public: crash monitoring, GDPR account delete + data export,
 - [ ] Confirm **v0.15.0** analytics + forgot-password abuse controls are live before opening stores (see minor board)
 - [ ] Confirm **v0.16.0** halal + vegan pills + profile diet prefs are live before opening stores (see minor board)
 - [ ] Confirm **quality admin staple seed** is loaded: macros, micros, EU-14 allergens, halal, vegan correct where known (unknown only when honest)
+- [ ] **In-app store review prompt:** after about **7 days** of real use (e.g. days with food logged, not just install), ask once for App Store / Play review via the platform review API; respect OS limits; never nag; easy dismiss
 - [ ] Tag `v1.0.0` and open to the public
 - [ ] **Sentry account:** start signup/trial around launch (not earlier - avoid burning the trial during quiet founder testing). Wire `EXPO_PUBLIC_SENTRY_DSN` in production env; confirm smoke/test event. SDK already shipped in **v0.1.0** (`SETUP.md`)
 
@@ -106,6 +107,7 @@ _Note: thin rule-based day/week coaching lines ship in **0.x**; richer period re
 
 Big retention / fun / monetization step.
 
+- [ ] **Refer a friend:** share invite / referral from Settings or profile (link or code); light reward TBD (coins in v1.4 economy, or simple thank-you). Keep core free; no dark patterns
 - [ ] Posts, groups, chat, moderation
 - [ ] **Digital profile display:** short bio/text, social links; **avatar** (not a real-life selfie). Start with a **small set of avatar options**; expand cosmetics / variations with the store below
 - [ ] Community **badges** (achievements, contribution, milestones) on profiles
