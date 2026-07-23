@@ -5,7 +5,7 @@
 | Status | Draft |
 | Roadmap | [`ROADMAP_MINOR.md`](../ROADMAP_MINOR.md) → ship helper with **v0.7.0** (diary QoL); extend weights in **v0.10.0** when cook lands |
 | Depends on | Product versions, likes; cook_state (ships as v0.10.0) for cook points |
-| Related | [`v1.0.10-diary-search-qol.md`](v1.0.10-diary-search-qol.md) (ships as v0.7.0), [`v1.0.7-cook-state.md`](v1.0.7-cook-state.md) (ships as v0.10.0), `current_product_versions` |
+| Related | [`v0.7.0-diary-search-qol.md`](v0.7.0-diary-search-qol.md) (ships as v0.7.0), [`v0.10.0-cook-state.md`](v0.10.0-cook-state.md) (ships as v0.10.0), `current_product_versions` |
 
 ## Problem
 

@@ -101,6 +101,7 @@
   "onboarding": {
     "allergensTitle": "What are you allergic to?",
     "allergensSubtitle": "Products containing your allergens get a clear warning. You can change this later.",
+    "allergensNothing": "Nothing",
     "goalsTitle": "Daily goals (optional)",
     "goalsSubtitle": "Enter what you want to eat per day.",
     "start": "Get started"
@@ -128,8 +129,14 @@
     "activity_very_active": "Very active",
     "calculate": "Calculate goals",
     "invalid": "Enter a valid weight, height, and date of birth.",
-    "disclaimer": "kcal: maintenance ± goal (−500 / 0 / +300). Protein 1.6–2.0 g/kg by goal, fat 0.9 g/kg, carbs the rest. Not medical advice.",
-    "kcalDrivesMacros": "Change kcal and protein, fat, and carbs recalculate (when weight is known)."
+    "softHeight": "Height looks unusual. Use a value between 100 and 230 cm.",
+    "softWeight": "Weight looks unusual. Use a value between 30 and 250 kg.",
+    "softNonPositive": "Height and weight must be greater than zero.",
+    "disclaimer": "kcal: maintenance ± goal (−500 / 0 / +300). Protein by goal, fat 0.9 g/kg, carbs the rest. Not medical advice.",
+    "kcalDrivesMacros": "Change kcal and protein, fat, and carbs recalculate (when weight is known).",
+    "needWeightForSliders": "Add your weight (calculator above) to use g/kg sliders. You can still type grams.",
+    "macroKcal": "{{kcal}} kcal",
+    "kcalBalanceWarn": "Macro calories differ from your kcal goal by more than 5%."
   },
   "allergens": {
     "gluten": "Gluten",
@@ -378,8 +385,6 @@
     "emailChangeSentBody": "We sent a confirmation link to {{email}}. Open it on this phone to finish the change. Until then, sign in with your current email.",
     "emailChangeConfirmedTitle": "Email updated",
     "emailChangeConfirmedBody": "Your new email is confirmed. Use it the next time you sign in.",
-    "bodySavedTitle": "Body details saved",
-    "bodySavedBody": "Height, date of birth, weight, gender, activity, and daily goals (kcal/macros) were written to your profile.",
     "bodyMetricsMigrationHint": "Could not save body details. In Supabase SQL Editor, run migrations 006_profile_body_metrics.sql and 007_profile_weight_goal.sql, then try again.",
     "dateFormatMigrationHint": "Could not save date format. In Supabase SQL Editor, run migration 017_settings_identity_gdpr.sql, then try again.",
     "language": "Language",

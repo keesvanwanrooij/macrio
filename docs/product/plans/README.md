@@ -21,34 +21,34 @@
 
 ## Naming
 
-- New plan files: prefer `v0.N.0-slug.md` matching ship number
-- Older files may keep a former `v1.0.x` filename; **`ROADMAP_MINOR.md` headings are authoritative**
+- Plan files: `v0.N.0-slug.md` matching ship number (pre-public board)
 - Majors: `v1.1-workouts.md`, etc.
 - Template: `_TEMPLATE.md` (do not delete)
+- Legacy stubs may remain as redirects
 
 ## Current pre-public plans (ship order)
 
 | Ship | Plan file |
 |---|---|
 | **Group A — ops & account** | |
-| v0.1.0 | [crash reporting](v1.0.1-crash-reporting.md) |
-| v0.2.0 | [auth emails](v1.0.2-auth-emails.md) |
+| v0.1.0 | [crash reporting](v0.1.0-crash-reporting.md) |
+| v0.2.0 | [auth emails](v0.2.0-auth-emails.md) |
 | v0.3.0 | [Settings identity + dates + GDPR](v0.3.0-settings-identity-gdpr.md) _(stubs: [identity](v1.0.3-settings-identity.md), [GDPR](v1.0.3-gdpr-account.md))_
 | **Group B — goals** | |
-| v0.4.0 | [onboarding & goals](v1.0.4-onboarding-goals.md) |
+| v0.4.0 | [onboarding & goals](v0.4.0-onboarding-goals.md) |
 | **Group C — diary & reports** | |
-| v0.5.0 | [diary progress](v1.0.5-diary-progress.md) |
-| v0.6.0 | [report coaching texts](v1.0.6-report-coaching.md) |
-| v0.7.0 | [diary & search QoL](v1.0.10-diary-search-qol.md) _(filename legacy)_ |
+| v0.5.0 | [diary progress](v0.5.0-diary-progress.md) |
+| v0.6.0 | [report coaching texts](v0.6.0-report-coaching.md) |
+| v0.7.0 | [diary & search QoL](v0.7.0-diary-search-qol.md) |
 | **Group D — portions** | |
-| v0.8.0 | [portion units](v1.0.1-portion-units.md) _(filename legacy)_ |
-| v0.9.0 | [named portions](v1.0.6-named-portions.md) _(filename legacy)_ |
+| v0.8.0 | [portion units](v0.8.0-portion-units.md) |
+| v0.9.0 | [named portions](v0.9.0-named-portions.md) |
 | **Group E — catalog & nutrition** | |
-| v0.10.0 | [cook state](v1.0.7-cook-state.md) _(filename legacy)_ |
-| v0.11.0 | [mother catalog](v1.0.8-mother-catalog.md) _(filename legacy)_ |
-| v0.12.0 | [version quality + missing info](v1.0.12-version-quality.md) |
-| v0.13.0 | [create product UX](v1.0.9-create-product-ux.md) _(filename legacy)_ |
-| v0.14.0 | [full nutrition / micros](v1.0.14-full-nutrition.md) |
+| v0.10.0 | [cook state](v0.10.0-cook-state.md) |
+| v0.11.0 | [mother catalog](v0.11.0-mother-catalog.md) |
+| v0.12.0 | [version quality + missing info](v0.12.0-version-quality.md) |
+| v0.13.0 | [create product UX](v0.13.0-create-product-ux.md) |
+| v0.14.0 | [full nutrition / micros](v0.14.0-full-nutrition.md) |
 | **Group F — analytics & abuse** | |
 | v0.15.0 | [analytics + password-reset abuse](v0.15.0-analytics-abuse.md) |
 | **Group G — diet labels** | |

@@ -79,7 +79,7 @@ Search/list pattern:
 
 ## Related roadmap
 
-- **Mother catalog + barcode grouping** ships as **v0.11.0** — [`plans/v1.0.8-mother-catalog.md`](plans/v1.0.8-mother-catalog.md)
+- **Mother catalog + barcode grouping** ships as **v0.11.0** — [`plans/v0.11.0-mother-catalog.md`](plans/v0.11.0-mother-catalog.md)
 - Staples / seed foods are normal **mothers** owned by the reserved **admin** account (not a separate parent type).
 - Older “parent ≠ child” UI copy in this file will be rewritten when that patch lands; until then treat **parent** docs language as ≈ **mother** for seed staples.
 - Pitch (seed content ideas): [`docs/context/parent-food-catalog-pitch.md`](../context/parent-food-catalog-pitch.md)

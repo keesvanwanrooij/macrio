@@ -2,6 +2,21 @@
 
 All notable changes to Macrio. Format: [Keep a Changelog](https://keepachangelog.com/), versioning per `docs/process/VERSIONING.md`.
 
+## [0.4.0] — 2026-07-23
+
+### Added
+
+- Onboarding **Niets / Nothing** allergen chip (Skip also saves `allergens: []`)
+- Soft height/weight validation messages (100–230 cm, 30–250 kg); block = 0; no age soft message
+- Shared **GoalMacroEditor**: kcal + g/kg sliders + gram fields with cascade (kcal?macros, P/F?carbs, carbs?kcal), 5% balance warn, empty-field fill
+- `@react-native-community/slider` dependency
+
+### Changed
+
+- Goal calculator default closed on onboarding + Settings; silent save on Bereken doelen (no popup)
+- Plan files renamed from legacy `v1.0.x` to matching `v0.N.0-*` ship names
+- App version **0.4.0**
+
 ## [0.3.0] â€” 2026-07-22
 
 ### Added
@@ -73,3 +88,4 @@ Partial work toward later 0.x patches is tracked in `docs/product/ROADMAP_MINOR.
 - Product report modal (all reasons + cancel on Android)
 - App version in Settings (from Expo config)
 - Allergen `may_contain` / kan bevatten (orange)
+

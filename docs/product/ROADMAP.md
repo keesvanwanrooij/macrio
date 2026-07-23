@@ -35,7 +35,7 @@ Finish patches in `ROADMAP_MINOR.md` (**v0.1.0 → v0.16.0**), then tag **public
 
 Must include before public: crash monitoring, GDPR account delete + data export, mother catalog, version quality badges + missing-info prompts, full nutrition (fiber, sugars, salt, fats, micronutrients), rule-based report coaching, **analytics + password-reset abuse ops (v0.15.0)**, **halal + vegan diet pills (v0.16.0)**, **quality admin staple seed** (correct macros, micros, EU-14 allergens, and diet labels where known - see minor board v0.11 / v0.14 / v0.16), and the rest of the grouped 0.x board.
 
-**Catalog (ships as v0.11.0):** mothers group versions by barcode; search finds versions; mother name only when browsing. **Admin seed** under a reserved account must be high-quality catalog data (macros + allergens at seed time; micros + halal/vegan when those fields exist). Plan: [`plans/v1.0.8-mother-catalog.md`](plans/v1.0.8-mother-catalog.md).
+**Catalog (ships as v0.11.0):** mothers group versions by barcode; search finds versions; mother name only when browsing. **Admin seed** under a reserved account must be high-quality catalog data (macros + allergens at seed time; micros + halal/vegan when those fields exist). Plan: [`plans/v0.11.0-mother-catalog.md`](plans/v0.11.0-mother-catalog.md).
 
 **Post-launch OK:** fuller unit model per 100 g / 100 ml if not already covered by portion patches.
 

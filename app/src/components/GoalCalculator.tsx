@@ -15,10 +15,12 @@ import {
   isActivityLevel,
   isGender,
   isWeightGoal,
+  softBodyValidation,
   type ActivityLevel,
   type BodyMetricsDraft,
   type Gender,
   type GoalCalcResult,
+  type SoftBodyError,
   type WeightGoal,
 } from '../lib/goalCalculator';
 import { parseNum } from '../lib/nutrition';
@@ -41,7 +43,7 @@ export function GoalCalculator({ profile, defaultOpen = false, onCalculated }: P
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
   const [dob, setDob] = useState('');
-  const [error, setError] = useState(false);
+  const [errorKey, setErrorKey] = useState<SoftBodyError | 'invalid' | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -60,17 +62,24 @@ export function GoalCalculator({ profile, defaultOpen = false, onCalculated }: P
     const weightKg = parseNum(weight);
     const heightCm = parseNum(height);
 
-    const result =
-      ageYears != null
-        ? calculateDailyGoals({ weightKg, heightCm, ageYears, gender, activity, weightGoal })
-        : null;
-
-    if (!result || !dateOfBirth) {
-      setError(true);
+    // Soft height/weight messages only (no age soft-range copy). Still block ≤ 0.
+    const soft = softBodyValidation(heightCm, weightKg);
+    if (soft) {
+      setErrorKey(soft);
+      return;
+    }
+    if (!dateOfBirth || ageYears == null || !(ageYears > 0)) {
+      setErrorKey('invalid');
       return;
     }
 
-    setError(false);
+    const result = calculateDailyGoals({ weightKg, heightCm, ageYears, gender, activity, weightGoal });
+    if (!result) {
+      setErrorKey('invalid');
+      return;
+    }
+
+    setErrorKey(null);
     onCalculated({
       goals: result,
       body: {
@@ -82,6 +91,13 @@ export function GoalCalculator({ profile, defaultOpen = false, onCalculated }: P
         weight_goal: weightGoal,
       },
     });
+  }
+
+  function softErrorText(): string {
+    if (errorKey === 'height') return t('goalsCalc.softHeight');
+    if (errorKey === 'weight') return t('goalsCalc.softWeight');
+    if (errorKey === 'nonPositive') return t('goalsCalc.softNonPositive');
+    return t('goalsCalc.invalid');
   }
 
   const dobValue = /^\d{4}-\d{2}-\d{2}$/.test(dob) ? dob : '2000-01-01';
@@ -136,7 +152,7 @@ export function GoalCalculator({ profile, defaultOpen = false, onCalculated }: P
             ))}
           </View>
 
-          {error ? <Text style={styles.error}>{t('goalsCalc.invalid')}</Text> : null}
+          {errorKey ? <Text style={styles.error}>{softErrorText()}</Text> : null}
           <Text style={styles.disclaimer}>{t('goalsCalc.disclaimer')}</Text>
           <Button title={t('goalsCalc.calculate')} onPress={runCalculate} variant="secondary" />
         </View>

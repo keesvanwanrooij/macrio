@@ -1,8 +1,8 @@
 # Minor & Patch Planning — pre-public (0.x)
 
-> Planning board for **0.x** patches before public **1.0.0**. Post-launch majors stay in [`ROADMAP.md`](ROADMAP.md). Fed by founder notes (`docs/founder/notes.md`), Supabase/GitHub feedback, and GitHub issues.
+> Planning board for **0.x** patches before public **1.0.0**. Post-launch majors stay in `[ROADMAP.md](ROADMAP.md)`. Fed by founder notes (`docs/founder/notes.md`), Supabase/GitHub feedback, and GitHub issues.
 
-**Version scheme:** `0.1.0` → … → **`0.16.0`** (pre-public) → then `1.0.0` public. See [`VERSIONING.md`](../process/VERSIONING.md).
+**Version scheme:** `0.1.0` → … → `0.16.0` (pre-public) → then `1.0.0` public. See `[VERSIONING.md](../process/VERSIONING.md)`.
 
 Patches are **grouped** below. Some plan filenames still use older `v1.0.x` names; the **heading is the ship identity**.
 
@@ -14,7 +14,7 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 
 ### v0.1.0 — crash reporting / error monitoring
 
-**Plan:** `[plans/v1.0.1-crash-reporting.md](plans/v1.0.1-crash-reporting.md)`
+**Plan:** `[plans/v0.1.0-crash-reporting.md](plans/v0.1.0-crash-reporting.md)`
 
 **Progress:**
 
@@ -23,11 +23,11 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 - [x] Smoke: force test error in dev; verify event in dashboard
 - [x] Ship **before** public users (analytics / product funnels ship as **v0.15.0**, not with Sentry)
 
-*Note: portion-units content lives in **v0.8.0** (plan file* `v1.0.1-portion-units.md` *kept).*
+*Note: portion-units content lives in **v0.8.0** (plan file* `v0.8.0-portion-units.md` *kept).*
 
 ### v0.2.0 — auth emails + forgot password
 
-**Plan:** `[plans/v1.0.2-auth-emails.md](plans/v1.0.2-auth-emails.md)`
+**Plan:** `[plans/v0.2.0-auth-emails.md](plans/v0.2.0-auth-emails.md)`
 
 **Progress:**
 
@@ -37,8 +37,8 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 
 ### v0.3.0 — Settings identity, dates + GDPR account delete / export
 
-**Plan:** [`plans/v0.3.0-settings-identity-gdpr.md`](plans/v0.3.0-settings-identity-gdpr.md)  
-_(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.md), [`v1.0.3-gdpr-account.md`](plans/v1.0.3-gdpr-account.md))_
+**Plan:** `[plans/v0.3.0-settings-identity-gdpr.md](plans/v0.3.0-settings-identity-gdpr.md)`  
+*(Legacy stubs:* `[v1.0.3-settings-identity.md](plans/v1.0.3-settings-identity.md)`*,* `[v1.0.3-gdpr-account.md](plans/v1.0.3-gdpr-account.md)`*)*
 
 **Progress:**
 
@@ -64,15 +64,15 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.4.0 — onboarding & daily goals UX (+ g/kg macro sliders)
 
-**Plan:** `[plans/v1.0.4-onboarding-goals.md](plans/v1.0.4-onboarding-goals.md)`
+**Plan:** `[plans/v0.4.0-onboarding-goals.md](plans/v0.4.0-onboarding-goals.md)`
 
 **Progress:**
 
-- [ ] Calculator behind “Berekenen op basis van je lichaam” button
-- [ ] Allergen “Niets / Nothing” (= skip, `allergens: []`)
-- [ ] Soft body validation (height/weight/age)
-- [ ] Macro autocomplete + kcal equivalents
-- [ ] **Goal macro sliders** (onboarding + Settings): set kcal (or calculate), then protein/carbs/fat on logical g/kg ranges (e.g. protein ~0.8–2.2 g/kg); show **grams and kcal** for each macro so targets are understandable
+- [x] Calculator behind “Berekenen op basis van je lichaam” button
+- [x] Allergen “Niets / Nothing” (= skip, `allergens: []`)
+- [x] Soft body validation (height/weight; no age message; ≤0 blocked)
+- [x] Macro autocomplete + kcal equivalents
+- [x] **Goal macro sliders** (onboarding + Settings): set kcal (or calculate), then protein/carbs/fat on logical g/kg ranges (e.g. protein ~0.8–2.2 g/kg); show **grams and kcal** for each macro so targets are understandable
 - [ ] *(Later)* Auto-calc from **health-synced weight** + g/kg sliders (carbs fill rest) → `ROADMAP.md` v1.2
 
 ### After Group B — simplify / DRY / prune
@@ -85,7 +85,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.5.0 — diary meal totals & daily progress
 
-**Plan:** `[plans/v1.0.5-diary-progress.md](plans/v1.0.5-diary-progress.md)`
+**Plan:** `[plans/v0.5.0-diary-progress.md](plans/v0.5.0-diary-progress.md)`
 
 **Progress:**
 
@@ -98,7 +98,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.6.0 — rule-based report coaching texts
 
-**Plan:** `[plans/v1.0.6-report-coaching.md](plans/v1.0.6-report-coaching.md)`
+**Plan:** `[plans/v0.6.0-report-coaching.md](plans/v0.6.0-report-coaching.md)`
 
 **Progress:**
 
@@ -108,7 +108,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.7.0 — diary & search QoL (log, recents, favorites)
 
-**Plan:** `[plans/v1.0.10-diary-search-qol.md](plans/v1.0.10-diary-search-qol.md)` *(filename legacy; ships as v0.7.0)*
+**Plan:** `[plans/v0.7.0-diary-search-qol.md](plans/v0.7.0-diary-search-qol.md)`
 
 **Progress:**
 
@@ -127,7 +127,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.8.0 — portion units (g / ml) + default 100 g
 
-**Plan:** `[plans/v1.0.1-portion-units.md](plans/v1.0.1-portion-units.md)` *(filename legacy; ships as v0.8.0)*
+**Plan:** `[plans/v0.8.0-portion-units.md](plans/v0.8.0-portion-units.md)`
 
 **Progress:**
 
@@ -138,7 +138,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.9.0 — named portions (S / M / L)
 
-**Plan:** `[plans/v1.0.6-named-portions.md](plans/v1.0.6-named-portions.md)` *(filename legacy; ships as v0.9.0)*
+**Plan:** `[plans/v0.9.0-named-portions.md](plans/v0.9.0-named-portions.md)`
 
 **Progress:**
 
@@ -155,7 +155,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.10.0 — cooked / uncooked / not applicable (+ dual macros)
 
-**Plan:** `[plans/v1.0.7-cook-state.md](plans/v1.0.7-cook-state.md)` *(filename legacy; ships as v0.10.0)*
+**Plan:** `[plans/v0.10.0-cook-state.md](plans/v0.10.0-cook-state.md)`
 
 **Progress:**
 
@@ -167,7 +167,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.11.0 — mother catalog, barcode grouping, admin seed (pre-launch blocker)
 
-**Plan:** `[plans/v1.0.8-mother-catalog.md](plans/v1.0.8-mother-catalog.md)` *(filename legacy; ships as v0.11.0)*  
+**Plan:** `[plans/v0.11.0-mother-catalog.md](plans/v0.11.0-mother-catalog.md)`  
 (Old parent/child plan superseded: `[plans/v1.0.8-parent-catalog.md](plans/v1.0.8-parent-catalog.md)`)
 
 **Progress:**
@@ -185,7 +185,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.12.0 — version quality badge + “help improve” missing info
 
-**Plan:** `[plans/v1.0.12-version-quality.md](plans/v1.0.12-version-quality.md)`
+**Plan:** `[plans/v0.12.0-version-quality.md](plans/v0.12.0-version-quality.md)`
 
 **Progress:**
 
@@ -196,29 +196,30 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.13.0 — create product UX (allergens, names, macro sliders)
 
-**Plan:** `[plans/v1.0.9-create-product-ux.md](plans/v1.0.9-create-product-ux.md)` *(filename legacy; ships as v0.13.0)*
+**Plan:** `[plans/v0.13.0-create-product-ux.md](plans/v0.13.0-create-product-ux.md)`
 
 **Progress:**
 
 - [ ] **Set remaining allergens to free (green):** one action so users do not tap every allergen twice after marking contains
 - [ ] **Optional NL + EN name fields** when creating/editing a product; UI language decides which field is primary (nl → start with Dutch; en → start with English); other language optional
+- [ ] Note: make sure to also translate the meal text inside the dagboek screen when changing the language
 - [ ] **Create-food macro sliders:** user enters total kcal for the product (or per 100 g flow); sliders for carbs/protein/fat share that energy; grams cannot exceed product weight (e.g. 100 g product → max 100 g of a macro); show grams + kcal so create is understandable
 
 ### v0.14.0 — full nutrition fields (fiber, sugars, fats, micronutrients)
 
-**Plan:** `[plans/v1.0.14-full-nutrition.md](plans/v1.0.14-full-nutrition.md)`
+**Plan:** `[plans/v0.14.0-full-nutrition.md](plans/v0.14.0-full-nutrition.md)`
 
 **Progress:**
 
 - [ ] Schema + create/edit/log/reports for **fiber, sugars, salt/sodium, saturated + unsaturated fat** (and related fat fields as agreed)
 - [ ] **Micronutrients** (vitamins/minerals) in DB + UI (honest unknown when missing)
 - [ ] Seed / OFF mapping where available; diary snapshots include new fields when logging
-- [ ] **Admin staple seed:** backfill curated seed versions with accurate macro + micro nutrition (same quality bar as v0.11 seed; unknown only when data truly missing)
+- [ ] **Admin staple seed:** backfill curated seed versions with accurate macro + micro nutrition (same quality bar as v0.11 seed; unknown only when data truly missing) (this is a founder 10hour task)
 - [ ] Pre-public blocker (moved forward from old v1.4 salt/micros line)
 
 ### After Group E — simplify / DRY / prune
 
-- [ ] Run **Prompt 2** in [`Prompts.md`](../../Prompts.md) on catalog, create/edit product, nutrition fields, quality badge helpers. DRY shared product/version logic; remove obsolete catalog paths before public **1.0.0**.
+- [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on catalog, create/edit product, nutrition fields, quality badge helpers. DRY shared product/version logic; remove obsolete catalog paths before public **1.0.0**.
 
 ---
 
@@ -226,7 +227,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.15.0 — analytics + password-reset abuse ops
 
-**Plan:** [`plans/v0.15.0-analytics-abuse.md`](plans/v0.15.0-analytics-abuse.md)
+**Plan:** `[plans/v0.15.0-analytics-abuse.md](plans/v0.15.0-analytics-abuse.md)`
 
 **Progress:**
 
@@ -241,7 +242,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### After Group F — simplify / DRY / prune
 
-- [ ] Run **Prompt 2** in [`Prompts.md`](../../Prompts.md) on analytics wiring + forgot-password / abuse helpers before public **1.0.0**.
+- [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on analytics wiring + forgot-password / abuse helpers before public **1.0.0**.
 
 ---
 
@@ -249,7 +250,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### v0.16.0 — Halal + vegan pills (same row as allergens)
 
-**Plan:** [`plans/v0.16.0-halal-vegan.md`](plans/v0.16.0-halal-vegan.md)
+**Plan:** `[plans/v0.16.0-halal-vegan.md](plans/v0.16.0-halal-vegan.md)`
 
 **Progress:**
 
@@ -263,7 +264,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 
 ### After Group G — simplify / DRY / prune
 
-- [ ] Run **Prompt 2** in [`Prompts.md`](../../Prompts.md) on allergen/diet chip UI + profile preference helpers.
+- [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on allergen/diet chip UI + profile preference helpers.
 
 ---
 
@@ -318,27 +319,27 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 ## Rejected / deferred
 
 
-| Item                                                                                                 | Reason                                                                                             |
-| ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Feedback: multiple screenshots (max 5)                                                               | Keep single image for now. Also listed under Old notes.                                            |
-| Health-synced weight → auto kcal + g/kg macros (carbs fill rest)                                     | `ROADMAP.md` v1.2 (after Health sync)                                                              |
-| Quick-log % macro sliders (restaurant)                                                               | `ROADMAP.md` v1.3                                                                                  |
-| Personal reorder of add-food tabs                                                                    | `ROADMAP.md` v1.3                                                                                  |
-| Water tracker / daily diary notes / meal reminders / home widgets                                    | `ROADMAP.md` v1.3 (post-public)                                                                    |
-| Food-logging streaks, freezers, coins, avatar store, community badges                                | `ROADMAP.md` v1.4                                                                                  |
-| Themed seasonal events (Christmas, Halloween, etc.)                                                  | `ROADMAP.md` v1.4                                                                                  |
-| Auto-trim low-like product versions (beyond per-owner cap)                                           | `ROADMAP.md` v1.2                                                                                  |
-| 30-day version edit fork / profile visibility slider / duplicate-from-version / multi-admin merge UI | `ROADMAP.md` v1.2                                                                                  |
-| Recipes, community duplicate meals                                                                   | `ROADMAP.md` v1.4                                                                                  |
-| Personal meal templates + meal planner + meal/ingredient photos                                      | `ROADMAP.md` v1.3                                                                                  |
-| Salt / fiber / micros (old v1.4 line)                                                                | **Moved** to pre-public **v0.14.0**                                                                |
-| Analytics / success metrics + forgot-password abuse (limits, CAPTCHA, ops) | **Moved** to pre-public **v0.15.0** |
-| Crash reporting                                                                                      | **Moved** to pre-public **v0.1.0**                                                                 |
-| Account delete + data export (GDPR)                                                                  | **Moved** to pre-public **v0.3.0**                                                                 |
-| Metric / imperial (and optional kJ) display units                                                    | `ROADMAP.md` v1.3 (after date-format preference in **v0.3.0**)                                     |
-| Supporter pay-what-you-want + quarterly in-app funding notices                                       | `ROADMAP.md` v1.5                                                                                  |
-| Production auth: HTTPS Site URL, custom SMTP, `macrio://` reset/confirm (leave localhost / Expo Go)  | `ROADMAP.md` v1.0.0 + `RELEASE_CHECKLIST.md`                                                       |
-| AI photo + AI coach                                                                                  | `ROADMAP.md` v2.0                                                                                  |
-| User feedback at scale (replies, status, dedupe)                                                     | Not decided — [`community-feedback-future.md`](../founder/community-feedback-future.md) |
+| Item                                                                                                 | Reason                                                                                  |
+| ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Feedback: multiple screenshots (max 5)                                                               | Keep single image for now. Also listed under Old notes.                                 |
+| Health-synced weight → auto kcal + g/kg macros (carbs fill rest)                                     | `ROADMAP.md` v1.2 (after Health sync)                                                   |
+| Quick-log % macro sliders (restaurant)                                                               | `ROADMAP.md` v1.3                                                                       |
+| Personal reorder of add-food tabs                                                                    | `ROADMAP.md` v1.3                                                                       |
+| Water tracker / daily diary notes / meal reminders / home widgets                                    | `ROADMAP.md` v1.3 (post-public)                                                         |
+| Food-logging streaks, freezers, coins, avatar store, community badges                                | `ROADMAP.md` v1.4                                                                       |
+| Themed seasonal events (Christmas, Halloween, etc.)                                                  | `ROADMAP.md` v1.4                                                                       |
+| Auto-trim low-like product versions (beyond per-owner cap)                                           | `ROADMAP.md` v1.2                                                                       |
+| 30-day version edit fork / profile visibility slider / duplicate-from-version / multi-admin merge UI | `ROADMAP.md` v1.2                                                                       |
+| Recipes, community duplicate meals                                                                   | `ROADMAP.md` v1.4                                                                       |
+| Personal meal templates + meal planner + meal/ingredient photos                                      | `ROADMAP.md` v1.3                                                                       |
+| Salt / fiber / micros (old v1.4 line)                                                                | **Moved** to pre-public **v0.14.0**                                                     |
+| Analytics / success metrics + forgot-password abuse (limits, CAPTCHA, ops)                           | **Moved** to pre-public **v0.15.0**                                                     |
+| Crash reporting                                                                                      | **Moved** to pre-public **v0.1.0**                                                      |
+| Account delete + data export (GDPR)                                                                  | **Moved** to pre-public **v0.3.0**                                                      |
+| Metric / imperial (and optional kJ) display units                                                    | `ROADMAP.md` v1.3 (after date-format preference in **v0.3.0**)                          |
+| Supporter pay-what-you-want + quarterly in-app funding notices                                       | `ROADMAP.md` v1.5                                                                       |
+| Production auth: HTTPS Site URL, custom SMTP, `macrio://` reset/confirm (leave localhost / Expo Go)  | `ROADMAP.md` v1.0.0 + `RELEASE_CHECKLIST.md`                                            |
+| AI photo + AI coach                                                                                  | `ROADMAP.md` v2.0                                                                       |
+| User feedback at scale (replies, status, dedupe)                                                     | Not decided — `[community-feedback-future.md](../founder/community-feedback-future.md)` |
 
 

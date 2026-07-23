@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Card, Chip, Field, Loading, PasswordField, SectionTitle } from '../../components/ui';
 import { GoalCalculator } from '../../components/GoalCalculator';
+import { GoalMacroEditor } from '../../components/GoalMacroEditor';
 import { EU_ALLERGENS } from '../../lib/allergens';
 import { APP_VERSION } from '../../lib/appMeta';
 import { getEmailChangeRedirectUrl } from '../../lib/authDeepLink';
@@ -24,8 +25,8 @@ import {
 } from '../../lib/auth';
 import { DATE_FORMATS, resolveDateFormat } from '../../lib/dates';
 import { fetchMyDataExport, shareDataExport } from '../../lib/dataExport';
-import type { BodyMetricsDraft } from '../../lib/goalCalculator';
-import { macrosFromKcal } from '../../lib/goalCalculator';
+import type { BodyMetricsDraft, GoalFields } from '../../lib/goalCalculator';
+import { isWeightGoal } from '../../lib/goalCalculator';
 import { upsertTodayGoalRevision } from '../../lib/goalRevisions';
 import { parseNum } from '../../lib/nutrition';
 import { captureException, isSentryEnabled } from '../../lib/sentry';
@@ -74,7 +75,7 @@ export default function Settings() {
   const router = useRouter();
   const { session, profile, updateProfile } = useSession();
   const [section, setSection] = useState<SettingsSection>('preferences');
-  const [goalDraft, setGoalDraft] = useState<{ [k: string]: string } | null>(null);
+  const [goalDraft, setGoalDraft] = useState<GoalFields | null>(null);
   const [bodyDraft, setBodyDraft] = useState<BodyMetricsDraft | null>(null);
   const [fullNameDraft, setFullNameDraft] = useState<string | null>(null);
   const [usernameDraft, setUsernameDraft] = useState<string | null>(null);
@@ -112,15 +113,15 @@ export default function Settings() {
   const emailDirty =
     emailDraft !== null && normalizeEmail(email) !== normalizeEmail(accountEmail);
 
-  const goals = goalDraft ?? {
+  const goals: GoalFields = goalDraft ?? {
     kcal: profile.goal_kcal ? String(profile.goal_kcal) : '',
     carbs: profile.goal_carbs ? String(profile.goal_carbs) : '',
     protein: profile.goal_protein ? String(profile.goal_protein) : '',
     fat: profile.goal_fat ? String(profile.goal_fat) : '',
   };
 
-  function setGoal(key: string, value: string) {
-    setGoalDraft({ ...goals, [key]: value });
+  function onGoalsChange(next: GoalFields) {
+    setGoalDraft(next);
   }
 
   async function saveFullName() {
@@ -283,22 +284,6 @@ export default function Settings() {
     });
     setGoalDraft(null);
     setBodyDraft(null);
-  }
-
-  function setGoalKcal(value: string) {
-    const weightKg = profile!.weight_kg ?? 0;
-    const weightGoal = profile!.weight_goal ?? 'maintain';
-    const macros = macrosFromKcal(parseNum(value), weightKg, weightGoal);
-    if (macros) {
-      setGoalDraft({
-        kcal: value,
-        carbs: String(macros.carbs),
-        protein: String(macros.protein),
-        fat: String(macros.fat),
-      });
-    } else {
-      setGoalDraft({ kcal: value, carbs: '', protein: '', fat: '' });
-    }
   }
 
   function toggleAllergen(key: string) {
@@ -573,6 +558,7 @@ export default function Settings() {
           <SectionTitle>{t('settings.goals')}</SectionTitle>
           <GoalCalculator
             profile={profile}
+            defaultOpen={false}
             onCalculated={async ({ goals: calcGoals, body }) => {
               setSavingBody(true);
               const patch = {
@@ -608,15 +594,18 @@ export default function Settings() {
               });
               setGoalDraft(null);
               setBodyDraft(null);
-              Alert.alert(t('settings.bodySavedTitle'), t('settings.bodySavedBody'));
             }}
           />
           {savingBody ? <Text style={styles.disclaimer}>{t('common.loading')}</Text> : null}
-          <Field label={t('settings.goalKcal')} value={goals.kcal} onChangeText={setGoalKcal} keyboardType="numeric" />
-          <Text style={styles.disclaimer}>{t('goalsCalc.kcalDrivesMacros')}</Text>
-          <Field label={t('settings.goalCarbs')} value={goals.carbs} onChangeText={(v) => setGoal('carbs', v)} keyboardType="numeric" />
-          <Field label={t('settings.goalProtein')} value={goals.protein} onChangeText={(v) => setGoal('protein', v)} keyboardType="numeric" />
-          <Field label={t('settings.goalFat')} value={goals.fat} onChangeText={(v) => setGoal('fat', v)} keyboardType="numeric" />
+          <GoalMacroEditor
+            value={goals}
+            onChange={onGoalsChange}
+            weightKg={bodyDraft?.weight_kg ?? profile.weight_kg ?? 0}
+            weightGoal={
+              bodyDraft?.weight_goal ??
+              (isWeightGoal(profile.weight_goal) ? profile.weight_goal : 'maintain')
+            }
+          />
           {goalDraft && <Button title={t('common.save')} onPress={saveGoals} />}
         </>
       ) : null}
