@@ -32,7 +32,7 @@ import {
   type GoalSnapshot,
 } from '../../lib/goalRevisions';
 import { MACRO_COMPACT_WIDTH, MACRO_KEYS, macroDisplayLabel, type MacroKey } from '../../lib/macroLabels';
-import { mealScaleFromDayGoal, snackMacroTotal, isSnackSlot, DEFAULT_GOAL_KCAL, DEFAULT_GOAL_WEIGHT_KG } from '../../lib/mealGoalShare';
+import { mealScaleFromDayGoal, snackMacroTotal, isSnackSlot, DEFAULT_GOAL_KCAL } from '../../lib/mealGoalShare';
 import { macrosFromKcal } from '../../lib/goalCalculator';
 import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDateString } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
@@ -76,11 +76,7 @@ function dayGoalForMacro(
       return { dayGoal: fromProfile, goalIsDefault: false };
     }
   }
-  const weight =
-    profile?.weight_kg != null && Number(profile.weight_kg) > 0
-      ? Number(profile.weight_kg)
-      : DEFAULT_GOAL_WEIGHT_KG;
-  const macrosCalc = macrosFromKcal(DEFAULT_GOAL_KCAL, weight, profile?.weight_goal ?? 'maintain');
+  const macrosCalc = macrosFromKcal(DEFAULT_GOAL_KCAL);
   const defaults = {
     kcal: DEFAULT_GOAL_KCAL,
     carbs: macrosCalc?.carbs ?? 225,

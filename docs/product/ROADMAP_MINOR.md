@@ -92,7 +92,7 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 
 ### After Group B — simplify / DRY / prune
 
-- [ ] Run **Prompt 2** in `[prompts/02-after-group-simplify.md](../../prompts/02-after-group-simplify.md)` on onboarding + goals/calculator paths. DRY shared goal math/UI; prune superseded calculator/onboarding code.
+- [x] Run **Prompt 2** in `[prompts/02-after-group-simplify.md](../../prompts/02-after-group-simplify.md)` on onboarding + goals/calculator paths. DRY shared goal math/UI; prune superseded calculator/onboarding code.
 
 ---
 

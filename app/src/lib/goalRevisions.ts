@@ -7,6 +7,7 @@
  * OUTPUT: void | GoalSnapshot | null
  */
 import { supabase } from './supabase';
+import type { GoalNumberPatch } from './goalCalculator';
 import type { MacroKey } from './macroLabels';
 
 export type GoalSnapshot = {
@@ -17,12 +18,9 @@ export type GoalSnapshot = {
   goal_fat: number | null;
 };
 
-export async function upsertTodayGoalRevision(goals: {
-  goal_kcal: number | null;
-  goal_carbs: number | null;
-  goal_protein: number | null;
-  goal_fat: number | null;
-}): Promise<{ error: string | null }> {
+export async function upsertTodayGoalRevision(
+  goals: GoalNumberPatch
+): Promise<{ error: string | null }> {
   const { error } = await supabase.rpc('upsert_goal_revision_for_today', {
     p_goal_kcal: goals.goal_kcal,
     p_goal_carbs: goals.goal_carbs,

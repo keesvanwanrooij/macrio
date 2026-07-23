@@ -19,7 +19,7 @@ import {
   DEFAULT_MACRO_PERCENTS,
   applyPercentRingChange,
   gPerKg,
-  gramsFromPercents,
+  goalsFromPercents,
   gramsToKcal,
   isReliablePercentSplit,
   macroGramsToKcal,
@@ -39,6 +39,12 @@ type Props = {
 };
 
 type PercentMacro = 'protein' | 'carbs' | 'fat';
+
+const MACRO_ROWS: { key: PercentMacro; labelKey: string }[] = [
+  { key: 'carbs', labelKey: 'settings.goalCarbs' },
+  { key: 'protein', labelKey: 'settings.goalProtein' },
+  { key: 'fat', labelKey: 'settings.goalFat' },
+];
 
 export function GoalMacroEditor({ value, onChange, weightKg }: Props) {
   const { t } = useTranslation();
@@ -83,17 +89,12 @@ export function GoalMacroEditor({ value, onChange, weightKg }: Props) {
     onChange(next);
   }
 
-  function gramsFieldsFromPercents(kcalValue: number, percents: MacroPercents, kcalRaw: string): GoalFields {
+  /** Keep typed kcal raw; fill grams from % (or zeros when kcal empty/0). */
+  function fieldsFromLockedPercents(kcalValue: number, percents: MacroPercents, kcalRaw: string): GoalFields {
     if (!(kcalValue > 0)) {
       return { kcal: kcalRaw, protein: '0', carbs: '0', fat: '0' };
     }
-    const grams = gramsFromPercents(kcalValue, percents);
-    return {
-      kcal: kcalRaw,
-      protein: String(grams.protein),
-      carbs: String(grams.carbs),
-      fat: String(grams.fat),
-    };
+    return { ...goalsFromPercents(kcalValue, percents), kcal: kcalRaw };
   }
 
   function setField(key: GoalFieldKey, raw: string) {
@@ -109,7 +110,7 @@ export function GoalMacroEditor({ value, onChange, weightKg }: Props) {
       const split = lockedPercents ?? DEFAULT_MACRO_PERCENTS;
       if (!lockedPercents) setLockedPercents(split);
       if (trimmed !== '' && Number.isFinite(n) && n > 0) {
-        commitFields(gramsFieldsFromPercents(n, split, raw));
+        commitFields(fieldsFromLockedPercents(n, split, raw));
         return;
       }
       // Empty or 0 kcal → gram fields 0; sliders keep locked %
@@ -120,40 +121,20 @@ export function GoalMacroEditor({ value, onChange, weightKg }: Props) {
     // Edit one gram → other two grams stay; kcal = sum; recompute locked %
     if (key === 'protein' || key === 'carbs' || key === 'fat') {
       const cur = valueRef.current;
-      if (trimmed === '') {
-        // Empty → treat as 0 for math; leave field empty for typing; recompute kcal + %
-        const p = key === 'protein' ? 0 : parseNum(cur.protein);
-        const c = key === 'carbs' ? 0 : parseNum(cur.carbs);
-        const f = key === 'fat' ? 0 : parseNum(cur.fat);
-        const nextKcal = Math.round(macroGramsToKcal(p, c, f));
-        const next: GoalFields = {
-          kcal: nextKcal > 0 ? String(nextKcal) : cur.kcal,
-          protein: key === 'protein' ? raw : cur.protein,
-          carbs: key === 'carbs' ? raw : cur.carbs,
-          fat: key === 'fat' ? raw : cur.fat,
-        };
-        if (nextKcal > 0) {
-          setLockedPercents(percentsFromGrams(nextKcal, p, c, f));
-        }
-        commitFields(next);
-        return;
-      }
-      const n = Number(String(raw).replace(',', '.'));
-      if (!Number.isFinite(n) || n < 0) return;
+      const n = trimmed === '' ? 0 : Number(String(raw).replace(',', '.'));
+      if (trimmed !== '' && (!Number.isFinite(n) || n < 0)) return;
+
       const p = key === 'protein' ? n : parseNum(cur.protein);
       const c = key === 'carbs' ? n : parseNum(cur.carbs);
       const f = key === 'fat' ? n : parseNum(cur.fat);
       const nextKcal = Math.round(macroGramsToKcal(p, c, f));
+
       const next: GoalFields = {
-        kcal: String(nextKcal),
+        kcal: nextKcal > 0 ? String(nextKcal) : trimmed === '' ? cur.kcal : String(nextKcal),
         protein: key === 'protein' ? raw : String(Math.round(p)),
         carbs: key === 'carbs' ? raw : String(Math.round(c)),
         fat: key === 'fat' ? raw : String(Math.round(f)),
       };
-      // Keep typed raw in the edited box; round the other two for display consistency
-      if (key === 'protein') next.protein = raw;
-      if (key === 'carbs') next.carbs = raw;
-      if (key === 'fat') next.fat = raw;
       if (nextKcal > 0) {
         setLockedPercents(percentsFromGrams(nextKcal, p, c, f));
       }
@@ -172,7 +153,7 @@ export function GoalMacroEditor({ value, onChange, weightKg }: Props) {
     setLockedPercents(ring);
     setDragPercent((prev) => ({ ...prev, [macro]: pct }));
     if (kcal > 0) {
-      commitFields(gramsFieldsFromPercents(kcal, ring, value.kcal));
+      commitFields(fieldsFromLockedPercents(kcal, ring, value.kcal));
     }
   }
 
@@ -186,18 +167,18 @@ export function GoalMacroEditor({ value, onChange, weightKg }: Props) {
     const ring = applyPercentRingChange(base, macro, pct);
     setLockedPercents(ring);
     if (kcal > 0) {
-      commitFields(gramsFieldsFromPercents(kcal, ring, value.kcal));
+      commitFields(fieldsFromLockedPercents(kcal, ring, value.kcal));
     }
   }
 
-  function macroHeader(macro: PercentMacro, labelKey: string) {
+  function macroRow(macro: PercentMacro, labelKey: string) {
     const grams = parseNum(value[macro]);
     const kcalPart = gramsToKcal(macro, grams);
     const pct = activePercents[macro];
     const perKg = hasWeight && grams > 0 ? gPerKg(grams, weightKg) : null;
 
     return (
-      <>
+      <View key={macro} style={styles.macroBlock}>
         <View style={styles.macroHeader}>
           <Text style={styles.macroLabel} numberOfLines={1}>
             {t(labelKey)}
@@ -216,7 +197,20 @@ export function GoalMacroEditor({ value, onChange, weightKg }: Props) {
           {` · ${t('goalsCalc.percentOfKcal', { value: pct.toFixed(0) })}`}
           {perKg != null ? ` · ${t('goalsCalc.perKg', { value: perKg.toFixed(1) })}` : ''}
         </Text>
-      </>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={scaleMax}
+          step={1}
+          value={percentDisplay(macro)}
+          onValueChange={(v) => onPercentChange(macro, v)}
+          onSlidingComplete={(v) => onPercentComplete(macro, v)}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primaryDark}
+          accessibilityLabel={t(labelKey)}
+        />
+      </View>
     );
   }
 
@@ -228,57 +222,7 @@ export function GoalMacroEditor({ value, onChange, weightKg }: Props) {
         onChangeText={(v) => setField('kcal', v)}
         keyboardType="numeric"
       />
-
-      <View style={styles.macroBlock}>
-        {macroHeader('carbs', 'settings.goalCarbs')}
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={scaleMax}
-          step={1}
-          value={percentDisplay('carbs')}
-          onValueChange={(v) => onPercentChange('carbs', v)}
-          onSlidingComplete={(v) => onPercentComplete('carbs', v)}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primaryDark}
-          accessibilityLabel={t('settings.goalCarbs')}
-        />
-      </View>
-
-      <View style={styles.macroBlock}>
-        {macroHeader('protein', 'settings.goalProtein')}
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={scaleMax}
-          step={1}
-          value={percentDisplay('protein')}
-          onValueChange={(v) => onPercentChange('protein', v)}
-          onSlidingComplete={(v) => onPercentComplete('protein', v)}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primaryDark}
-          accessibilityLabel={t('settings.goalProtein')}
-        />
-      </View>
-
-      <View style={styles.macroBlock}>
-        {macroHeader('fat', 'settings.goalFat')}
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={scaleMax}
-          step={1}
-          value={percentDisplay('fat')}
-          onValueChange={(v) => onPercentChange('fat', v)}
-          onSlidingComplete={(v) => onPercentComplete('fat', v)}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primaryDark}
-          accessibilityLabel={t('settings.goalFat')}
-        />
-      </View>
+      {MACRO_ROWS.map((row) => macroRow(row.key, row.labelKey))}
     </View>
   );
 }

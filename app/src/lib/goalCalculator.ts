@@ -32,6 +32,8 @@ export const WEIGHT_GOAL_KCAL_DELTA: Record<WeightGoal, number> = {
   gain: 300,
 };
 
+export type MacroPercents = { protein: number; carbs: number; fat: number };
+
 /** Unified default % of daily kcal (carbs / protein / fat). */
 export const DEFAULT_MACRO_PERCENTS: MacroPercents = {
   carbs: 50,
@@ -75,7 +77,7 @@ export type BodyMetricsDraft = {
   weight_goal: WeightGoal;
 };
 
-export type SoftBodyError = 'height' | 'weight' | 'nonPositive' | 'missing';
+export type SoftBodyError = 'height' | 'weight' | 'nonPositive';
 
 export type GoalFieldKey = 'kcal' | 'protein' | 'carbs' | 'fat';
 
@@ -86,7 +88,23 @@ export type GoalFields = {
   fat: string;
 };
 
-export type MacroPercents = { protein: number; carbs: number; fat: number };
+/** Empty editor draft (onboarding start / cleared goals). */
+export const EMPTY_GOAL_FIELDS: GoalFields = { kcal: '', protein: '', carbs: '', fat: '' };
+
+/** Profile + goal_revisions columns for daily targets. */
+export type GoalNumberPatch = {
+  goal_kcal: number | null;
+  goal_carbs: number | null;
+  goal_protein: number | null;
+  goal_fat: number | null;
+};
+
+export const NULL_GOAL_NUMBERS: GoalNumberPatch = {
+  goal_kcal: null,
+  goal_carbs: null,
+  goal_protein: null,
+  goal_fat: null,
+};
 
 /** Age in whole years from YYYY-MM-DD. */
 export function ageFromDateOfBirth(isoDate: string, now = new Date()): number | null {
@@ -257,18 +275,31 @@ export function goalsFromPercents(
   };
 }
 
-/**
- * Macro split from a kcal target: default 50/20/30 (C/P/F).
- * weightKg / weightGoal kept optional for call-site compat; ignored.
- */
+/** Macro split from a kcal target: default 50/20/30 (C/P/F). */
 export function macrosFromKcal(
-  kcal: number,
-  _weightKg?: number,
-  _weightGoal?: WeightGoal
+  kcal: number
 ): Pick<GoalCalcResult, 'carbs' | 'protein' | 'fat'> | null {
   if (!(kcal > 0)) return null;
   const grams = gramsFromPercents(kcal, DEFAULT_MACRO_PERCENTS);
   return { protein: grams.protein, carbs: grams.carbs, fat: grams.fat };
+}
+
+/** GoalFields from a calculator result (already 50/20/30 grams). */
+export function goalsFromCalcResult(result: GoalCalcResult): GoalFields {
+  return {
+    kcal: String(result.kcal),
+    protein: String(result.protein),
+    carbs: String(result.carbs),
+    fat: String(result.fat),
+  };
+}
+
+/** Parse one goal text field (comma or dot decimals). NaN if empty/invalid. */
+function parseGoalFieldNumber(raw: string): number {
+  const t = raw.trim();
+  if (t === '') return NaN;
+  const n = Number(String(t).replace(',', '.'));
+  return Number.isFinite(n) ? n : NaN;
 }
 
 /** True when all four goal fields are empty (user clearing goals). */
@@ -283,11 +314,39 @@ export function goalsFieldsAllEmpty(fields: GoalFields): boolean {
 
 /** True when kcal and all macros are finite and > 0. */
 export function goalsFieldsComplete(fields: GoalFields): boolean {
-  const k = Number(String(fields.kcal).replace(',', '.'));
-  const p = Number(String(fields.protein).replace(',', '.'));
-  const c = Number(String(fields.carbs).replace(',', '.'));
-  const f = Number(String(fields.fat).replace(',', '.'));
-  return [k, p, c, f].every((n) => Number.isFinite(n) && n > 0);
+  return (['kcal', 'protein', 'carbs', 'fat'] as const).every((key) => {
+    const n = parseGoalFieldNumber(fields[key]);
+    return Number.isFinite(n) && n > 0;
+  });
+}
+
+/**
+ * Map editor strings → profile/revision numbers.
+ * Empty or ≤0 becomes null (same as historical `parseNum(x) || null`).
+ */
+export function goalNumbersFromFields(fields: GoalFields): GoalNumberPatch {
+  const toNullable = (raw: string): number | null => {
+    const n = parseGoalFieldNumber(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  return {
+    goal_kcal: toNullable(fields.kcal),
+    goal_carbs: toNullable(fields.carbs),
+    goal_protein: toNullable(fields.protein),
+    goal_fat: toNullable(fields.fat),
+  };
+}
+
+/** Body draft → profile columns (onboarding + Settings calculator save). */
+export function bodyMetricsToProfilePatch(body: BodyMetricsDraft) {
+  return {
+    date_of_birth: body.date_of_birth,
+    height_cm: body.height_cm,
+    weight_kg: body.weight_kg,
+    gender: body.gender,
+    activity_level: body.activity_level,
+    weight_goal: body.weight_goal,
+  };
 }
 
 export function calculateDailyGoals(input: GoalCalcInput): GoalCalcResult | null {

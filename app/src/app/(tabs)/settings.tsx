@@ -26,9 +26,15 @@ import {
 import { DATE_FORMATS, resolveDateFormat } from '../../lib/dates';
 import { fetchMyDataExport, shareDataExport } from '../../lib/dataExport';
 import type { BodyMetricsDraft, GoalFields } from '../../lib/goalCalculator';
-import { goalsFieldsAllEmpty, goalsFieldsComplete, goalsFromPercents } from '../../lib/goalCalculator';
+import {
+  NULL_GOAL_NUMBERS,
+  bodyMetricsToProfilePatch,
+  goalNumbersFromFields,
+  goalsFieldsAllEmpty,
+  goalsFieldsComplete,
+  goalsFromCalcResult,
+} from '../../lib/goalCalculator';
 import { upsertTodayGoalRevision } from '../../lib/goalRevisions';
-import { parseNum } from '../../lib/nutrition';
 import { captureException, isSentryEnabled } from '../../lib/sentry';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
@@ -260,34 +266,17 @@ export default function Settings() {
       Alert.alert(t('common.error'), t('goalsCalc.goalsIncomplete'));
       return;
     }
-    const clearing = goalsFieldsAllEmpty(goals);
+    const goalPatch = goalsFieldsAllEmpty(goals) ? NULL_GOAL_NUMBERS : goalNumbersFromFields(goals);
     const patch = {
-      goal_kcal: clearing ? null : parseNum(goals.kcal) || null,
-      goal_carbs: clearing ? null : parseNum(goals.carbs) || null,
-      goal_protein: clearing ? null : parseNum(goals.protein) || null,
-      goal_fat: clearing ? null : parseNum(goals.fat) || null,
-      ...(bodyDraft
-        ? {
-            date_of_birth: bodyDraft.date_of_birth,
-            height_cm: bodyDraft.height_cm,
-            weight_kg: bodyDraft.weight_kg,
-            gender: bodyDraft.gender,
-            activity_level: bodyDraft.activity_level,
-            weight_goal: bodyDraft.weight_goal,
-          }
-        : {}),
+      ...goalPatch,
+      ...(bodyDraft ? bodyMetricsToProfilePatch(bodyDraft) : {}),
     };
     const { error } = await updateProfile(patch);
     if (error) {
       Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
       return;
     }
-    await upsertTodayGoalRevision({
-      goal_kcal: patch.goal_kcal,
-      goal_carbs: patch.goal_carbs,
-      goal_protein: patch.goal_protein,
-      goal_fat: patch.goal_fat,
-    });
+    await upsertTodayGoalRevision(goalPatch);
     setGoalDraft(null);
     setBodyDraft(null);
   }
@@ -567,18 +556,16 @@ export default function Settings() {
             defaultOpen={false}
             onCalculated={async ({ goals: calcGoals, body }) => {
               setSavingBody(true);
-              const styled = goalsFromPercents(calcGoals.kcal);
-              const patch = {
+              const styled = goalsFromCalcResult(calcGoals);
+              const goalPatch = {
                 goal_kcal: calcGoals.kcal,
-                goal_carbs: parseNum(styled.carbs) || calcGoals.carbs,
-                goal_protein: parseNum(styled.protein) || calcGoals.protein,
-                goal_fat: parseNum(styled.fat) || calcGoals.fat,
-                date_of_birth: body.date_of_birth,
-                height_cm: body.height_cm,
-                weight_kg: body.weight_kg,
-                gender: body.gender,
-                activity_level: body.activity_level,
-                weight_goal: body.weight_goal,
+                goal_carbs: calcGoals.carbs,
+                goal_protein: calcGoals.protein,
+                goal_fat: calcGoals.fat,
+              };
+              const patch = {
+                ...goalPatch,
+                ...bodyMetricsToProfilePatch(body),
               };
               const { error } = await updateProfile(patch);
               setSavingBody(false);
@@ -588,12 +575,7 @@ export default function Settings() {
                 Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
                 return;
               }
-              await upsertTodayGoalRevision({
-                goal_kcal: patch.goal_kcal,
-                goal_carbs: patch.goal_carbs,
-                goal_protein: patch.goal_protein,
-                goal_fat: patch.goal_fat,
-              });
+              await upsertTodayGoalRevision(goalPatch);
               setGoalDraft(null);
               setBodyDraft(null);
             }}

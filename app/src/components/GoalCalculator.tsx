@@ -1,4 +1,10 @@
-// Optional body-stat form that fills daily kcal/macro goal fields and persists metrics.
+/*
+ * SECTION: Body-based daily goal calculator
+ * WHAT: Collapsible Mifflin form; fills kcal + macros (50/20/30) and body metrics.
+ * HOW: Soft height/weight checks → age from DOB → calculateDailyGoals → onCalculated
+ * INPUT: optional profile prefill; defaultOpen; onCalculated callback
+ * OUTPUT: { goals: GoalCalcResult, body: BodyMetricsDraft }
+ */
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';

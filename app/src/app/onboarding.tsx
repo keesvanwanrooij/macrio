@@ -12,12 +12,15 @@ import { EU_ALLERGENS } from '../lib/allergens';
 import {
   type BodyMetricsDraft,
   type GoalFields,
+  EMPTY_GOAL_FIELDS,
+  NULL_GOAL_NUMBERS,
+  bodyMetricsToProfilePatch,
+  goalNumbersFromFields,
   goalsFieldsAllEmpty,
   goalsFieldsComplete,
-  goalsFromPercents,
+  goalsFromCalcResult,
 } from '../lib/goalCalculator';
 import { upsertTodayGoalRevision } from '../lib/goalRevisions';
-import { parseNum } from '../lib/nutrition';
 import { useSession } from '../lib/session';
 import { colors, spacing } from '../lib/theme';
 
@@ -26,7 +29,7 @@ export default function Onboarding() {
   const { profile, updateProfile } = useSession();
   const [step, setStep] = useState<0 | 1>(0);
   const [selected, setSelected] = useState<string[]>([]);
-  const [goals, setGoals] = useState<GoalFields>({ kcal: '', carbs: '', protein: '', fat: '' });
+  const [goals, setGoals] = useState<GoalFields>(EMPTY_GOAL_FIELDS);
   const [bodyDraft, setBodyDraft] = useState<BodyMetricsDraft | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -52,25 +55,11 @@ export default function Onboarding() {
     }
     setBusy(true);
     try {
-      const goalPatch = {
-        goal_kcal: persistGoals ? parseNum(goals.kcal) || null : null,
-        goal_carbs: persistGoals ? parseNum(goals.carbs) || null : null,
-        goal_protein: persistGoals ? parseNum(goals.protein) || null : null,
-        goal_fat: persistGoals ? parseNum(goals.fat) || null : null,
-      };
+      const goalPatch = persistGoals ? goalNumbersFromFields(goals) : NULL_GOAL_NUMBERS;
       const { error } = await updateProfile({
         allergens,
         ...goalPatch,
-        ...(bodyDraft
-          ? {
-              date_of_birth: bodyDraft.date_of_birth,
-              height_cm: bodyDraft.height_cm,
-              weight_kg: bodyDraft.weight_kg,
-              gender: bodyDraft.gender,
-              activity_level: bodyDraft.activity_level,
-              weight_goal: bodyDraft.weight_goal,
-            }
-          : {}),
+        ...(bodyDraft ? bodyMetricsToProfilePatch(bodyDraft) : {}),
         onboarded: true,
       });
       if (error) {
@@ -82,12 +71,7 @@ export default function Onboarding() {
             : error;
         Alert.alert(t('common.error'), hint);
       } else if (persistGoals) {
-        await upsertTodayGoalRevision({
-          goal_kcal: goalPatch.goal_kcal,
-          goal_carbs: goalPatch.goal_carbs,
-          goal_protein: goalPatch.goal_protein,
-          goal_fat: goalPatch.goal_fat,
-        });
+        await upsertTodayGoalRevision(goalPatch);
       }
     } catch (e) {
       Alert.alert(t('common.error'), e instanceof Error ? e.message : String(e));
@@ -142,7 +126,7 @@ export default function Onboarding() {
               profile={profile}
               defaultOpen={false}
               onCalculated={({ goals: calcGoals, body }) => {
-                setGoals(goalsFromPercents(calcGoals.kcal));
+                setGoals(goalsFromCalcResult(calcGoals));
                 setBodyDraft(body);
               }}
             />
