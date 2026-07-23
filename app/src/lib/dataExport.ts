@@ -76,7 +76,8 @@ export async function fetchMyDataExport(): Promise<
  * OUTPUT: void; throws/returns error string on failure
  */
 export async function shareDataExport(
-  bundle: ExportBundle
+  bundle: ExportBundle,
+  titles?: { json?: string; csv?: string }
 ): Promise<{ error: string | null }> {
   const base = FileSystem.cacheDirectory;
   if (!base) return { error: 'no_cache_dir' };
@@ -103,11 +104,11 @@ export async function shareDataExport(
   // Share JSON first, then diary CSV (two clear files for the user).
   await Sharing.shareAsync(jsonPath, {
     mimeType: 'application/json',
-    dialogTitle: 'Macrio export (JSON)',
+    dialogTitle: titles?.json ?? 'Macrio export (JSON)',
   });
   await Sharing.shareAsync(csvPath, {
     mimeType: 'text/csv',
-    dialogTitle: 'Macrio diary (CSV)',
+    dialogTitle: titles?.csv ?? 'Macrio diary (CSV)',
   });
 
   return { error: null };

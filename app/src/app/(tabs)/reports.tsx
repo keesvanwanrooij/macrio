@@ -19,8 +19,10 @@ import { ProgressBar } from '../../components/ProgressBar';
 import {
   clampToToday,
   formatDateDisplay,
+  isoToDate,
   resolveDateFormat,
   todayIso,
+  weekdayLabel,
   weekStartMonday,
 } from '../../lib/dates';
 import {
@@ -182,12 +184,8 @@ export default function Reports() {
   );
 
   function label(): string {
-    const locale = i18n.language === 'nl' ? 'nl-NL' : 'en-GB';
     if (mode === 'day') {
-      const weekday = new Date(anchor + 'T12:00:00').toLocaleDateString(locale, {
-        weekday: 'long',
-      });
-      return `${weekday} ${formatDateDisplay(anchor, dateFormat)}`;
+      return `${weekdayLabel(anchor, i18n.language, 'long')} ${formatDateDisplay(anchor, dateFormat)}`;
     }
     const weekEnd = addDays(weekStart, 6);
     return `${formatDateDisplay(weekStart, dateFormat)} – ${formatDateDisplay(weekEnd, dateFormat)}`;
@@ -221,7 +219,7 @@ export default function Reports() {
               onChange={(iso) => setAnchor(clampToToday(iso, today))}
               dateFormat={dateFormat}
               displayText={label()}
-              maximumDate={new Date(today + 'T12:00:00')}
+              maximumDate={isoToDate(today)}
             />
             <Pressable hitSlop={12} onPress={() => shift(1)} disabled={!canShiftForward}>
               <Text style={[styles.navArrow, !canShiftForward && { color: colors.faint }]}>›</Text>
@@ -609,7 +607,6 @@ function WeekMacroChart({
 
   const maxVal = Math.max(...values, ...dayGoals.map((g) => g ?? 0), 1);
 
-  const locale = i18n.language === 'nl' ? 'nl-NL' : 'en-GB';
   const unit = macro === 'kcal' ? t('common.kcal') : 'g';
   const daysWithData = perDay.filter((p) => p.kcal > 0).length || 1;
   const avgVal = perDay.reduce((s, p) => s + p[macro], 0) / daysWithData;
@@ -702,7 +699,7 @@ function WeekMacroChart({
                 />
               </View>
               <Text style={styles.barLabel}>
-                {new Date(d + 'T12:00:00').toLocaleDateString(locale, { weekday: 'narrow' })}
+                {weekdayLabel(d, i18n.language, 'narrow')}
               </Text>
             </Pressable>
           );

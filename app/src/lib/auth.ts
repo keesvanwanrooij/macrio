@@ -29,15 +29,51 @@ export function isDuplicateEmailSignUpError(message: string): boolean {
   );
 }
 
-/** Map trigger / unique-index failures for a taken username during sign-up. */
+/** Map trigger / unique-index failures for a taken username (sign-up or Settings). */
 export function isUsernameTakenSignUpError(message: string): boolean {
   const m = message.toLowerCase();
   return (
     m.includes('username_taken') ||
     m.includes('profiles_username_lower_idx') ||
     m.includes('profiles_nickname_lower_idx') ||
-    (m.includes('duplicate') && (m.includes('username') || m.includes('nickname')))
+    (m.includes('duplicate') && (m.includes('username') || m.includes('nickname'))) ||
+    (m.includes('unique') && (m.includes('username') || m.includes('nickname')))
   );
+}
+
+/** DB CHECK / format failures for username (Settings save or sign-up). */
+export function isUsernameFormatError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('profiles_username_format') ||
+    m.includes('profiles_nickname_format') ||
+    (m.includes('check') && (m.includes('username') || m.includes('nickname')))
+  );
+}
+
+/** i18n key for username save/sign-up errors, or null when message should stay raw. */
+export function usernameErrorI18nKey(
+  message: string
+): 'auth.usernameTaken' | 'auth.usernameInvalid' | null {
+  if (isUsernameTakenSignUpError(message)) return 'auth.usernameTaken';
+  if (isUsernameFormatError(message)) return 'auth.usernameInvalid';
+  return null;
+}
+
+/*
+ * SECTION: Re-auth before sensitive Settings changes
+ * WHAT: Proves current password so a stolen session cannot change username/email/password alone.
+ * HOW: signInWithPassword with the account email + typed current password.
+ * INPUT: account email, current password
+ * OUTPUT: { ok: true } or { ok: false }
+ */
+export async function reauthenticateWithPassword(
+  email: string,
+  password: string
+): Promise<{ ok: true } | { ok: false }> {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { ok: false };
+  return { ok: true };
 }
 
 /*

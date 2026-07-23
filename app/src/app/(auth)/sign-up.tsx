@@ -8,10 +8,10 @@ import { isValidUsername, sanitizeUsernameInput } from '../../lib/username';
 import {
   isDuplicateEmailSignUpError,
   isUsernameAvailable,
-  isUsernameTakenSignUpError,
   getAuthRedirectUrl,
   isValidEmail,
   normalizeEmail,
+  usernameErrorI18nKey,
 } from '../../lib/auth';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
@@ -58,13 +58,12 @@ export default function SignUp() {
         },
       });
       if (error) {
+        const usernameKey = usernameErrorI18nKey(error.message);
         const msg = isDuplicateEmailSignUpError(error.message)
           ? t('auth.emailTaken')
-          : isUsernameTakenSignUpError(error.message)
-            ? t('auth.usernameTaken')
-            : error.message.includes('profiles_username_format') || error.message.includes('profiles_nickname_format')
-              ? t('auth.usernameInvalid')
-              : error.message;
+          : usernameKey
+            ? t(usernameKey)
+            : error.message;
         Alert.alert(t('auth.signUpFailed'), msg);
         return;
       }

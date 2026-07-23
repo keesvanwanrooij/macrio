@@ -16,8 +16,13 @@ import { GoalCalculator } from '../../components/GoalCalculator';
 import { EU_ALLERGENS } from '../../lib/allergens';
 import { APP_VERSION } from '../../lib/appMeta';
 import { getEmailChangeRedirectUrl } from '../../lib/authDeepLink';
-import { isValidEmail, normalizeEmail } from '../../lib/auth';
-import { DATE_FORMATS, resolveDateFormat, type DateFormat } from '../../lib/dates';
+import {
+  isValidEmail,
+  normalizeEmail,
+  reauthenticateWithPassword,
+  usernameErrorI18nKey,
+} from '../../lib/auth';
+import { DATE_FORMATS, resolveDateFormat } from '../../lib/dates';
 import { fetchMyDataExport, shareDataExport } from '../../lib/dataExport';
 import type { BodyMetricsDraft } from '../../lib/goalCalculator';
 import { macrosFromKcal } from '../../lib/goalCalculator';
@@ -47,14 +52,8 @@ function profileSaveErrorMessage(raw: string, t: (k: string) => string): string 
 }
 
 function usernameSaveError(raw: string, t: (k: string) => string): string {
-  const m = raw.toLowerCase();
-  if (m.includes('profiles_username_lower_idx') || m.includes('duplicate') || m.includes('unique')) {
-    return t('auth.usernameTaken');
-  }
-  if (m.includes('profiles_username_format') || m.includes('profiles_nickname_format') || m.includes('check')) {
-    return t('auth.usernameInvalid');
-  }
-  return raw;
+  const key = usernameErrorI18nKey(raw);
+  return key ? t(key) : raw;
 }
 
 function sectionLabelKey(section: SettingsSection): string {
@@ -152,11 +151,8 @@ export default function Settings() {
 
     setSavingUsername(true);
     // Re-auth so a stolen session cannot change username alone (same as email change)
-    const { error: reauthError } = await supabase.auth.signInWithPassword({
-      email: accountEmail,
-      password: usernamePassword,
-    });
-    if (reauthError) {
+    const reauth = await reauthenticateWithPassword(accountEmail, usernamePassword);
+    if (!reauth.ok) {
       setSavingUsername(false);
       Alert.alert(t('common.error'), t('settings.passwordCurrentWrong'));
       return;
@@ -193,11 +189,8 @@ export default function Settings() {
 
     setSavingPassword(true);
     // Step 1: prove current password (Supabase requires a fresh session for sensitive updates)
-    const { error: reauthError } = await supabase.auth.signInWithPassword({
-      email: accountEmail,
-      password: currentPassword,
-    });
-    if (reauthError) {
+    const reauth = await reauthenticateWithPassword(accountEmail, currentPassword);
+    if (!reauth.ok) {
       setSavingPassword(false);
       Alert.alert(t('common.error'), t('settings.passwordCurrentWrong'));
       return;
@@ -234,11 +227,8 @@ export default function Settings() {
 
     setSavingEmail(true);
     // Re-auth so a stolen session cannot change email alone
-    const { error: reauthError } = await supabase.auth.signInWithPassword({
-      email: accountEmail,
-      password: emailPassword,
-    });
-    if (reauthError) {
+    const reauth = await reauthenticateWithPassword(accountEmail, emailPassword);
+    if (!reauth.ok) {
       setSavingEmail(false);
       Alert.alert(t('common.error'), t('settings.passwordCurrentWrong'));
       return;
@@ -333,7 +323,10 @@ export default function Settings() {
       );
       return;
     }
-    const shareResult = await shareDataExport(data);
+    const shareResult = await shareDataExport(data, {
+      json: t('settings.exportShareJsonTitle'),
+      csv: t('settings.exportShareCsvTitle'),
+    });
     setExporting(false);
     if (shareResult.error === 'sharing_unavailable') {
       Alert.alert(t('common.error'), t('settings.exportShareUnavailable'));
@@ -561,7 +554,7 @@ export default function Settings() {
                 label={fmt}
                 active={dateFormat === fmt}
                 onPress={async () => {
-                  const { error } = await updateProfile({ date_format: fmt as DateFormat });
+                  const { error } = await updateProfile({ date_format: fmt });
                   if (error) Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
                 }}
               />

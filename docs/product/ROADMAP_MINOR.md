@@ -56,7 +56,7 @@ _(Legacy stubs: [`v1.0.3-settings-identity.md`](plans/v1.0.3-settings-identity.m
 ### After Group A — simplify / DRY / prune
 
 - [x] Signup: taken username shows `auth.usernameTaken` (no silent `user_<id>`); migration `018` + `is_username_available`
-- [ ] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on areas touched by Group A (auth, settings/account, crash ops). Simplify duplicates, share helpers, remove dead/obsolete code paths. No new features.
+- [x] Run **Prompt 2** in `[Prompts.md](../../Prompts.md)` on areas touched by Group A (auth, settings/account, crash ops). Simplify duplicates, share helpers, remove dead/obsolete code paths. No new features.
 
 ---
 

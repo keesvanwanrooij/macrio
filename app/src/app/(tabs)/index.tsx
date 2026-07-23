@@ -11,7 +11,7 @@ import { MacroSummary } from '../../components/MacroSummary';
 import { NativeDatePicker } from '../../components/NativeDatePicker';
 import { Loading } from '../../components/ui';
 import { diaryAllergenHits } from '../../lib/allergens';
-import { clampToToday, formatDateDisplay, resolveDateFormat, todayIso } from '../../lib/dates';
+import { clampToToday, formatDateDisplay, isoToDate, resolveDateFormat, todayIso, weekdayLabel } from '../../lib/dates';
 import { type MacroKey } from '../../lib/macroLabels';
 import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDateString } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
@@ -92,11 +92,7 @@ export default function Diary() {
     if (date === today) return t('diary.today');
     if (date === addDays(today, -1)) return t('diary.yesterday');
     // Prefer profile date_format for non-relative days
-    const weekday = new Date(date + 'T12:00:00').toLocaleDateString(
-      i18n.language === 'nl' ? 'nl-NL' : 'en-GB',
-      { weekday: 'short' }
-    );
-    return `${weekday} ${formatDateDisplay(date, dateFormat)}`;
+    return `${weekdayLabel(date, i18n.language, 'short')} ${formatDateDisplay(date, dateFormat)}`;
   }
 
   function goPrevDay() {
@@ -258,7 +254,7 @@ export default function Diary() {
           onChange={(iso) => setDate(clampToToday(iso, today))}
           dateFormat={dateFormat}
           displayText={dateLabel()}
-          maximumDate={new Date(today + 'T12:00:00')}
+          maximumDate={isoToDate(today)}
         />
         <Pressable hitSlop={12} onPress={goNextDay} disabled={date >= today}>
           <Ionicons

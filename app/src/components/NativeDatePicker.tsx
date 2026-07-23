@@ -1,9 +1,11 @@
 /*
  * SECTION: Shared native date picker
- * WHAT: Tap a label → platform date picker (Android dialog / iOS spinner or inline).
+ * WHAT: Tap a label → platform date picker (Android dialog / iOS spinner).
  * HOW: Pressable shows formatted date; opens @react-native-community/datetimepicker.
  * INPUT: value ISO YYYY-MM-DD; onChange; optional max/min; dateFormat for label
  * OUTPUT: onChange(iso) when user confirms a day
+ *
+ * Keep stock native look (no brand theming plugin).
  */
 import DateTimePicker, {
   type DateTimePickerEvent,
@@ -14,9 +16,9 @@ import { useTranslation } from 'react-i18next';
 
 import {
   clampToToday,
-  dateToIso,
   formatDateDisplay,
   isoToDate,
+  toDateString,
   todayIso,
   type DateFormat,
 } from '../lib/dates';
@@ -63,15 +65,18 @@ export function NativeDatePicker({
   const closedLabel = displayText ?? formatDateDisplay(value, dateFormat);
 
   function apply(iso: string) {
-    const next =
-      maximumDate === null ? iso : clampToToday(iso, dateToIso(max ?? isoToDate(todayIso())));
-    onChange(next);
+    if (maximumDate === null) {
+      onChange(iso);
+      return;
+    }
+    const maxIso = toDateString(max ?? isoToDate(todayIso()));
+    onChange(clampToToday(iso, maxIso));
   }
 
-  function onAndroidChange(event: DateTimePickerEvent, date?: Date) {
+  function onNativeChange(event: DateTimePickerEvent, date?: Date) {
     setOpen(false);
     if (event.type === 'dismissed' || !date) return;
-    apply(dateToIso(date));
+    apply(toDateString(date));
   }
 
   function openPicker() {
@@ -97,12 +102,13 @@ export function NativeDatePicker({
         <Text style={variant === 'plain' ? styles.plainText : styles.fieldText}>{closedLabel}</Text>
       </Pressable>
 
-      {open && Platform.OS === 'android' ? (
+      {/* Android + web: one-shot dialog */}
+      {open && Platform.OS !== 'ios' ? (
         <DateTimePicker
           value={parsed}
           mode="date"
           display="default"
-          onChange={onAndroidChange}
+          onChange={onNativeChange}
           maximumDate={max}
           minimumDate={minimumDate}
         />
@@ -129,29 +135,13 @@ export function NativeDatePicker({
               <Button
                 title={t('common.done')}
                 onPress={() => {
-                  apply(dateToIso(iosDraft));
+                  apply(toDateString(iosDraft));
                   setOpen(false);
                 }}
               />
             </View>
           </View>
         </Modal>
-      ) : null}
-
-      {/* Web / unknown: fall back to same Android-style one-shot if supported */}
-      {open && Platform.OS !== 'ios' && Platform.OS !== 'android' ? (
-        <DateTimePicker
-          value={parsed}
-          mode="date"
-          display="default"
-          onChange={(event, date) => {
-            setOpen(false);
-            if (event.type === 'dismissed' || !date) return;
-            apply(dateToIso(date));
-          }}
-          maximumDate={max}
-          minimumDate={minimumDate}
-        />
       ) : null}
     </View>
   );

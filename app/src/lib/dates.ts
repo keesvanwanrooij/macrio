@@ -1,12 +1,15 @@
 /*
- * SECTION: Date format preference + formatting helpers
- * WHAT: Profile date_format (DD-MM-YYYY default) applied wherever dates are shown.
- * HOW: formatDateDisplay / parseDisplayDate; clamp to today; week-start Monday helper.
- * INPUT: ISO YYYY-MM-DD strings + DateFormat preference
- * OUTPUT: display strings; clamped ISO dates
+ * SECTION: Date format preference + calendar helpers
+ * WHAT: Profile date_format (DD-MM-YYYY default) plus shared ISO calendar math.
+ * HOW: formatDateDisplay; clamp to today; Monday week-start; addDays / toDateString.
+ * INPUT: ISO YYYY-MM-DD strings + DateFormat preference (or Date for toDateString)
+ * OUTPUT: display strings; clamped / shifted ISO dates
+ *
+ * Single source for diary, reports, NativeDatePicker, and nutrition re-exports.
  */
+import type { DateFormat } from './types';
 
-export type DateFormat = 'DD-MM-YYYY' | 'YYYY-MM-DD' | 'MM-DD-YYYY';
+export type { DateFormat };
 
 export const DATE_FORMATS: DateFormat[] = ['DD-MM-YYYY', 'YYYY-MM-DD', 'MM-DD-YYYY'];
 
@@ -41,7 +44,7 @@ export function todayIso(): string {
   return toDateString(new Date());
 }
 
-/** Never allow a diary/report anchor after today. */
+/** Never allow a diary/report anchor after today (or after `today` override / max ISO). */
 export function clampToToday(iso: string, today: string = todayIso()): string {
   return iso > today ? today : iso;
 }
@@ -54,18 +57,23 @@ export function weekStartMonday(iso: string): string {
   return toDateString(d);
 }
 
-export function addDaysIso(dateStr: string, days: number): string {
+export function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T12:00:00');
   d.setDate(d.getDate() + days);
-  return toDateString(d);
-}
-
-/** Parse Date → ISO using local calendar (picker values). */
-export function dateToIso(d: Date): string {
   return toDateString(d);
 }
 
 /** ISO → Date at local noon (avoids DST edge shifts). */
 export function isoToDate(iso: string): Date {
   return new Date(iso + 'T12:00:00');
+}
+
+/** Weekday label for nav headers (diary short / reports long). */
+export function weekdayLabel(
+  iso: string,
+  language: string,
+  width: 'short' | 'long' | 'narrow' = 'short'
+): string {
+  const locale = language === 'nl' ? 'nl-NL' : 'en-GB';
+  return isoToDate(iso).toLocaleDateString(locale, { weekday: width });
 }

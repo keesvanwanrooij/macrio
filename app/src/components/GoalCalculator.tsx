@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { NativeDatePicker } from './NativeDatePicker';
 import { Button, Chip, Field } from './ui';
-import { resolveDateFormat, todayIso } from '../lib/dates';
+import { isoToDate, resolveDateFormat, todayIso } from '../lib/dates';
 import {
   ACTIVITIES,
   GENDERS,
@@ -120,8 +120,8 @@ export function GoalCalculator({ profile, defaultOpen = false, onCalculated }: P
             value={dobValue}
             onChange={setDob}
             dateFormat={dateFormat}
-            maximumDate={new Date(todayIso() + 'T12:00:00')}
-            minimumDate={new Date('1920-01-01T12:00:00')}
+            maximumDate={isoToDate(todayIso())}
+            minimumDate={isoToDate('1920-01-01')}
           />
 
           <Text style={styles.label}>{t('goalsCalc.activity')}</Text>

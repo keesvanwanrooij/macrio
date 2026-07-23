@@ -86,20 +86,6 @@ export function ageFromDateOfBirth(isoDate: string, now = new Date()): number | 
   return age;
 }
 
-/** Normalize typed DOB to YYYY-MM-DD (accepts DD-MM-YYYY / DD/MM/YYYY). */
-export function normalizeDateOfBirthInput(raw: string): string | null {
-  const s = raw.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const eu = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(s);
-  if (eu) {
-    const d = eu[1].padStart(2, '0');
-    const mo = eu[2].padStart(2, '0');
-    const y = eu[3];
-    return `${y}-${mo}-${d}`;
-  }
-  return null;
-}
-
 export function isGender(v: string | null | undefined): v is Gender {
   return v === 'male' || v === 'female' || v === 'other';
 }
