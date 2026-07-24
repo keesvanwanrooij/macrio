@@ -1,4 +1,4 @@
-// Diary — the home screen. Date navigation, macro summary, meal sections
+// Diary — the home screen. Date navigation, birthday banner, macro summary, meal sections
 // (breakfast/lunch/dinner + snack slots between and after).
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,7 +11,7 @@ import { MacroSummary } from '../../components/MacroSummary';
 import { NativeDatePicker } from '../../components/NativeDatePicker';
 import { Loading } from '../../components/ui';
 import { diaryAllergenHits } from '../../lib/allergens';
-import { clampToToday, formatDateDisplay, isoToDate, resolveDateFormat, todayIso, weekdayLabel } from '../../lib/dates';
+import { clampToToday, formatDateDisplay, isBirthdayOnDate, isoToDate, resolveDateFormat, todayIso, weekdayLabel } from '../../lib/dates';
 import { type MacroKey } from '../../lib/macroLabels';
 import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDateString } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
@@ -242,6 +242,8 @@ export default function Diary() {
 
   if (!profile) return <Loading />;
 
+  const showBirthday = isBirthdayOnDate(profile.date_of_birth, date);
+
   return (
     <View style={styles.container}>
       <View style={styles.dateNav}>
@@ -280,6 +282,11 @@ export default function Diary() {
             />
           }
         >
+          {showBirthday ? (
+            <Text style={styles.birthdayBanner} accessibilityRole="text">
+              {t('diary.happyBirthday')}
+            </Text>
+          ) : null}
           <MacroSummary
             totals={totals}
             profile={profile}
@@ -312,6 +319,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.m,
+  },
+  birthdayBanner: {
+    marginHorizontal: spacing.l,
+    marginBottom: spacing.m,
+    paddingVertical: spacing.m,
+    paddingHorizontal: spacing.l,
+    borderRadius: radius.m,
+    backgroundColor: colors.primarySoft,
+    color: colors.primaryDark,
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 21,
   },
   dateLabel: { fontSize: 17, fontWeight: '800', color: colors.text },
   mealCard: {

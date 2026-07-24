@@ -107,3 +107,23 @@ export function allergenChipLabel(
   if (labelMode === 'short') return allergenShortLabel(t, key);
   return allergenFullStateLabel(t, key, state);
 }
+
+/*
+ * SECTION: “Niets / Nothing” collapse pattern (EU-14 multi-select)
+ * WHAT: Leading None chip clears the list and hides option chips; “…” expands them again.
+ * HOW: optionsExpanded + selectedCount → noneActive / showOptions
+ * INPUT: selectedCount, optionsExpanded
+ * OUTPUT: { noneActive, showOptions }
+ *
+ * Halal / vegan (v0.16): do NOT reuse this collapse. Those are independent profile
+ * booleans (“I eat halal”, “I eat vegan”) on the same row as extra product labels.
+ * Unset = no diet warnings (like empty allergens). No “Niets” twin for diet prefs.
+ */
+export function noneChipListState(selectedCount: number, optionsExpanded: boolean) {
+  const noneActive = selectedCount === 0 && !optionsExpanded;
+  return {
+    noneActive,
+    /** When false, only the None chip is shown. */
+    showOptions: !noneActive,
+  };
+}

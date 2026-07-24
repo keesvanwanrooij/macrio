@@ -41,12 +41,14 @@ export const DEFAULT_MACRO_PERCENTS: MacroPercents = {
   fat: 30,
 };
 
-/** Floor for % slider max; actual max = max(PERCENT_SLIDER_FLOOR, highest %). */
-export const PERCENT_SLIDER_FLOOR = 60;
+/** Default % slider rail max. Grows if a macro exceeds this (ring spill). */
+export const PERCENT_SLIDER_MAX = 100;
 
-/** Soft body limits with friendly messages (height/weight only; no age message). */
+/** Soft unusual ranges (warn only; Mifflin still runs). */
 export const HEIGHT_CM_SOFT = { min: 100, max: 230 } as const;
 export const WEIGHT_KG_SOFT = { min: 30, max: 250 } as const;
+/** Soft warn when age is under this (years); Mifflin still runs when age > 0. */
+export const AGE_YEARS_SOFT_UNDER = 16;
 
 export const GENDERS: Gender[] = ['male', 'female', 'other'];
 export const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
@@ -66,6 +68,16 @@ export type GoalCalcResult = {
   carbs: number;
   protein: number;
   fat: number;
+  /**
+   * Mifflin breakdown for the calculator footer (only set by calculateDailyGoals).
+   * bmr → × activity = tdee → ± goal delta = kcal.
+   */
+  energy?: {
+    bmr: number;
+    activityFactor: number;
+    tdee: number;
+    goalDelta: number;
+  };
 };
 
 export type BodyMetricsDraft = {
@@ -77,7 +89,10 @@ export type BodyMetricsDraft = {
   weight_goal: WeightGoal;
 };
 
-export type SoftBodyError = 'height' | 'weight' | 'nonPositive';
+export type BodyMetricHardError = 'negative' | 'nonPositive';
+
+/** Soft vs hard copy under weight/height/age fields (i18n key + severity). */
+export type BodyFieldMessage = { severity: 'hard' | 'soft'; key: string };
 
 export type GoalFieldKey = 'kcal' | 'protein' | 'carbs' | 'fat';
 
@@ -158,19 +173,61 @@ export function gPerKg(grams: number, weightKg: number): number {
 }
 
 /**
- * Soft height/weight check for calculator UX.
- * No age soft-range message (caller may still require a valid DOB for Mifflin).
+ * Hard field error for weight/height.
+ * Empty input → null. Only negative / ≤0 block calculation.
  */
-export function softBodyValidation(heightCm: number, weightKg: number): SoftBodyError | null {
-  if (!(heightCm > 0) || !(weightKg > 0)) return 'nonPositive';
-  if (heightCm < HEIGHT_CM_SOFT.min || heightCm > HEIGHT_CM_SOFT.max) return 'height';
-  if (weightKg < WEIGHT_KG_SOFT.min || weightKg > WEIGHT_KG_SOFT.max) return 'weight';
+export function bodyMetricHardError(raw: string, value: number): BodyMetricHardError | null {
+  if (raw.trim() === '') return null;
+  if (!Number.isFinite(value)) return 'nonPositive';
+  if (value < 0) return 'negative';
+  if (!(value > 0)) return 'nonPositive';
   return null;
 }
 
-/** Slider max for % bars: at least 60, or the highest current percentage. */
+/** Soft: height outside usual adult range (still calculates). */
+export function softHeightUnusual(heightCm: number): boolean {
+  return heightCm > 0 && (heightCm < HEIGHT_CM_SOFT.min || heightCm > HEIGHT_CM_SOFT.max);
+}
+
+/** Soft: weight outside usual adult range (still calculates). */
+export function softWeightUnusual(weightKg: number): boolean {
+  return weightKg > 0 && (weightKg < WEIGHT_KG_SOFT.min || weightKg > WEIGHT_KG_SOFT.max);
+}
+
+/** Soft: under 16 (encourage talking to a trusted person; still calculates when age > 0). */
+export function softAgeYoung(ageYears: number): boolean {
+  return ageYears > 0 && ageYears < AGE_YEARS_SOFT_UNDER;
+}
+
+/** i18n key for a hard weight/height/age field error. */
+export function bodyMetricHardI18nKey(
+  kind: 'weight' | 'height' | 'age',
+  err: BodyMetricHardError
+): string {
+  if (err === 'negative') {
+    if (kind === 'weight') return 'goalsCalc.weightNegative';
+    if (kind === 'height') return 'goalsCalc.heightNegative';
+    return 'goalsCalc.ageNegative';
+  }
+  if (kind === 'weight') return 'goalsCalc.weightNonPositive';
+  if (kind === 'height') return 'goalsCalc.heightNonPositive';
+  return 'goalsCalc.ageNonPositive';
+}
+
+/**
+ * Weight field copy after blur: hard ≤0 first, else soft unusual range.
+ * Shared by Settings + onboarding (GoalCalculator has its own height/age rows).
+ */
+export function weightFieldMessage(raw: string, weightKg: number): BodyFieldMessage | null {
+  const hard = bodyMetricHardError(raw, weightKg);
+  if (hard) return { severity: 'hard', key: bodyMetricHardI18nKey('weight', hard) };
+  if (softWeightUnusual(weightKg)) return { severity: 'soft', key: 'goalsCalc.softWeight' };
+  return null;
+}
+
+/** Slider max for % bars: at least 100, or the highest current percentage. */
 export function percentScaleMax(percents: MacroPercents): number {
-  return Math.max(PERCENT_SLIDER_FLOOR, percents.protein, percents.carbs, percents.fat);
+  return Math.max(PERCENT_SLIDER_MAX, percents.protein, percents.carbs, percents.fat);
 }
 
 /** Grams → % of daily kcal (0 if kcal missing). */
@@ -227,7 +284,7 @@ export function applyPercentRingChange(
   nextValue: number
 ): MacroPercents {
   const scale = Math.max(
-    PERCENT_SLIDER_FLOOR,
+    PERCENT_SLIDER_MAX,
     percents.protein,
     percents.carbs,
     percents.fat,
@@ -275,23 +332,47 @@ export function goalsFromPercents(
   };
 }
 
-/** Macro split from a kcal target: default 50/20/30 (C/P/F). */
-export function macrosFromKcal(
-  kcal: number
-): Pick<GoalCalcResult, 'carbs' | 'protein' | 'fat'> | null {
-  if (!(kcal > 0)) return null;
-  const grams = gramsFromPercents(kcal, DEFAULT_MACRO_PERCENTS);
-  return { protein: grams.protein, carbs: grams.carbs, fat: grams.fat };
+/**
+ * Rescale macros for a new kcal while keeping the current C/P/F split.
+ * Falls back to default 50/20/30 only when there is no usable split yet.
+ * Does not force a reset (user uses “Macro's resetten” for that).
+ */
+export function goalsFromKcalKeepingSplit(kcal: number, current: GoalFields, kcalRaw?: string): GoalFields {
+  const raw = kcalRaw ?? String(kcal);
+  if (!(kcal > 0)) {
+    return { kcal: raw, protein: '0', carbs: '0', fat: '0' };
+  }
+  const protein = parseGoalFieldNumber(current.protein);
+  const carbs = parseGoalFieldNumber(current.carbs);
+  const fat = parseGoalFieldNumber(current.fat);
+  const hasMacros =
+    Number.isFinite(protein) &&
+    protein >= 0 &&
+    Number.isFinite(carbs) &&
+    carbs >= 0 &&
+    Number.isFinite(fat) &&
+    fat >= 0 &&
+    (protein > 0 || carbs > 0 || fat > 0);
+  if (hasMacros) {
+    const fromGrams = percentsFromGrams(parseGoalFieldNumber(current.kcal) || kcal, protein, carbs, fat);
+    const percents = isReliablePercentSplit(fromGrams) ? fromGrams : DEFAULT_MACRO_PERCENTS;
+    return { ...goalsFromPercents(kcal, percents), kcal: raw };
+  }
+  return { ...goalsFromPercents(kcal, DEFAULT_MACRO_PERCENTS), kcal: raw };
 }
 
-/** GoalFields from a calculator result (already 50/20/30 grams). */
-export function goalsFromCalcResult(result: GoalCalcResult): GoalFields {
-  return {
-    kcal: String(result.kcal),
-    protein: String(result.protein),
-    carbs: String(result.carbs),
-    fat: String(result.fat),
-  };
+/**
+ * Shared Calorieën text field (Settings / onboarding) when Macro's panel is closed.
+ * Empty → clear macro grams. Positive → keep current %. Returns null to ignore invalid input.
+ */
+export function goalFieldsFromKcalInput(raw: string, current: GoalFields): GoalFields | null {
+  if (raw.trim() === '') {
+    return { ...current, kcal: raw, protein: '', carbs: '', fat: '' };
+  }
+  const n = Number(String(raw).replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0) return null;
+  if (n > 0) return goalsFromKcalKeepingSplit(n, current, raw);
+  return { ...current, kcal: raw };
 }
 
 /** Parse one goal text field (comma or dot decimals). NaN if empty/invalid. */
@@ -312,28 +393,66 @@ export function goalsFieldsAllEmpty(fields: GoalFields): boolean {
   );
 }
 
-/** True when kcal and all macros are finite and > 0. */
+/** True when kcal > 0 and each macro gram is a finite number ≥ 0 (0 g allowed). */
 export function goalsFieldsComplete(fields: GoalFields): boolean {
-  return (['kcal', 'protein', 'carbs', 'fat'] as const).every((key) => {
+  const kcal = parseGoalFieldNumber(fields.kcal);
+  if (!(Number.isFinite(kcal) && kcal > 0)) return false;
+  return (['protein', 'carbs', 'fat'] as const).every((key) => {
     const n = parseGoalFieldNumber(fields[key]);
-    return Number.isFinite(n) && n > 0;
+    return Number.isFinite(n) && n >= 0;
   });
 }
 
 /**
+ * True when draft numbers differ from saved profile goal columns.
+ * Used to skip no-op flushes when leaving Doelen / switching Berekenen·Macro's.
+ */
+export function goalsFieldsDirty(
+  draft: GoalFields,
+  saved: {
+    goal_kcal: number | null;
+    goal_carbs: number | null;
+    goal_protein: number | null;
+    goal_fat: number | null;
+  }
+): boolean {
+  if (goalsFieldsAllEmpty(draft)) {
+    // Any saved goal column (including explicit 0 g) counts as something to clear
+    return (
+      saved.goal_kcal != null ||
+      saved.goal_carbs != null ||
+      saved.goal_protein != null ||
+      saved.goal_fat != null
+    );
+  }
+  const next = goalNumbersFromFields(draft);
+  return (
+    next.goal_kcal !== (saved.goal_kcal ?? null) ||
+    next.goal_carbs !== (saved.goal_carbs ?? null) ||
+    next.goal_protein !== (saved.goal_protein ?? null) ||
+    next.goal_fat !== (saved.goal_fat ?? null)
+  );
+}
+
+/**
  * Map editor strings → profile/revision numbers.
- * Empty or ≤0 becomes null (same as historical `parseNum(x) || null`).
+ * Empty → null. Kcal must be > 0. Macro grams may be 0 (e.g. 100% carbs).
  */
 export function goalNumbersFromFields(fields: GoalFields): GoalNumberPatch {
-  const toNullable = (raw: string): number | null => {
+  const toKcal = (raw: string): number | null => {
     const n = parseGoalFieldNumber(raw);
     return Number.isFinite(n) && n > 0 ? n : null;
   };
+  const toMacroGrams = (raw: string): number | null => {
+    if (raw.trim() === '') return null;
+    const n = parseGoalFieldNumber(raw);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
   return {
-    goal_kcal: toNullable(fields.kcal),
-    goal_carbs: toNullable(fields.carbs),
-    goal_protein: toNullable(fields.protein),
-    goal_fat: toNullable(fields.fat),
+    goal_kcal: toKcal(fields.kcal),
+    goal_carbs: toMacroGrams(fields.carbs),
+    goal_protein: toMacroGrams(fields.protein),
+    goal_fat: toMacroGrams(fields.fat),
   };
 }
 
@@ -351,17 +470,19 @@ export function bodyMetricsToProfilePatch(body: BodyMetricsDraft) {
 
 export function calculateDailyGoals(input: GoalCalcInput): GoalCalcResult | null {
   const { weightKg, heightCm, ageYears, gender, activity, weightGoal } = input;
+  // Hard gate only: positive weight, height, age. Soft unusual ranges still calculate.
   if (!(weightKg > 0) || !(heightCm > 0) || !(ageYears > 0)) {
     return null;
   }
 
-  const soft = softBodyValidation(heightCm, weightKg);
-  if (soft) return null;
-
-  const bmr = estimateBmr({ weightKg, heightCm, ageYears, gender });
-  const tdee = Math.round(bmr * ACTIVITY_FACTORS[activity]);
-  const kcal = Math.max(1200, tdee + WEIGHT_GOAL_KCAL_DELTA[weightGoal]);
-  const macros = macrosFromKcal(kcal);
-  if (!macros) return null;
-  return { kcal, ...macros };
+  const activityFactor = ACTIVITY_FACTORS[activity];
+  const goalDelta = WEIGHT_GOAL_KCAL_DELTA[weightGoal];
+  const bmr = Math.round(estimateBmr({ weightKg, heightCm, ageYears, gender }));
+  const tdee = Math.round(bmr * activityFactor);
+  const kcal = Math.max(1200, tdee + goalDelta);
+  // Default 50/20/30 via shared grams helper (same path as goalsFromPercents)
+  return {
+    ...gramsFromPercents(kcal, DEFAULT_MACRO_PERCENTS),
+    energy: { bmr, activityFactor, tdee, goalDelta },
+  };
 }

@@ -1,7 +1,7 @@
 /*
  * SECTION: Date format preference + calendar helpers
  * WHAT: Profile date_format (DD-MM-YYYY default) plus shared ISO calendar math.
- * HOW: formatDateDisplay; clamp to today; Monday week-start; addDays / toDateString.
+ * HOW: formatDateDisplay; isIsoDate; clamp to today; Monday week-start; addDays / toDateString; birthday match.
  * INPUT: ISO YYYY-MM-DD strings + DateFormat preference (or Date for toDateString)
  * OUTPUT: display strings; clamped / shifted ISO dates
  *
@@ -12,6 +12,14 @@ import type { DateFormat } from './types';
 export type { DateFormat };
 
 export const DATE_FORMATS: DateFormat[] = ['DD-MM-YYYY', 'YYYY-MM-DD', 'MM-DD-YYYY'];
+
+/** Calendar day as stored in profiles / diary (local YYYY-MM-DD). */
+const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** True when `value` is a full ISO calendar date (not a partial typed draft). */
+export function isIsoDate(value: string | null | undefined): value is string {
+  return ISO_DATE_RE.test((value ?? '').trim());
+}
 
 export function isDateFormat(value: unknown): value is DateFormat {
   return value === 'DD-MM-YYYY' || value === 'YYYY-MM-DD' || value === 'MM-DD-YYYY';
@@ -24,7 +32,7 @@ export function resolveDateFormat(value: unknown): DateFormat {
 
 /** Format ISO YYYY-MM-DD for UI using the user's preference. */
 export function formatDateDisplay(iso: string, format: DateFormat = 'DD-MM-YYYY'): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  const m = ISO_DATE_RE.exec(iso.trim());
   if (!m) return iso;
   const [, y, mo, d] = m;
   if (format === 'YYYY-MM-DD') return `${y}-${mo}-${d}`;
@@ -66,6 +74,14 @@ export function addDays(dateStr: string, days: number): string {
 /** ISO → Date at local noon (avoids DST edge shifts). */
 export function isoToDate(iso: string): Date {
   return new Date(iso + 'T12:00:00');
+}
+
+/** True when `dayIso` is the calendar birthday of `dateOfBirth` (month + day; ignores year). */
+export function isBirthdayOnDate(dateOfBirth: string | null | undefined, dayIso: string): boolean {
+  const dob = ISO_DATE_RE.exec((dateOfBirth ?? '').trim());
+  const day = ISO_DATE_RE.exec(dayIso.trim());
+  if (!dob || !day) return false;
+  return dob[2] === day[2] && dob[3] === day[3];
 }
 
 /** Weekday label for nav headers (diary short / reports long). */

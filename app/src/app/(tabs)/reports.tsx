@@ -33,7 +33,7 @@ import {
 } from '../../lib/goalRevisions';
 import { MACRO_COMPACT_WIDTH, MACRO_KEYS, macroDisplayLabel, type MacroKey } from '../../lib/macroLabels';
 import { mealScaleFromDayGoal, snackMacroTotal, isSnackSlot, DEFAULT_GOAL_KCAL } from '../../lib/mealGoalShare';
-import { macrosFromKcal } from '../../lib/goalCalculator';
+import { DEFAULT_MACRO_PERCENTS, gramsFromPercents } from '../../lib/goalCalculator';
 import { addDays, fmt, MAIN_SLOTS, SNACK_AFTER, slotLabelKey, sumEntries, toDateString } from '../../lib/nutrition';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
@@ -76,12 +76,12 @@ function dayGoalForMacro(
       return { dayGoal: fromProfile, goalIsDefault: false };
     }
   }
-  const macrosCalc = macrosFromKcal(DEFAULT_GOAL_KCAL);
+  const macrosCalc = gramsFromPercents(DEFAULT_GOAL_KCAL, DEFAULT_MACRO_PERCENTS);
   const defaults = {
     kcal: DEFAULT_GOAL_KCAL,
-    carbs: macrosCalc?.carbs ?? 225,
-    protein: macrosCalc?.protein ?? 112,
-    fat: macrosCalc?.fat ?? 63,
+    carbs: macrosCalc.carbs,
+    protein: macrosCalc.protein,
+    fat: macrosCalc.fat,
   };
   return { dayGoal: defaults[macro], goalIsDefault: true };
 }

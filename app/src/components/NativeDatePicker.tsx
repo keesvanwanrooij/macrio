@@ -2,6 +2,8 @@
  * SECTION: Shared native date picker
  * WHAT: Tap a label → platform date picker (Android dialog / iOS spinner).
  * HOW: Pressable shows formatted date; opens @react-native-community/datetimepicker.
+ *      While open, uses an internal draft so parent re-renders (countdown, soft field
+ *      messages) cannot reset the spinner via new min/max Date identities or value sync.
  * INPUT: value ISO YYYY-MM-DD; onChange; optional max/min; dateFormat for label
  * OUTPUT: onChange(iso) when user confirms a day
  *
@@ -10,7 +12,7 @@
 import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -43,6 +45,20 @@ type Props = {
   variant?: 'field' | 'plain';
 };
 
+/** Stable Date identity when the calendar day is unchanged (avoids spinner reset on re-render). */
+function useStableDate(input: Date | null | undefined): Date | undefined {
+  const ref = useRef<Date | undefined>(undefined);
+  if (input == null) {
+    ref.current = undefined;
+    return undefined;
+  }
+  const t = input.getTime();
+  if (ref.current == null || ref.current.getTime() !== t) {
+    ref.current = new Date(t);
+  }
+  return ref.current;
+}
+
 export function NativeDatePicker({
   value,
   onChange,
@@ -56,13 +72,23 @@ export function NativeDatePicker({
 }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  // iOS: keep a draft until Done; Android fires once on set.
-  const [iosDraft, setIosDraft] = useState<Date>(() => isoToDate(value));
+  // Draft while the picker is open (iOS spinner / Android set). Parent value must not
+  // overwrite this mid-scroll when Settings re-renders (save countdown, soft messages).
+  const [draft, setDraft] = useState<Date>(() => isoToDate(value));
 
-  const max =
+  const maxRaw =
     maximumDate === null ? undefined : maximumDate ?? isoToDate(todayIso());
-  const parsed = isoToDate(value);
+  const max = useStableDate(maxRaw);
+  const min = useStableDate(minimumDate);
+
+  const parsed = useMemo(() => isoToDate(value), [value]);
   const closedLabel = displayText ?? formatDateDisplay(value, dateFormat);
+
+  // Sync closed value → draft only when the sheet is closed
+  useEffect(() => {
+    if (open) return;
+    setDraft(parsed);
+  }, [parsed, open]);
 
   function apply(iso: string) {
     if (maximumDate === null) {
@@ -73,15 +99,21 @@ export function NativeDatePicker({
     onChange(clampToToday(iso, maxIso));
   }
 
-  function onNativeChange(event: DateTimePickerEvent, date?: Date) {
-    setOpen(false);
-    if (event.type === 'dismissed' || !date) return;
-    apply(toDateString(date));
+  function onAndroidChange(event: DateTimePickerEvent, date?: Date) {
+    if (event.type === 'dismissed') {
+      setOpen(false);
+      return;
+    }
+    // Commit only on explicit set (ignore any intermediate noise)
+    if (event.type === 'set' && date) {
+      setOpen(false);
+      apply(toDateString(date));
+    }
   }
 
   function openPicker() {
     if (disabled) return;
-    setIosDraft(parsed);
+    setDraft(parsed);
     setOpen(true);
   }
 
@@ -105,28 +137,34 @@ export function NativeDatePicker({
       {/* Android + web: one-shot dialog */}
       {open && Platform.OS !== 'ios' ? (
         <DateTimePicker
-          value={parsed}
+          value={draft}
           mode="date"
           display="default"
-          onChange={onNativeChange}
+          onChange={onAndroidChange}
           maximumDate={max}
-          minimumDate={minimumDate}
+          minimumDate={min}
         />
       ) : null}
 
-      {open && Platform.OS === 'ios' ? (
-        <Modal transparent animationType="slide" visible onRequestClose={() => setOpen(false)}>
+      {/* Keep Modal mounted while open; draft value so parent re-renders do not reset the wheel */}
+      {Platform.OS === 'ios' ? (
+        <Modal
+          transparent
+          animationType="slide"
+          visible={open}
+          onRequestClose={() => setOpen(false)}
+        >
           <Pressable style={styles.iosBackdrop} onPress={() => setOpen(false)} />
           <View style={styles.iosSheet}>
             <DateTimePicker
-              value={iosDraft}
+              value={draft}
               mode="date"
               display="spinner"
               onChange={(_e, date) => {
-                if (date) setIosDraft(date);
+                if (date) setDraft(date);
               }}
               maximumDate={max}
-              minimumDate={minimumDate}
+              minimumDate={min}
               style={{ alignSelf: 'stretch' }}
             />
             <View style={styles.iosActions}>
@@ -135,7 +173,7 @@ export function NativeDatePicker({
               <Button
                 title={t('common.done')}
                 onPress={() => {
-                  apply(toDateString(iosDraft));
+                  apply(toDateString(draft));
                   setOpen(false);
                 }}
               />
