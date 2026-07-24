@@ -1,39 +1,45 @@
 /*
  * SECTION: Body-based daily goal calculator
- * WHAT: Mifflin form; fills kcal (+ macros 50/20/30 on explicit calculate).
+ * WHAT: Mifflin form; fills kcal (keeps current macro % on calculate / auto-update).
  * HOW: Hard ≤0 under fields; soft unusual height/weight after blur; soft age <16 always (still calculates)
- *      → age from DOB → calculateDailyGoals → onCalculated / onAutoCalculated
+ *      → age from DOB → calculateDailyGoals → onCalculated (Settings owns auto-update)
  * INPUT: profile; controlled weight/height/DOB from parent (Settings/onboarding); onCalculated
- * OUTPUT: { goals: GoalCalcResult, body: BodyMetricsDraft } (caller decides what to persist)
+ * OUTPUT: { goals: GoalCalcResult, body: BodyMetricsDraft } (caller keeps % or seeds defaults)
  */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { NativeDatePicker } from './NativeDatePicker';
 import { Button, Chip, Field } from './ui';
-import { isoToDate, isIsoDate, resolveDateFormat, todayIso } from '../lib/dates';
+import { isoToDate, isIsoDate, DOB_PICKER_FALLBACK_ISO, DOB_PICKER_MIN_ISO, resolveDateFormat, todayIso } from '../lib/dates';
 import {
   ACTIVITIES,
+  DEFAULT_MACRO_PERCENTS,
   GENDERS,
-  WEIGHT_GOALS,
+  KCAL_FLOOR,
+  WEIGHT_GOALS_EXTENDED,
+  WEIGHT_GOALS_SIMPLE,
   ageFromDateOfBirth,
   bodyMetricHardError,
-  bodyMetricHardI18nKey,
   calculateDailyGoals,
+  activityTipKind,
+  buildGoalCalcInput,
+  heightFieldMessage,
   isActivityLevel,
+  isExtendedWeightGoal,
   isGender,
   isWeightGoal,
-  softAgeYoung,
-  softHeightUnusual,
-  softWeightUnusual,
+  weightFieldMessage,
+  ageFieldMessage,
   type ActivityLevel,
-  type BodyMetricHardError,
   type BodyMetricsDraft,
   type Gender,
   type GoalCalcResult,
+  type MacroPercents,
   type WeightGoal,
 } from '../lib/goalCalculator';
+import { formatLocaleNumber } from '../lib/localeNumber';
 import { parseNum } from '../lib/nutrition';
 import type { Profile } from '../lib/types';
 import { colors, spacing } from '../lib/theme';
@@ -50,9 +56,15 @@ type Props = {
   onDobTextChange?: (value: string) => void;
   /**
    * When true, parent already shows weight above; hide the duplicate here.
-   * Height + DOB + age still show in this form (set once inside Berekenen).
    */
   hideWeightField?: boolean;
+  /**
+   * When true, height / DOB / age / gender live on Settings → Account.
+   * Parent still passes heightText + dobText; gender comes from profile for Mifflin.
+   */
+  hideHeightAndDob?: boolean;
+  /** Current macro % for the disclaimer (from Macro's / default 50/20/30). */
+  macroPercents?: MacroPercents;
   defaultOpen?: boolean;
   /** When false, parent owns the open toggle (Settings Berekenen chip). */
   showToggle?: boolean;
@@ -63,13 +75,20 @@ type Props = {
    * When true, hide the duplicate kcal answer under Bereken doelen.
    */
   hideResultKcal?: boolean;
-  /**
-   * When true, recalculate silently whenever inputs change (debounced).
-   * Hides the Bereken doelen button (kcal already tracks inputs).
+  /*
+   * Auto-update is owned by Settings (single debounce path for open + closed Berekenen).
+   * This prop only hides “Bereken doelen” and shows the needs-body hint.
    */
   autoUpdate?: boolean;
-  /** Fired by autoUpdate (not by the Bereken doelen button). */
-  onAutoCalculated?: (payload: { goals: GoalCalcResult; body: BodyMetricsDraft }) => void;
+  /**
+   * Fired when activity / weight-goal (/ gender when shown) chips change.
+   * Parent drafts into bodyDraft so leave/tap-save cannot lose chip edits.
+   */
+  onCalcMetaChange?: (meta: {
+    gender: Gender;
+    activity_level: ActivityLevel;
+    weight_goal: WeightGoal;
+  }) => void;
   /** Called when user edits the kcal answer field under Bereken doelen. */
   onResultKcalChange?: (kcal: number) => void;
   onCalculated: (payload: { goals: GoalCalcResult; body: BodyMetricsDraft }) => void;
@@ -84,12 +103,14 @@ export function GoalCalculator({
   dobText,
   onDobTextChange,
   hideWeightField = false,
+  hideHeightAndDob = false,
+  macroPercents,
   defaultOpen = false,
   showToggle = true,
   open: openProp,
   hideResultKcal = false,
   autoUpdate = false,
-  onAutoCalculated,
+  onCalcMetaChange,
   onResultKcalChange,
   onCalculated,
 }: Props) {
@@ -99,6 +120,8 @@ export function GoalCalculator({
   const [gender, setGender] = useState<Gender>('male');
   const [activity, setActivity] = useState<ActivityLevel>('moderate');
   const [weightGoal, setWeightGoal] = useState<WeightGoal>('maintain');
+  /** “…” expands to 5 rates (fast ±500 + moderate ±300). Auto-opens when a fast goal is loaded. */
+  const [weightGoalsExpanded, setWeightGoalsExpanded] = useState(false);
   const [weightLocal, setWeightLocal] = useState('');
   const [heightLocal, setHeightLocal] = useState('');
   const [dobLocal, setDobLocal] = useState('');
@@ -110,66 +133,109 @@ export function GoalCalculator({
   const [kcalDraft, setKcalDraft] = useState(
     profile?.goal_kcal != null && profile.goal_kcal > 0 ? String(profile.goal_kcal) : ''
   );
-  const onAutoCalculatedRef = useRef(onAutoCalculated);
-  onAutoCalculatedRef.current = onAutoCalculated;
 
-  // Controlled (parent) vs local draft
-  const weightControlled = onWeightTextChange != null;
-  const heightControlled = onHeightTextChange != null;
-  const dobControlled = onDobTextChange != null;
-  const weight = weightControlled ? (weightText ?? '') : weightLocal;
-  const height = heightControlled ? (heightText ?? '') : heightLocal;
-  const dob = dobControlled ? (dobText ?? '') : dobLocal;
+  // Controlled when parent passes the text prop (Settings Doelen / Account); else local draft
+  const weight = weightText !== undefined ? (weightText ?? '') : weightLocal;
+  const height = heightText !== undefined ? (heightText ?? '') : heightLocal;
+  const dob = dobText !== undefined ? (dobText ?? '') : dobLocal;
+  // Account owns gender when hidden: only use saved profile (no silent “male” default)
+  const effectiveGender: Gender | null = hideHeightAndDob
+    ? isGender(profile?.gender)
+      ? profile.gender
+      : null
+    : gender;
 
   useEffect(() => {
     if (!profile) return;
     if (isGender(profile.gender)) setGender(profile.gender);
     if (isActivityLevel(profile.activity_level)) setActivity(profile.activity_level);
-    if (isWeightGoal(profile.weight_goal)) setWeightGoal(profile.weight_goal);
-    if (!dobControlled && profile.date_of_birth) setDobLocal(profile.date_of_birth);
+    if (isWeightGoal(profile.weight_goal)) {
+      setWeightGoal(profile.weight_goal);
+      if (isExtendedWeightGoal(profile.weight_goal)) setWeightGoalsExpanded(true);
+    }
+    if (dobText === undefined && profile.date_of_birth) setDobLocal(profile.date_of_birth);
     if (profile.goal_kcal != null && profile.goal_kcal > 0) {
       setKcalDraft(String(profile.goal_kcal));
     }
-  }, [profile, dobControlled]);
+  }, [profile, dobText]);
 
   // Uncontrolled only: seed local weight/height from profile
   useEffect(() => {
-    if (weightControlled) return;
+    if (weightText !== undefined) return;
     if (profile?.weight_kg != null) setWeightLocal(String(profile.weight_kg));
-  }, [weightControlled, profile?.weight_kg]);
+  }, [weightText, profile?.weight_kg]);
 
   useEffect(() => {
-    if (heightControlled) return;
+    if (heightText !== undefined) return;
     if (profile?.height_cm != null) setHeightLocal(String(profile.height_cm));
-  }, [heightControlled, profile?.height_cm]);
+  }, [heightText, profile?.height_cm]);
 
   function setWeight(next: string) {
     setWeightConfirmed(false);
-    if (weightControlled) onWeightTextChange?.(next);
+    if (onWeightTextChange) onWeightTextChange(next);
     else setWeightLocal(next);
   }
 
   function setHeight(next: string) {
     setHeightConfirmed(false);
-    if (heightControlled) onHeightTextChange?.(next);
+    if (onHeightTextChange) onHeightTextChange(next);
     else setHeightLocal(next);
   }
 
   function setDob(next: string) {
-    if (dobControlled) onDobTextChange?.(next);
+    if (onDobTextChange) onDobTextChange(next);
     else setDobLocal(next);
+  }
+
+  /** Push chip meta into parent bodyDraft (activity / weight goal / gender when shown). */
+  function emitCalcMeta(next: {
+    gender: Gender;
+    activity_level: ActivityLevel;
+    weight_goal: WeightGoal;
+  }) {
+    onCalcMetaChange?.(next);
+  }
+
+  function pickGenderForMeta(): Gender | null {
+    if (effectiveGender) return effectiveGender;
+    if (isGender(gender)) return gender;
+    return null;
+  }
+
+  function selectWeightGoal(g: WeightGoal) {
+    setWeightGoal(g);
+    const gen = pickGenderForMeta();
+    if (gen) emitCalcMeta({ gender: gen, activity_level: activity, weight_goal: g });
+  }
+
+  function selectActivity(a: ActivityLevel) {
+    setActivity(a);
+    const gen = pickGenderForMeta();
+    if (gen) emitCalcMeta({ gender: gen, activity_level: a, weight_goal: weightGoal });
+  }
+
+  function selectGender(g: Gender) {
+    setGender(g);
+    emitCalcMeta({ gender: g, activity_level: activity, weight_goal: weightGoal });
   }
 
   /** Build Mifflin result + body draft, or null when hard-invalid / incomplete. Soft unusual still ok. */
   function tryBuildResult(): { goals: GoalCalcResult; body: BodyMetricsDraft } | null {
     const dateOfBirth = isIsoDate(dob) ? dob : null;
-    const ageYears = dateOfBirth ? ageFromDateOfBirth(dateOfBirth) : null;
     const weightKg = parseNum(weight);
     const heightCm = parseNum(height);
-    if (bodyMetricHardError(weight, weightKg) || !(weightKg > 0)) return null;
-    if (bodyMetricHardError(height, heightCm) || !(heightCm > 0)) return null;
-    if (!dateOfBirth || ageYears == null || !(ageYears > 0)) return null;
-    const result = calculateDailyGoals({ weightKg, heightCm, ageYears, gender, activity, weightGoal });
+    if (bodyMetricHardError(weight, weightKg) || bodyMetricHardError(height, heightCm)) return null;
+    if (!effectiveGender || !dateOfBirth) return null;
+    const input = buildGoalCalcInput({
+      weightKg,
+      heightCm,
+      dateOfBirth,
+      gender: effectiveGender,
+      activity,
+      weightGoal,
+    });
+    if (!input) return null;
+    const result = calculateDailyGoals(input);
     if (!result) return null;
     return {
       goals: result,
@@ -177,7 +243,7 @@ export function GoalCalculator({
         date_of_birth: dateOfBirth,
         height_cm: heightCm,
         weight_kg: weightKg,
-        gender,
+        gender: effectiveGender,
         activity_level: activity,
         weight_goal: weightGoal,
       },
@@ -205,22 +271,9 @@ export function GoalCalculator({
   }
 
   /*
-   * Auto-update: push Mifflin when hard-valid inputs settle.
-   * Soft unusual height/weight/age only show under fields; they do not block.
+   * Auto-update lives in Settings only (one debounce for open + closed panel).
+   * Keep local kcalDraft in sync when parent goals change via profile.
    */
-  useEffect(() => {
-    if (!autoUpdate || !open) return;
-    const timer = setTimeout(() => {
-      const built = tryBuildResult();
-      if (!built) return;
-      setFormError(null);
-      setKcalDraft(String(built.goals.kcal));
-      onAutoCalculatedRef.current?.(built);
-    }, 350);
-    return () => clearTimeout(timer);
-    // Field list is intentional; callback is read via ref
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoUpdate, open, gender, activity, weightGoal, weight, height, dob]);
 
   function onKcalDraftChange(raw: string) {
     setKcalDraft(raw);
@@ -230,41 +283,25 @@ export function GoalCalculator({
     }
   }
 
-  function hardMetricMessage(kind: 'weight' | 'height' | 'age', err: BodyMetricHardError | null): string | null {
-    if (!err) return null;
-    return t(bodyMetricHardI18nKey(kind, err));
-  }
-
-  const dobValue = isIsoDate(dob) ? dob : '2000-01-01';
+  const dobValue = isIsoDate(dob) ? dob : DOB_PICKER_FALLBACK_ISO;
   const dateFormat = resolveDateFormat(profile?.date_format);
   // Stable Date identities: new Date() each render resets the iOS/Android spinner mid-scroll
   const dobMaximumDate = useMemo(() => isoToDate(todayIso()), []);
-  const dobMinimumDate = useMemo(() => isoToDate('1920-01-01'), []);
+  const dobMinimumDate = useMemo(() => isoToDate(DOB_PICKER_MIN_ISO), []);
   const ageYearsDisplay = isIsoDate(dob) ? ageFromDateOfBirth(dob) : null;
   const weightKg = parseNum(weight);
   const heightCm = parseNum(height);
 
   const weightHard = bodyMetricHardError(weight, weightKg);
   const heightHard = bodyMetricHardError(height, heightCm);
-  const ageHard: BodyMetricHardError | null =
-    ageYearsDisplay == null
-      ? null
-      : ageYearsDisplay < 0
-        ? 'negative'
-        : !(ageYearsDisplay > 0)
-          ? 'nonPositive'
-          : null;
-
-  const weightSoft = !weightHard && softWeightUnusual(weightKg);
-  const heightSoft = !heightHard && softHeightUnusual(heightCm);
-  const ageSoft = !ageHard && ageYearsDisplay != null && softAgeYoung(ageYearsDisplay);
+  const ageMsg = ageFieldMessage(ageYearsDisplay);
 
   // Live Mifflin breakdown for the footer (null while hard-invalid / incomplete)
   const liveGoals = tryBuildResult()?.goals ?? null;
   const liveEnergy = liveGoals?.energy ?? null;
   const heightFilled = heightCm > 0 && !heightHard;
   const dobFilled = isIsoDate(dob) && ageYearsDisplay != null && ageYearsDisplay > 0;
-  const needsBodyForCalc = !heightFilled || !dobFilled;
+  const needsBodyForCalc = !heightFilled || !dobFilled || (hideHeightAndDob && !effectiveGender);
 
   function formatGoalDelta(delta: number): string {
     if (delta > 0) return `+ ${delta}`;
@@ -282,15 +319,35 @@ export function GoalCalculator({
       {open ? (
         <View style={styles.box}>
           <Text style={styles.label}>{t('goalsCalc.weightGoal')}</Text>
-          <View style={styles.row}>
-            {WEIGHT_GOALS.map((g) => (
+          <View style={styles.rowTight}>
+            {(weightGoalsExpanded ? WEIGHT_GOALS_EXTENDED : WEIGHT_GOALS_SIMPLE).map((g) => (
               <Chip
                 key={g}
-                label={t(`goalsCalc.weightGoal_${g}`)}
+                label={
+                  weightGoalsExpanded
+                    ? t(`goalsCalc.weightGoalSymbol_${g}`)
+                    : t(`goalsCalc.weightGoal_${g}`)
+                }
                 active={weightGoal === g}
-                onPress={() => setWeightGoal(g)}
+                onPress={() => selectWeightGoal(g)}
               />
             ))}
+          </View>
+          <View style={styles.weightGoalHelp}>
+            <Text style={styles.weightGoalHint}>{t(`goalsCalc.weightGoalHint_${weightGoal}`)}</Text>
+            <Text
+              style={styles.weightGoalsToggle}
+              onPress={() => {
+                // Stay expanded while a fast rate is selected (not in the simple 3)
+                setWeightGoalsExpanded((v) => {
+                  if (v && isExtendedWeightGoal(weightGoal)) return true;
+                  return !v;
+                });
+              }}
+              accessibilityRole="button"
+            >
+              {weightGoalsExpanded ? t('goalsCalc.weightGoalsLess') : t('goalsCalc.weightGoalsMore')}
+            </Text>
           </View>
 
           <Text style={styles.label}>{t('goalsCalc.activity')}</Text>
@@ -300,17 +357,30 @@ export function GoalCalculator({
                 key={a}
                 label={t(`goalsCalc.activity_${a}`)}
                 active={activity === a}
-                onPress={() => setActivity(a)}
+                onPress={() => selectActivity(a)}
               />
             ))}
           </View>
+          <Text style={styles.fieldHint}>{t(`goalsCalc.activityHint_${activity}`)}</Text>
+          <Text style={styles.fieldTip}>
+            {t(`goalsCalc.activityTip_${activityTipKind(weightGoal)}`)}
+          </Text>
 
-          <Text style={styles.label}>{t('goalsCalc.gender')}</Text>
-          <View style={styles.row}>
-            {GENDERS.map((g) => (
-              <Chip key={g} label={t(`goalsCalc.gender_${g}`)} active={gender === g} onPress={() => setGender(g)} />
-            ))}
-          </View>
+          {!hideHeightAndDob ? (
+            <>
+              <Text style={styles.label}>{t('goalsCalc.gender')}</Text>
+              <View style={styles.row}>
+                {GENDERS.map((g) => (
+                  <Chip
+                    key={g}
+                    label={t(`goalsCalc.gender_${g}`)}
+                    active={gender === g}
+                    onPress={() => selectGender(g)}
+                  />
+                ))}
+              </View>
+            </>
+          ) : null}
 
           {!hideWeightField ? (
             <>
@@ -323,49 +393,58 @@ export function GoalCalculator({
               />
               {weightConfirmed
                 ? (() => {
-                    const msg = hardMetricMessage('weight', weightHard);
-                    if (msg) return <Text style={styles.fieldHard}>{msg}</Text>;
-                    if (weightSoft) return <Text style={styles.fieldSoft}>{t('goalsCalc.softWeight')}</Text>;
-                    return null;
+                    const msg = weightFieldMessage(weight, weightKg);
+                    if (!msg) return null;
+                    return (
+                      <Text style={msg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft}>
+                        {t(msg.key)}
+                      </Text>
+                    );
                   })()
                 : null}
             </>
           ) : null}
-          <Field
-            label={t('goalsCalc.height')}
-            value={height}
-            onChangeText={setHeight}
-            onBlur={() => setHeightConfirmed(true)}
-            keyboardType="numeric"
-          />
-          {heightConfirmed
-            ? (() => {
-                const msg = hardMetricMessage('height', heightHard);
-                if (msg) return <Text style={styles.fieldHard}>{msg}</Text>;
-                if (heightSoft) return <Text style={styles.fieldSoft}>{t('goalsCalc.softHeight')}</Text>;
-                return null;
-              })()
-            : null}
-          <NativeDatePicker
-            label={t('goalsCalc.dateOfBirth')}
-            value={dobValue}
-            onChange={setDob}
-            dateFormat={dateFormat}
-            maximumDate={dobMaximumDate}
-            minimumDate={dobMinimumDate}
-          />
-          <Field
-            label={t('goalsCalc.age')}
-            value={ageYearsDisplay != null && ageYearsDisplay >= 0 ? String(ageYearsDisplay) : ''}
-            editable={false}
-          />
-          {(() => {
-            const msg = hardMetricMessage('age', ageHard);
-            if (msg) return <Text style={styles.fieldHard}>{msg}</Text>;
-            // Soft age: always visible when under 16 (saved DOB or just picked)
-            if (ageSoft) return <Text style={styles.fieldSoft}>{t('goalsCalc.softAge')}</Text>;
-            return null;
-          })()}
+          {!hideHeightAndDob ? (
+            <>
+              <Field
+                label={t('goalsCalc.height')}
+                value={height}
+                onChangeText={setHeight}
+                onBlur={() => setHeightConfirmed(true)}
+                keyboardType="numeric"
+              />
+              {heightConfirmed
+                ? (() => {
+                    const msg = heightFieldMessage(height, heightCm);
+                    if (!msg) return null;
+                    return (
+                      <Text style={msg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft}>
+                        {t(msg.key)}
+                      </Text>
+                    );
+                  })()
+                : null}
+              <NativeDatePicker
+                label={t('goalsCalc.dateOfBirth')}
+                value={dobValue}
+                onChange={setDob}
+                dateFormat={dateFormat}
+                maximumDate={dobMaximumDate}
+                minimumDate={dobMinimumDate}
+              />
+              <View style={styles.readOnlyField}>
+                <Text style={styles.readOnlyLabel}>{t('goalsCalc.age')}</Text>
+                <Text style={styles.readOnlyValue}>
+                  {ageYearsDisplay != null && ageYearsDisplay >= 0 ? String(ageYearsDisplay) : ''}
+                </Text>
+              </View>
+              {ageMsg ? (
+                <Text style={ageMsg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft}>
+                  {t(ageMsg.key)}
+                </Text>
+              ) : null}
+            </>
+          ) : null}
 
           {formError ? <Text style={styles.fieldHard}>{formError}</Text> : null}
           {!formError && autoUpdate && needsBodyForCalc ? (
@@ -385,7 +464,10 @@ export function GoalCalculator({
                 <Text style={styles.energyValue}>
                   {t('goalsCalc.tdeeValue', {
                     bmr: liveEnergy.bmr,
-                    factor: liveEnergy.activityFactor,
+                    factor: formatLocaleNumber(liveEnergy.activityFactor, {
+                      maximumFractionDigits: 3,
+                      minimumFractionDigits: 0,
+                    }),
                     tdee: liveEnergy.tdee,
                   })}
                 </Text>
@@ -400,9 +482,20 @@ export function GoalCalculator({
                   })}
                 </Text>
               </View>
+              {liveEnergy.hitFloor ? (
+                <Text style={styles.floorWarning}>
+                  {t('goalsCalc.kcalFloorWarning', { floor: KCAL_FLOOR })}
+                </Text>
+              ) : null}
             </View>
           ) : null}
-          <Text style={styles.disclaimer}>{t('goalsCalc.disclaimer')}</Text>
+          <Text style={styles.disclaimer}>
+            {t('goalsCalc.disclaimer', {
+              carbs: Math.round((macroPercents ?? DEFAULT_MACRO_PERCENTS).carbs),
+              protein: Math.round((macroPercents ?? DEFAULT_MACRO_PERCENTS).protein),
+              fat: Math.round((macroPercents ?? DEFAULT_MACRO_PERCENTS).fat),
+            })}
+          </Text>
           {!autoUpdate ? (
             <Button title={t('goalsCalc.calculate')} onPress={runCalculate} variant="secondary" />
           ) : null}
@@ -446,6 +539,38 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   row: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.m },
+  rowTight: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.xs },
+  weightGoalHelp: {
+    marginBottom: spacing.m,
+    gap: 2,
+  },
+  weightGoalHint: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: '400',
+    lineHeight: 16,
+  },
+  // Link-style control (not a section label like Doel / Activiteit)
+  weightGoalsToggle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.primaryDark,
+    lineHeight: 16,
+    alignSelf: 'flex-start',
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: colors.muted,
+    lineHeight: 17,
+    marginTop: 0,
+    marginBottom: spacing.s,
+  },
+  fieldTip: {
+    fontSize: 12,
+    color: colors.faint,
+    lineHeight: 17,
+    marginBottom: spacing.m,
+  },
   energyBreakdown: { marginBottom: spacing.m, gap: spacing.s },
   energyRow: { gap: 2 },
   energyLabel: {
@@ -469,6 +594,26 @@ const styles = StyleSheet.create({
     color: colors.muted,
     lineHeight: 18,
     marginBottom: spacing.s,
+  },
+  // Age is derived from DOB: plain text, not a fake disabled input
+  readOnlyField: { marginBottom: spacing.m },
+  readOnlyLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.muted,
+    marginBottom: spacing.xs,
+  },
+  readOnlyValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    lineHeight: 22,
+  },
+  floorWarning: {
+    fontSize: 12,
+    color: colors.warn,
+    lineHeight: 17,
+    marginTop: spacing.xs,
   },
   // Pull up under Field’s margin so the message sits on the triggering input
   fieldHard: {

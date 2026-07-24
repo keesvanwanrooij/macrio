@@ -21,6 +21,11 @@ export function isIsoDate(value: string | null | undefined): value is string {
   return ISO_DATE_RE.test((value ?? '').trim());
 }
 
+/** Oldest DOB the native pickers allow (shared Settings Account + GoalCalculator). */
+export const DOB_PICKER_MIN_ISO = '1920-01-01';
+/** Fallback picker value when profile has no DOB yet. */
+export const DOB_PICKER_FALLBACK_ISO = '2000-01-01';
+
 export function isDateFormat(value: unknown): value is DateFormat {
   return value === 'DD-MM-YYYY' || value === 'YYYY-MM-DD' || value === 'MM-DD-YYYY';
 }

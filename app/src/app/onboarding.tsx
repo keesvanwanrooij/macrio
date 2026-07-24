@@ -1,71 +1,117 @@
-// Two-step onboarding: allergens (multi-select + Niets) → optional daily goals.
-// Both steps are skippable; Skip/Niets persist allergens: [].
-// Goals step mirrors Settings → Doelen (one body block, shared kcal, Berekenen / Macro's).
-import React, { useRef, useState } from 'react';
+/*
+ * SECTION: Onboarding (calm step-by-step, mirrors Settings topics)
+ * WHAT: Body → daily needs → macros → allergens. Each step is skippable.
+ * HOW: One topic per screen; progress dots; same helpers as Settings Account / Doelen.
+ * INPUT: session profile (optional prefill)
+ * OUTPUT: updateProfile + onboarded; optional goal_revisions row
+ */
+import React, { useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GoalCalculator } from '../components/GoalCalculator';
 import { GoalMacroEditor, type GoalMacroEditorHandle } from '../components/GoalMacroEditor';
+import { NativeDatePicker } from '../components/NativeDatePicker';
 import { Button, Chip, Field } from '../components/ui';
 import { EU_ALLERGENS, noneChipListState } from '../lib/allergens';
 import {
-  type BodyMetricsDraft,
-  type GoalFields,
+  DOB_PICKER_FALLBACK_ISO,
+  DOB_PICKER_MIN_ISO,
+  isIsoDate,
+  isoToDate,
+  resolveDateFormat,
+  todayIso,
+} from '../lib/dates';
+import {
+  GENDERS,
+  ageFieldMessage,
+  ageFromDateOfBirth,
+  bodyMetricsToProfilePatch,
   EMPTY_GOAL_FIELDS,
   NULL_GOAL_NUMBERS,
-  bodyMetricsToProfilePatch,
+  goalFieldsFromKcalInput,
   goalNumbersFromFields,
   goalsFieldsAllEmpty,
   goalsFieldsComplete,
-  goalFieldsFromKcalInput,
-  goalsFromPercents,
+  goalsFromKcalKeepingSplit,
+  heightFieldMessage,
+  isGender,
+  macroPercentsFromGoalFields,
   weightFieldMessage,
+  type BodyMetricsDraft,
+  type Gender,
+  type GoalFields,
 } from '../lib/goalCalculator';
 import { upsertTodayGoalRevision } from '../lib/goalRevisions';
-import { isIsoDate } from '../lib/dates';
+import { formatLocaleMetric } from '../lib/localeNumber';
 import { parseNum } from '../lib/nutrition';
 import { useSession } from '../lib/session';
 import { colors, spacing } from '../lib/theme';
 
+type OnboardingStep = 'body' | 'needs' | 'macros' | 'allergens';
+
+const STEPS: OnboardingStep[] = ['body', 'needs', 'macros', 'allergens'];
+
 export default function Onboarding() {
   const { t } = useTranslation();
   const { profile, updateProfile } = useSession();
-  const [step, setStep] = useState<0 | 1>(0);
+  const [stepIndex, setStepIndex] = useState(0);
+  const step = STEPS[stepIndex] ?? 'body';
+
   const [selected, setSelected] = useState<string[]>([]);
   /** Start expanded so first-time users see Gluten…; Niets collapses the row. */
   const [allergenOptionsExpanded, setAllergenOptionsExpanded] = useState(true);
   const [goals, setGoals] = useState<GoalFields>(EMPTY_GOAL_FIELDS);
   const [bodyDraft, setBodyDraft] = useState<BodyMetricsDraft | null>(null);
-  const [macroPercentResetKey, setMacroPercentResetKey] = useState(0);
-  const [goalsPanel, setGoalsPanel] = useState<'calc' | 'macros' | null>('calc');
   const [weightDraft, setWeightDraft] = useState<string | null>(null);
   const [heightDraft, setHeightDraft] = useState<string | null>(null);
   const [dobDraft, setDobDraft] = useState<string | null>(null);
+  const [genderDraft, setGenderDraft] = useState<Gender | null>(null);
   const [busy, setBusy] = useState(false);
-  /** Weight soft/hard message only after blur (not mid-typing). */
   const [weightFieldConfirmed, setWeightFieldConfirmed] = useState(false);
+  const [heightConfirmed, setHeightConfirmed] = useState(false);
   const macroEditorRef = useRef<GoalMacroEditorHandle>(null);
-  const scrollRef = useRef<ScrollView>(null);
-  const needsSectionOffsetY = useRef(0);
 
   const weightStr =
     weightDraft ??
-    (profile?.weight_kg != null && profile.weight_kg > 0 ? String(profile.weight_kg) : '');
+    (profile?.weight_kg != null && profile.weight_kg > 0
+      ? formatLocaleMetric(profile.weight_kg)
+      : '');
   const heightStr =
     heightDraft ??
-    (profile?.height_cm != null && profile.height_cm > 0 ? String(profile.height_cm) : '');
+    (profile?.height_cm != null && profile.height_cm > 0
+      ? formatLocaleMetric(profile.height_cm, 1)
+      : '');
   const dobStr = dobDraft ?? profile?.date_of_birth ?? '';
+  const gender =
+    genderDraft ?? (isGender(profile?.gender) ? profile.gender : null);
   const lichaamWeightKg = parseNum(weightStr);
   const lichaamHeightCm = parseNum(heightStr);
+  const ageYears = isIsoDate(dobStr) ? ageFromDateOfBirth(dobStr) : null;
+  const heightMsg = heightFieldMessage(heightStr, lichaamHeightCm);
+  const ageMsg = ageFieldMessage(ageYears);
+  const dateFormat = resolveDateFormat(profile?.date_format);
+  const dobMaximumDate = useMemo(() => isoToDate(todayIso()), []);
+  const dobMinimumDate = useMemo(() => isoToDate(DOB_PICKER_MIN_ISO), []);
+  const disclaimerMacroPercents = macroPercentsFromGoalFields(goals);
+
+  // Profile with body drafts so GoalCalculator Mifflin uses this step’s gender/height/DOB
+  const calcProfile = profile
+    ? {
+        ...profile,
+        gender: gender ?? profile.gender,
+        height_cm: lichaamHeightCm > 0 ? lichaamHeightCm : profile.height_cm,
+        date_of_birth: isIsoDate(dobStr) ? dobStr : profile.date_of_birth,
+        weight_kg: lichaamWeightKg > 0 ? lichaamWeightKg : profile.weight_kg,
+      }
+    : profile;
 
   function toggle(key: string) {
     setAllergenOptionsExpanded(true);
     setSelected((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
   }
 
-  /** Niets: clear + hide EU pills. While Niets is active, use “…” to expand again. */
   function toggleAllergensNone() {
     const { noneActive } = noneChipListState(selected.length, allergenOptionsExpanded);
     if (noneActive) return;
@@ -79,31 +125,33 @@ export default function Onboarding() {
 
   const allergenNoneUi = noneChipListState(selected.length, allergenOptionsExpanded);
 
-  /** Keep current macro % when editing kcal (same rule as Settings). */
   function onSharedKcalChange(raw: string) {
-    if (goalsPanel === 'macros') {
-      macroEditorRef.current?.setKcalRaw(raw);
-      return;
-    }
     const next = goalFieldsFromKcalInput(raw, goals);
     if (!next) return;
-    if (raw.trim() === '' && goalsPanel !== 'calc') setGoalsPanel('calc');
     setGoals(next);
   }
 
-  function scrollToNeedsSection() {
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ y: Math.max(0, needsSectionOffsetY.current - 8), animated: true });
-    });
+  function goNext() {
+    if (stepIndex < STEPS.length - 1) setStepIndex((i) => i + 1);
+  }
+
+  function goBack() {
+    if (stepIndex > 0) setStepIndex((i) => i - 1);
   }
 
   async function finish(withGoals: boolean, allergens: string[] = selected) {
+    if (heightMsg?.severity === 'hard') {
+      Alert.alert(t('common.error'), t('goalsCalc.invalid'));
+      setStepIndex(STEPS.indexOf('body'));
+      return;
+    }
     let persistGoals = withGoals;
     if (withGoals) {
       if (goalsFieldsAllEmpty(goals)) {
         persistGoals = false;
       } else if (!goalsFieldsComplete(goals)) {
         Alert.alert(t('common.error'), t('goalsCalc.goalsIncomplete'));
+        setStepIndex(STEPS.indexOf('needs'));
         return;
       }
     }
@@ -117,6 +165,7 @@ export default function Onboarding() {
         ...(lichaamWeightKg > 0 ? { weight_kg: lichaamWeightKg } : {}),
         ...(lichaamHeightCm > 0 ? { height_cm: lichaamHeightCm } : {}),
         ...(isIsoDate(dobStr) ? { date_of_birth: dobStr } : {}),
+        ...(gender ? { gender } : {}),
         onboarded: true,
       });
       if (error) {
@@ -137,21 +186,195 @@ export default function Onboarding() {
     }
   }
 
+  const stepTitle =
+    step === 'body'
+      ? t('onboarding.bodyTitle')
+      : step === 'needs'
+        ? t('onboarding.needsTitle')
+        : step === 'macros'
+          ? t('onboarding.macrosTitle')
+          : t('onboarding.allergensTitle');
+  const stepSubtitle =
+    step === 'body'
+      ? t('onboarding.bodySubtitle')
+      : step === 'needs'
+        ? t('onboarding.needsSubtitle')
+        : step === 'macros'
+          ? t('onboarding.macrosSubtitle')
+          : t('onboarding.allergensSubtitle');
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={{ padding: spacing.xl }}
+        contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxl }}
         keyboardShouldPersistTaps="handled"
       >
-        {step === 0 ? (
+        {/* Progress: calm “step x of n” + dots (not a busy dashboard) */}
+        <Text style={styles.progressLabel}>
+          {t('onboarding.stepOf', { current: stepIndex + 1, total: STEPS.length })}
+        </Text>
+        <View style={styles.dots} accessibilityRole="progressbar">
+          {STEPS.map((s, i) => (
+            <View
+              key={s}
+              style={[styles.dot, i === stepIndex && styles.dotActive, i < stepIndex && styles.dotDone]}
+            />
+          ))}
+        </View>
+
+        <Text style={styles.title}>{stepTitle}</Text>
+        <Text style={styles.subtitle}>{stepSubtitle}</Text>
+
+        {step === 'body' ? (
           <>
-            {/*
-             * SECTION: Allergen step
-             * WHAT: Niets clears + hides pills; “…” expands them again. Skip saves allergens: [].
-             */}
-            <Text style={styles.title}>{t('onboarding.allergensTitle')}</Text>
-            <Text style={styles.subtitle}>{t('onboarding.allergensSubtitle')}</Text>
+            <Text style={styles.fieldLabel}>{t('goalsCalc.gender')}</Text>
+            <View style={styles.row}>
+              {GENDERS.map((g) => (
+                <Chip
+                  key={g}
+                  label={t(`goalsCalc.gender_${g}`)}
+                  active={gender === g}
+                  onPress={() => setGenderDraft(g)}
+                />
+              ))}
+            </View>
+            <Field
+              label={t('goalsCalc.height')}
+              value={heightStr}
+              onChangeText={(v) => {
+                setHeightConfirmed(false);
+                setHeightDraft(v);
+              }}
+              onBlur={() => setHeightConfirmed(true)}
+              keyboardType="decimal-pad"
+            />
+            {heightMsg?.severity === 'soft' ||
+            (heightConfirmed && heightMsg?.severity === 'hard') ? (
+              <Text style={heightMsg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft}>
+                {t(heightMsg.key)}
+              </Text>
+            ) : null}
+            <NativeDatePicker
+              label={t('goalsCalc.dateOfBirth')}
+              value={isIsoDate(dobStr) ? dobStr : DOB_PICKER_FALLBACK_ISO}
+              onChange={(iso) => setDobDraft(iso)}
+              dateFormat={dateFormat}
+              maximumDate={dobMaximumDate}
+              minimumDate={dobMinimumDate}
+            />
+            <View style={styles.readOnlyField}>
+              <Text style={styles.readOnlyLabel}>{t('goalsCalc.age')}</Text>
+              <Text style={styles.readOnlyValue}>
+                {ageYears != null && ageYears >= 0 ? String(ageYears) : ''}
+              </Text>
+            </View>
+            {ageMsg ? (
+              <Text style={ageMsg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft}>
+                {t(ageMsg.key)}
+              </Text>
+            ) : null}
+            <Button title={t('common.next')} onPress={goNext} />
+            <Text style={styles.skip} onPress={goNext}>
+              {t('common.skip')}
+            </Text>
+          </>
+        ) : null}
+
+        {step === 'needs' ? (
+          <>
+            <Field
+              label={t('goalsCalc.weight')}
+              value={weightStr}
+              onChangeText={(v) => {
+                setWeightFieldConfirmed(false);
+                setWeightDraft(v);
+              }}
+              onBlur={() => setWeightFieldConfirmed(true)}
+              keyboardType="decimal-pad"
+            />
+            {weightFieldConfirmed
+              ? (() => {
+                  const msg = weightFieldMessage(weightStr, lichaamWeightKg);
+                  if (!msg) return null;
+                  return (
+                    <Text style={msg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft}>
+                      {t(msg.key)}
+                    </Text>
+                  );
+                })()
+              : null}
+            <Field
+              label={t('settings.goalKcal')}
+              value={goals.kcal}
+              onChangeText={onSharedKcalChange}
+              keyboardType="numeric"
+            />
+            <Text style={styles.hint}>{t('onboarding.needsCalcHint')}</Text>
+            <GoalCalculator
+              profile={calcProfile}
+              weightText={weightStr}
+              heightText={heightStr}
+              onWeightTextChange={setWeightDraft}
+              dobText={dobStr}
+              hideWeightField
+              hideHeightAndDob
+              showToggle={false}
+              open
+              hideResultKcal
+              macroPercents={disclaimerMacroPercents}
+              onCalcMetaChange={(meta) => {
+                setGenderDraft(meta.gender);
+                setBodyDraft({
+                  date_of_birth: isIsoDate(dobStr) ? dobStr : '',
+                  height_cm: lichaamHeightCm,
+                  weight_kg: lichaamWeightKg,
+                  gender: meta.gender,
+                  activity_level: meta.activity_level,
+                  weight_goal: meta.weight_goal,
+                });
+              }}
+              onCalculated={({ goals: calcGoals, body }) => {
+                setGoals(goalsFromKcalKeepingSplit(calcGoals.kcal, goals));
+                setBodyDraft(body);
+                if (body.weight_kg > 0) setWeightDraft(formatLocaleMetric(body.weight_kg));
+              }}
+            />
+            <Button title={t('common.next')} onPress={goNext} />
+            <View style={styles.navRow}>
+              <Text style={styles.back} onPress={goBack}>
+                {t('common.back')}
+              </Text>
+              <Text style={styles.skipInline} onPress={goNext}>
+                {t('common.skip')}
+              </Text>
+            </View>
+          </>
+        ) : null}
+
+        {step === 'macros' ? (
+          <>
+            <Text style={styles.hint}>{t('onboarding.macrosHint')}</Text>
+            <GoalMacroEditor
+              ref={macroEditorRef}
+              value={goals}
+              onChange={setGoals}
+              weightKg={lichaamWeightKg > 0 ? lichaamWeightKg : 0}
+              hideKcalField
+            />
+            <Button title={t('common.next')} onPress={goNext} />
+            <View style={styles.navRow}>
+              <Text style={styles.back} onPress={goBack}>
+                {t('common.back')}
+              </Text>
+              <Text style={styles.skipInline} onPress={goNext}>
+                {t('common.skip')}
+              </Text>
+            </View>
+          </>
+        ) : null}
+
+        {step === 'allergens' ? (
+          <>
             <View style={styles.chips}>
               <Chip
                 label={t('onboarding.allergensNothing')}
@@ -177,117 +400,21 @@ export default function Onboarding() {
                 : null}
             </View>
             <Text style={styles.disclaimer}>{t('allergens.disclaimer')}</Text>
-            <Button title={t('common.next')} onPress={() => setStep(1)} />
-            <Text style={styles.skip} onPress={() => finish(false, [])}>
-              {t('common.skip')}
-            </Text>
-          </>
-        ) : (
-          <>
-            {/*
-             * SECTION: Goals step (mirrors Settings → Doelen)
-             * WHAT: One Mijn behoefte block: weight, kcal, chips, panels.
-             */}
-            <Text style={styles.title}>{t('onboarding.goalsTitle')}</Text>
-            <Text style={styles.subtitle}>{t('onboarding.goalsSubtitle')}</Text>
-
-            <View
-              collapsable={false}
-              onLayout={(e) => {
-                needsSectionOffsetY.current = e.nativeEvent.layout.y;
-              }}
-            >
-              <Text style={styles.sectionTitle}>{t('settings.goals')}</Text>
-              <Text style={styles.hint}>{t('settings.goalsHint')}</Text>
-            </View>
-
-            <Field
-              label={t('goalsCalc.weight')}
-              value={weightStr}
-              onChangeText={(v) => {
-                setWeightFieldConfirmed(false);
-                setWeightDraft(v);
-              }}
-              onBlur={() => setWeightFieldConfirmed(true)}
-              keyboardType="numeric"
+            <Button
+              title={t('onboarding.start')}
+              onPress={() => finish(true)}
+              loading={busy}
             />
-            {weightFieldConfirmed
-              ? (() => {
-                  const msg = weightFieldMessage(weightStr, lichaamWeightKg);
-                  if (!msg) return null;
-                  return (
-                    <Text style={msg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft}>
-                      {t(msg.key)}
-                    </Text>
-                  );
-                })()
-              : null}
-            <Field
-              label={t('settings.goalKcal')}
-              value={goals.kcal}
-              onChangeText={onSharedKcalChange}
-              keyboardType="numeric"
-            />
-
-            <View style={styles.goalModeRow}>
-              <Chip
-                label={t('settings.goalsModeSimple')}
-                active={goalsPanel === 'calc'}
-                onPress={() => setGoalsPanel(goalsPanel === 'calc' ? null : 'calc')}
-              />
-              <Chip
-                label={t('settings.goalsModeAdvanced')}
-                active={goalsPanel === 'macros'}
-                onPress={() => setGoalsPanel(goalsPanel === 'macros' ? null : 'macros')}
-              />
+            <View style={styles.navRow}>
+              <Text style={styles.back} onPress={goBack}>
+                {t('common.back')}
+              </Text>
+              <Text style={styles.skipInline} onPress={() => finish(false, [])}>
+                {t('onboarding.skipAllergens')}
+              </Text>
             </View>
-
-            {goalsPanel === 'calc' ? (
-              <>
-                <Text style={styles.panelHint}>{t('onboarding.calculateHint')}</Text>
-                <GoalCalculator
-                  profile={profile}
-                  weightText={weightStr}
-                  heightText={heightStr}
-                  onWeightTextChange={setWeightDraft}
-                  onHeightTextChange={setHeightDraft}
-                  dobText={dobStr}
-                  onDobTextChange={setDobDraft}
-                  hideWeightField
-                  showToggle={false}
-                  open
-                  hideResultKcal
-                  onCalculated={({ goals: calcGoals, body }) => {
-                    setGoals(goalsFromPercents(calcGoals.kcal));
-                    setBodyDraft(body);
-                    setMacroPercentResetKey((k) => k + 1);
-                    scrollToNeedsSection();
-                  }}
-                />
-              </>
-            ) : null}
-
-            {goalsPanel === 'macros' ? (
-              <>
-                <Text style={styles.panelHint}>{t('onboarding.macrosHint')}</Text>
-                <GoalMacroEditor
-                  ref={macroEditorRef}
-                  key={`macro-editor-${macroPercentResetKey}`}
-                  value={goals}
-                  onChange={setGoals}
-                  weightKg={lichaamWeightKg > 0 ? lichaamWeightKg : 0}
-                  percentResetKey={macroPercentResetKey}
-                  hideKcalField
-                />
-              </>
-            ) : null}
-
-            <Button title={t('onboarding.start')} onPress={() => finish(true)} loading={busy} />
-            <Text style={styles.skip} onPress={() => finish(false)}>
-              {t('common.skip')}
-            </Text>
           </>
-        )}
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -295,16 +422,50 @@ export default function Onboarding() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  progressLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.muted,
+    marginBottom: spacing.s,
+  },
+  dots: { flexDirection: 'row', gap: 8, marginBottom: spacing.l },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+  },
+  dotActive: { backgroundColor: colors.primaryDark, width: 20 },
+  dotDone: { backgroundColor: colors.primary },
   title: { fontSize: 26, fontWeight: '900', color: colors.text },
-  subtitle: { fontSize: 15, color: colors.muted, marginTop: spacing.s, marginBottom: spacing.l, lineHeight: 21 },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.text,
+  subtitle: {
+    fontSize: 15,
+    color: colors.muted,
     marginTop: spacing.s,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.l,
+    lineHeight: 21,
   },
   hint: { fontSize: 13, color: colors.muted, marginBottom: spacing.s, lineHeight: 18 },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.muted,
+    marginBottom: spacing.s,
+  },
+  row: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.m },
+  readOnlyField: { marginBottom: spacing.m },
+  readOnlyLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.muted,
+    marginBottom: spacing.xs,
+  },
+  readOnlyValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    lineHeight: 22,
+  },
   fieldHard: {
     fontSize: 12,
     color: colors.danger,
@@ -319,9 +480,15 @@ const styles = StyleSheet.create({
     marginTop: -spacing.m + 2,
     marginBottom: spacing.m,
   },
-  panelHint: { fontSize: 13, color: colors.muted, marginBottom: spacing.s, lineHeight: 18 },
-  goalModeRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.s },
   chips: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.l },
   disclaimer: { fontSize: 12, color: colors.faint, marginBottom: spacing.l, lineHeight: 17 },
+  navRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.l,
+  },
+  back: { color: colors.muted, fontWeight: '600', fontSize: 15 },
   skip: { textAlign: 'center', color: colors.muted, marginTop: spacing.l, fontWeight: '600' },
+  skipInline: { color: colors.muted, fontWeight: '600', fontSize: 15 },
 });

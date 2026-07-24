@@ -1,21 +1,21 @@
-/*
+/**
  * SECTION: Daily goal calculator + unified % macro math
  * WHAT: Mifflin-St Jeor kcal; default 50/20/30 C/P/F; % ring for GoalMacroEditor.
  * HOW:
- *   1) BMR × activity → TDEE ± goal delta
+ *   1) BMR × activity → TDEE ± goal delta (floor KCAL_FLOOR)
  *   2) Macros from kcal via DEFAULT_MACRO_PERCENTS (not personal g/kg)
- *   3) Soft height/weight validation
+ *   3) Soft height/weight/age validation helpers for Settings / calculator
  *   4) Editor: locked % + ring (C→P→F→C); see GoalMacroEditor for two-way rules
  * INPUT: body stats; GoalFields; MacroPercents
- * OUTPUT: goals, soft errors, percent helpers
+ * OUTPUT: goals, soft errors, percent helpers, buildGoalCalcInput for auto-update
  */
 
 export type Gender = 'male' | 'female' | 'other';
 
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
 
-/** lose = cut, maintain = TDEE, gain = lean bulk / muscle */
-export type WeightGoal = 'lose' | 'maintain' | 'gain';
+/** lose / lose_fast = cut, maintain = TDEE, gain / gain_fast = surplus */
+export type WeightGoal = 'lose_fast' | 'lose' | 'maintain' | 'gain' | 'gain_fast';
 
 export const ACTIVITY_FACTORS: Record<ActivityLevel, number> = {
   sedentary: 1.2,
@@ -25,11 +25,16 @@ export const ACTIVITY_FACTORS: Record<ActivityLevel, number> = {
   very_active: 1.9,
 };
 
-/** Daily kcal offset from maintenance TDEE. */
+/**
+ * Daily kcal offset from maintenance TDEE.
+ * Moderate ±300; fast ±500 (both directions).
+ */
 export const WEIGHT_GOAL_KCAL_DELTA: Record<WeightGoal, number> = {
-  lose: -500,
+  lose_fast: -500,
+  lose: -300,
   maintain: 0,
   gain: 300,
+  gain_fast: 500,
 };
 
 export type MacroPercents = { protein: number; carbs: number; fat: number };
@@ -52,7 +57,10 @@ export const AGE_YEARS_SOFT_UNDER = 16;
 
 export const GENDERS: Gender[] = ['male', 'female', 'other'];
 export const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
-export const WEIGHT_GOALS: WeightGoal[] = ['lose', 'maintain', 'gain'];
+/** Collapsed Doel row (plus “…” to expand). */
+export const WEIGHT_GOALS_SIMPLE: WeightGoal[] = ['lose', 'maintain', 'gain'];
+/** Full Doel row after “…” (moderate ±300, fast ±500). */
+export const WEIGHT_GOALS_EXTENDED: WeightGoal[] = ['lose_fast', 'lose', 'maintain', 'gain', 'gain_fast'];
 
 export type GoalCalcInput = {
   weightKg: number;
@@ -77,6 +85,8 @@ export type GoalCalcResult = {
     activityFactor: number;
     tdee: number;
     goalDelta: number;
+    /** True when raw TDEE±delta was below KCAL_FLOOR and we clamped. */
+    hitFloor: boolean;
   };
 };
 
@@ -146,16 +156,27 @@ export function isActivityLevel(v: string | null | undefined): v is ActivityLeve
 }
 
 export function isWeightGoal(v: string | null | undefined): v is WeightGoal {
-  return v === 'lose' || v === 'maintain' || v === 'gain';
+  return (
+    v === 'lose_fast' ||
+    v === 'lose' ||
+    v === 'maintain' ||
+    v === 'gain' ||
+    v === 'gain_fast'
+  );
+}
+
+/** True when the goal needs the expanded 5-chip row (fast rates). */
+export function isExtendedWeightGoal(v: WeightGoal): boolean {
+  return v === 'lose_fast' || v === 'gain_fast';
 }
 
 /** Mifflin-St Jeor resting energy (kcal/day). */
 export function estimateBmr(input: Pick<GoalCalcInput, 'weightKg' | 'heightCm' | 'ageYears' | 'gender'>): number {
   const { weightKg, heightCm, ageYears, gender } = input;
   const base = 10 * weightKg + 6.25 * heightCm - 5 * ageYears;
+  // Male +5; female and “other” use −161 (safer default for non-binary / prefer-not-to-say)
   if (gender === 'male') return base + 5;
-  if (gender === 'female') return base - 161;
-  return base - 78;
+  return base - 161;
 }
 
 export function macroGramsToKcal(protein: number, carbs: number, fat: number): number {
@@ -216,13 +237,31 @@ export function bodyMetricHardI18nKey(
 
 /**
  * Weight field copy after blur: hard ≤0 first, else soft unusual range.
- * Shared by Settings + onboarding (GoalCalculator has its own height/age rows).
+ * Shared by Settings Doelen weight + onboarding + GoalCalculator weight row.
  */
 export function weightFieldMessage(raw: string, weightKg: number): BodyFieldMessage | null {
   const hard = bodyMetricHardError(raw, weightKg);
   if (hard) return { severity: 'hard', key: bodyMetricHardI18nKey('weight', hard) };
   if (softWeightUnusual(weightKg)) return { severity: 'soft', key: 'goalsCalc.softWeight' };
   return null;
+}
+
+/**
+ * Height field copy after blur: hard ≤0 first, else soft unusual range.
+ * Shared by Account body metrics + GoalCalculator (onboarding).
+ */
+export function heightFieldMessage(raw: string, heightCm: number): BodyFieldMessage | null {
+  const hard = bodyMetricHardError(raw, heightCm);
+  if (hard) return { severity: 'hard', key: bodyMetricHardI18nKey('height', hard) };
+  if (softHeightUnusual(heightCm)) return { severity: 'soft', key: 'goalsCalc.softHeight' };
+  return null;
+}
+
+/** Map 5 weight goals → 3 activity tip keys (lose / maintain / gain). */
+export function activityTipKind(goal: WeightGoal): 'lose' | 'maintain' | 'gain' {
+  if (goal === 'lose' || goal === 'lose_fast') return 'lose';
+  if (goal === 'gain' || goal === 'gain_fast') return 'gain';
+  return 'maintain';
 }
 
 /** Slider max for % bars: at least 100, or the highest current percentage. */
@@ -259,6 +298,32 @@ export function gramsFromPercents(kcal: number, percents: MacroPercents): GoalCa
 export function isReliablePercentSplit(percents: MacroPercents): boolean {
   const sum = percents.protein + percents.carbs + percents.fat;
   return sum >= 90 && sum <= 110;
+}
+
+/**
+ * Macro % for Berekenen disclaimer / UI from current GoalFields.
+ * Always shows the live split from grams when possible (power users).
+ * Empty goals only → DEFAULT_MACRO_PERCENTS (50/20/30 C/P/F) for beginners.
+ */
+export function macroPercentsFromGoalFields(fields: GoalFields): MacroPercents {
+  const k = parseGoalFieldNumber(fields.kcal);
+  const p = parseGoalFieldNumber(fields.protein);
+  const c = parseGoalFieldNumber(fields.carbs);
+  const f = parseGoalFieldNumber(fields.fat);
+  if (!(k > 0) || !(p > 0 || c > 0 || f > 0)) return DEFAULT_MACRO_PERCENTS;
+  return percentsFromGrams(k, p, c, f);
+}
+
+/**
+ * Age field copy: hard ≤0 first, else soft under-16.
+ * Shared by Account + GoalCalculator (soft always; hard when DOB yields invalid age).
+ */
+export function ageFieldMessage(ageYears: number | null): BodyFieldMessage | null {
+  if (ageYears == null) return null;
+  if (ageYears < 0) return { severity: 'hard', key: 'goalsCalc.ageNegative' };
+  if (!(ageYears > 0)) return { severity: 'hard', key: 'goalsCalc.ageNonPositive' };
+  if (softAgeYoung(ageYears)) return { severity: 'soft', key: 'goalsCalc.softAge' };
+  return null;
 }
 
 const RING_NEXT: Record<'protein' | 'carbs' | 'fat', 'protein' | 'carbs' | 'fat'> = {
@@ -468,6 +533,30 @@ export function bodyMetricsToProfilePatch(body: BodyMetricsDraft) {
   };
 }
 
+/** Absolute minimum recommended daily kcal (UI shows a healthcare warning when hit). */
+export const KCAL_FLOOR = 1000;
+
+/**
+ * Build a validated Mifflin input from raw profile/draft values, or null if incomplete.
+ * Shared by Settings auto-update (panel closed) and GoalCalculator.
+ */
+export function buildGoalCalcInput(args: {
+  weightKg: number;
+  heightCm: number;
+  dateOfBirth: string | null | undefined;
+  gender: string | null | undefined;
+  activity: string | null | undefined;
+  weightGoal: string | null | undefined;
+}): GoalCalcInput | null {
+  const { weightKg, heightCm, dateOfBirth, gender, activity, weightGoal } = args;
+  if (!(weightKg > 0) || !(heightCm > 0)) return null;
+  if (!dateOfBirth?.trim()) return null;
+  const ageYears = ageFromDateOfBirth(dateOfBirth.trim());
+  if (ageYears == null || !(ageYears > 0)) return null;
+  if (!isGender(gender) || !isActivityLevel(activity) || !isWeightGoal(weightGoal)) return null;
+  return { weightKg, heightCm, ageYears, gender, activity, weightGoal };
+}
+
 export function calculateDailyGoals(input: GoalCalcInput): GoalCalcResult | null {
   const { weightKg, heightCm, ageYears, gender, activity, weightGoal } = input;
   // Hard gate only: positive weight, height, age. Soft unusual ranges still calculate.
@@ -479,10 +568,12 @@ export function calculateDailyGoals(input: GoalCalcInput): GoalCalcResult | null
   const goalDelta = WEIGHT_GOAL_KCAL_DELTA[weightGoal];
   const bmr = Math.round(estimateBmr({ weightKg, heightCm, ageYears, gender }));
   const tdee = Math.round(bmr * activityFactor);
-  const kcal = Math.max(1200, tdee + goalDelta);
+  const rawKcal = tdee + goalDelta;
+  const hitFloor = rawKcal < KCAL_FLOOR;
+  const kcal = Math.max(KCAL_FLOOR, rawKcal);
   // Default 50/20/30 via shared grams helper (same path as goalsFromPercents)
   return {
     ...gramsFromPercents(kcal, DEFAULT_MACRO_PERCENTS),
-    energy: { bmr, activityFactor, tdee, goalDelta },
+    energy: { bmr, activityFactor, tdee, goalDelta, hitFloor },
   };
 }

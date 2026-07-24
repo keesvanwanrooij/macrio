@@ -6,9 +6,9 @@
  *   2) Edit kcal → keep % → rescale all grams (bars stay)
  *   3) Edit one gram → other grams stay; kcal = P×4+C×4+F×9; recompute %
  *   4) Move slider or edit % box → ring C→P→F→C; kcal fixed; grams follow %
- *   5) Grey hint under row: kcal · g/kg (no %; % has its own input)
- * INPUT: GoalFields, weightKg (for g/kg hints), onChange; optional percentResetKey / hideKcalField
- * OUTPUT: updated GoalFields (Settings flushes on leave / panel switch; onboarding on Start)
+ *   5) Grey hint under slider: kcal · g/kg (no %; % has its own input)
+ * INPUT: GoalFields, weightKg (for g/kg hints), onChange; optional hideKcalField
+ * OUTPUT: updated GoalFields (Settings tap-save / leave Doelen; onboarding on Start)
  */
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
@@ -30,6 +30,7 @@ import {
   type GoalFields,
   type MacroPercents,
 } from '../lib/goalCalculator';
+import { formatLocaleNumber } from '../lib/localeNumber';
 import { parseNum } from '../lib/nutrition';
 import { colors, radius, spacing } from '../lib/theme';
 
@@ -42,11 +43,6 @@ type Props = {
   value: GoalFields;
   onChange: (next: GoalFields) => void;
   weightKg: number;
-  /**
-   * Bump when the body calculator finishes.
-   * Forces locked % back to default 50/20/30 (ignores previous slider split).
-   */
-  percentResetKey?: number;
   /** Parent owns the Calorieën field (Settings / onboarding); hide the duplicate here. */
   hideKcalField?: boolean;
 };
@@ -64,7 +60,6 @@ export const GoalMacroEditor = forwardRef<GoalMacroEditorHandle, Props>(function
     value,
     onChange,
     weightKg,
-    percentResetKey = 0,
     hideKcalField = false,
   },
   ref
@@ -74,7 +69,6 @@ export const GoalMacroEditor = forwardRef<GoalMacroEditorHandle, Props>(function
   const valueRef = useRef(value);
   // Fingerprint of the last fields *we* pushed via onChange (ignore those in the sync effect)
   const lastOwnEditRef = useRef<string | null>(null);
-  const lastResetKeyRef = useRef(percentResetKey);
 
   const [lockedPercents, setLockedPercents] = useState<MacroPercents>(DEFAULT_MACRO_PERCENTS);
   const [dragPercent, setDragPercent] = useState<Partial<Record<PercentMacro, number>>>({});
@@ -90,30 +84,15 @@ export const GoalMacroEditor = forwardRef<GoalMacroEditorHandle, Props>(function
     return `${fields.kcal}|${fields.protein}|${fields.carbs}|${fields.fat}`;
   }
 
-  // Body calculator finished → always snap bars to 50/20/30 (product rule)
-  useEffect(() => {
-    if (percentResetKey === lastResetKeyRef.current) return;
-    lastResetKeyRef.current = percentResetKey;
-    setLockedPercents(DEFAULT_MACRO_PERCENTS);
-    setDragPercent({});
-    setPercentDraft({});
-  }, [percentResetKey]);
-
   /*
    * Sync locked % when parent replaces goals (profile load / draft swap),
-   * but never override a fresh calculator reset (handled above).
+   * but ignore echoes of our own onChange commits.
    */
   useEffect(() => {
     valueRef.current = value;
     const fp = fieldsFingerprint(value);
     if (lastOwnEditRef.current === fp) return;
 
-    // Calculator just reset: keep DEFAULT even if grams briefly lag
-    if (percentResetKey !== lastResetKeyRef.current) {
-      lastOwnEditRef.current = fp;
-      return;
-    }
-    // After calculator reset key is applied, prefer DEFAULT when grams match default split
     if (kcal > 0 && (protein > 0 || carbs > 0 || fat > 0)) {
       const fromGrams = percentsFromGrams(kcal, protein, carbs, fat);
       setLockedPercents(isReliablePercentSplit(fromGrams) ? fromGrams : DEFAULT_MACRO_PERCENTS);
@@ -121,7 +100,7 @@ export const GoalMacroEditor = forwardRef<GoalMacroEditorHandle, Props>(function
       setLockedPercents(DEFAULT_MACRO_PERCENTS);
     }
     lastOwnEditRef.current = fp;
-  }, [value.kcal, value.protein, value.carbs, value.fat, kcal, protein, carbs, fat, percentResetKey]);
+  }, [value.kcal, value.protein, value.carbs, value.fat, kcal, protein, carbs, fat]);
 
   const activePercents: MacroPercents = lockedPercents;
 
@@ -246,6 +225,10 @@ export const GoalMacroEditor = forwardRef<GoalMacroEditorHandle, Props>(function
     onPercentComplete(macro, n);
   }
 
+  /*
+   * Compact row: label + %/g inputs, then slider flush under inputs (hint below track).
+   * Previous gap came from kcalHint between inputs and Slider’s default 40px hit box.
+   */
   function macroRow(macro: PercentMacro, labelKey: string) {
     const grams = parseNum(value[macro]);
     const kcalPart = gramsToKcal(macro, grams);
@@ -287,31 +270,35 @@ export const GoalMacroEditor = forwardRef<GoalMacroEditorHandle, Props>(function
             <Text style={styles.inputUnit}>g</Text>
           </View>
         </View>
+        <View style={styles.sliderWrap}>
+          <Slider
+            style={styles.slider}
+            minimumValue={0}
+            maximumValue={scaleMax}
+            step={1}
+            value={pctShown}
+            onValueChange={(v) => {
+              setPercentDraft((prev) => {
+                if (prev[macro] == null) return prev;
+                const next = { ...prev };
+                delete next[macro];
+                return next;
+              });
+              onPercentChange(macro, v);
+            }}
+            onSlidingComplete={(v) => onPercentComplete(macro, v)}
+            minimumTrackTintColor={colors.primary}
+            maximumTrackTintColor={colors.border}
+            thumbTintColor={colors.primaryDark}
+            accessibilityLabel={t(labelKey)}
+          />
+        </View>
         <Text style={styles.kcalHint} numberOfLines={1}>
           {t('goalsCalc.macroKcal', { kcal: Math.round(kcalPart) })}
-          {perKg != null ? ` · ${t('goalsCalc.perKg', { value: perKg.toFixed(1) })}` : ''}
+          {perKg != null
+            ? ` · ${t('goalsCalc.perKg', { value: formatLocaleNumber(perKg, { maximumFractionDigits: 1, minimumFractionDigits: 1 }) })}`
+            : ''}
         </Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={scaleMax}
-          step={1}
-          value={pctShown}
-          onValueChange={(v) => {
-            setPercentDraft((prev) => {
-              if (prev[macro] == null) return prev;
-              const next = { ...prev };
-              delete next[macro];
-              return next;
-            });
-            onPercentChange(macro, v);
-          }}
-          onSlidingComplete={(v) => onPercentComplete(macro, v)}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primaryDark}
-          accessibilityLabel={t(labelKey)}
-        />
       </View>
     );
   }
@@ -338,34 +325,36 @@ export const GoalMacroEditor = forwardRef<GoalMacroEditorHandle, Props>(function
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: spacing.s },
-  macroBlock: { marginBottom: spacing.xs },
+  // Tight stack between macros (was xs + floating slider padding)
+  macroBlock: { marginBottom: spacing.s },
   macroHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.m,
+    gap: spacing.s,
+    marginBottom: 0,
   },
   macroLabel: {
     flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: colors.muted,
   },
   macroInputs: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   macroInput: {
-    width: 64,
+    width: 56,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.card,
     borderRadius: radius.s,
-    paddingHorizontal: spacing.s,
-    paddingVertical: 4,
-    minHeight: 34,
-    fontSize: 16,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minHeight: 30,
+    fontSize: 15,
     fontWeight: '700',
     lineHeight: 18,
     color: colors.text,
@@ -375,11 +364,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.muted,
-    marginRight: 2,
+    marginRight: 1,
   },
-  // Tight stack: label row → kcal·g/kg → slider
-  kcalHint: { fontSize: 11, color: colors.faint, marginTop: 0, marginBottom: 0, lineHeight: 14 },
-  slider: { width: '100%', height: 22, marginTop: 0 },
+  // Pull the track up under the inputs; keep enough height for the thumb (no clip)
+  sliderWrap: {
+    height: 32,
+    justifyContent: 'center',
+    marginTop: -6,
+    marginBottom: -2,
+  },
+  slider: { width: '100%', height: 32 },
+  kcalHint: {
+    fontSize: 11,
+    color: colors.faint,
+    marginTop: 0,
+    marginBottom: 0,
+    lineHeight: 13,
+  },
   resetLink: {
     color: colors.primaryDark,
     fontWeight: '600',

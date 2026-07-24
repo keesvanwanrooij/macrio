@@ -7,13 +7,15 @@
  * OUTPUT: persisted profile/auth changes; export share sheet; soft-delete then signOut
  */
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ActivityIndicator, Animated, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Card, Chip, Field, Loading, PasswordField, SectionTitle } from '../../components/ui';
 import { GoalCalculator } from '../../components/GoalCalculator';
 import { GoalMacroEditor, type GoalMacroEditorHandle } from '../../components/GoalMacroEditor';
+import { NativeDatePicker } from '../../components/NativeDatePicker';
 import { EU_ALLERGENS, noneChipListState } from '../../lib/allergens';
 import { APP_VERSION } from '../../lib/appMeta';
 import { getEmailChangeRedirectUrl } from '../../lib/authDeepLink';
@@ -23,12 +25,10 @@ import {
   reauthenticateWithPassword,
   usernameErrorI18nKey,
 } from '../../lib/auth';
-import { DATE_FORMATS, isIsoDate, resolveDateFormat } from '../../lib/dates';
-import { fetchMyDataExport, shareDataExport } from '../../lib/dataExport';
-import type { BodyMetricsDraft, GoalFields } from '../../lib/goalCalculator';
 import {
   NULL_GOAL_NUMBERS,
   ageFromDateOfBirth,
+  buildGoalCalcInput,
   calculateDailyGoals,
   goalNumbersFromFields,
   goalsFieldsAllEmpty,
@@ -36,11 +36,15 @@ import {
   goalsFieldsDirty,
   goalFieldsFromKcalInput,
   goalsFromKcalKeepingSplit,
-  goalsFromPercents,
+  heightFieldMessage,
+  ageFieldMessage,
   weightFieldMessage,
-  isActivityLevel,
+  GENDERS,
   isGender,
-  isWeightGoal,
+  macroPercentsFromGoalFields,
+  type BodyMetricsDraft,
+  type Gender,
+  type GoalFields,
 } from '../../lib/goalCalculator';
 import { upsertTodayGoalRevision } from '../../lib/goalRevisions';
 import { parseNum } from '../../lib/nutrition';
@@ -49,23 +53,34 @@ import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
 import { colors, radius, spacing } from '../../lib/theme';
 import { isValidUsername, sanitizeUsernameInput } from '../../lib/username';
+import {
+  DATE_FORMATS,
+  DOB_PICKER_FALLBACK_ISO,
+  DOB_PICKER_MIN_ISO,
+  isIsoDate,
+  isoToDate,
+  resolveDateFormat,
+  todayIso,
+} from '../../lib/dates';
+import { fetchMyDataExport, shareDataExport } from '../../lib/dataExport';
+import { formatLocaleMetric } from '../../lib/localeNumber';
 
 const SPONSOR_URL = 'https://github.com/sponsors/keesvanwanrooij';
-/** Seconds until silent goals autosave while drafts are dirty. */
-const GOALS_AUTOSAVE_SEC = 10;
+/** Persist auto-update checkbox across app restarts (device-local). */
+const AUTO_UPDATE_KCAL_KEY = '@macrio/goals_auto_update_kcal';
 
 type SettingsSection = 'preferences' | 'goals' | 'account' | 'privacy' | 'about';
 
-const SETTINGS_SECTIONS: SettingsSection[] = ['goals', 'preferences', 'account', 'privacy', 'about'];
+const SETTINGS_SECTIONS: SettingsSection[] = ['goals', 'account', 'preferences', 'privacy', 'about'];
 
 /*
- * SECTION: Goals save affordance (always visible)
- * WHAT: Fixed slot: either green “Opgeslagen” or grey “Opslaan in Ns” (tap to save).
- * HOW: Same row height / icon slot so switching states does not shift the form.
+ * SECTION: Settings draft save affordance (Doelen + Account identity/body)
+ * WHAT: Grey “Tik om op te slaan” while dirty; green “Opgeslagen” when clean.
+ * HOW: Tap pending label to flush, or leave the section / Settings. No countdown.
  * INPUT: busy, label, onPress (pending only)
  * OUTPUT: Pressable or static status row
  */
-function GoalsSavePendingButton({
+function SettingsSavePendingButton({
   busy,
   label,
   onPress,
@@ -119,7 +134,7 @@ function GoalsSavePendingButton({
   );
 }
 
-function GoalsSavedLabel({ label }: { label: string }) {
+function SettingsSavedLabel({ label }: { label: string }) {
   return (
     <View style={styles.goalsSaveStatusRow} accessibilityRole="text">
       <View style={styles.goalsSaveIconSlot}>
@@ -134,7 +149,7 @@ function GoalsSavedLabel({ label }: { label: string }) {
 
 function profileSaveErrorMessage(raw: string, t: (k: string) => string): string {
   const m = raw.toLowerCase();
-  if (m.includes('date_of_birth') || m.includes('height_cm') || m.includes('weight_kg') || m.includes('weight_goal') || m.includes('goal_macro_mode') || m.includes('schema cache')) {
+  if (m.includes('date_of_birth') || m.includes('height_cm') || m.includes('weight_kg') || m.includes('weight_goal') || m.includes('schema cache')) {
     return t('settings.bodyMetricsMigrationHint');
   }
   if (m.includes('date_format')) {
@@ -170,39 +185,42 @@ export default function Settings() {
   const [section, setSection] = useState<SettingsSection>('goals');
   const [goalDraft, setGoalDraft] = useState<GoalFields | null>(null);
   const [bodyDraft, setBodyDraft] = useState<BodyMetricsDraft | null>(null);
-  /** Bumped on body calculator so GoalMacroEditor snaps bars to 50/20/30. */
-  const [macroPercentResetKey, setMacroPercentResetKey] = useState(0);
   const [weightDraft, setWeightDraft] = useState<string | null>(null);
+  /** Account body metrics (height / DOB / gender); saved on Account, not via Doelen flush. */
   const [heightDraft, setHeightDraft] = useState<string | null>(null);
   const [dobDraft, setDobDraft] = useState<string | null>(null);
+  const [genderDraft, setGenderDraft] = useState<Gender | null>(null);
+  const [accountHeightConfirmed, setAccountHeightConfirmed] = useState(false);
   /** Accordion: calculator | macros | neither. Open calc by default when no goals yet. */
   const [goalsPanel, setGoalsPanel] = useState<'calc' | 'macros' | null>(
     profile?.goal_kcal != null && profile.goal_kcal > 0 ? null : 'calc'
   );
-  /** When on, Mifflin recalculates kcal as body / calculator inputs change (keeps macro %). Default off (opt-in; same as onboarding). */
+  /** When on, Mifflin recalculates kcal as body / calculator inputs change (keeps macro %). */
   const [autoUpdateKcal, setAutoUpdateKcal] = useState(false);
   /** When false and allergens empty, only “Niets” shows (collapse pattern). */
   const [allergenOptionsExpanded, setAllergenOptionsExpanded] = useState(
     () => (profile?.allergens.length ?? 0) > 0
   );
+  /** Local allergen selection until tap-save / leave (same as goals drafts). */
+  const [allergensDraft, setAllergensDraft] = useState<string[] | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const needsSectionOffsetY = useRef(0);
   const macroEditorRef = useRef<GoalMacroEditorHandle>(null);
-  /** Guards overlapping flushes (panel switch + 10s interval + leave). */
+  /** Guards overlapping flushes (tap save + leave). */
   const flushingRef = useRef(false);
   const flushGoalsTabRef = useRef<(opts?: { silent?: boolean }) => Promise<boolean>>(async () => true);
+  const flushAccountTabRef = useRef<(opts?: { silent?: boolean }) => Promise<boolean>>(async () => true);
   const settingsGoalsDirtyRef = useRef(false);
   const goalsRef = useRef<GoalFields>({ kcal: '', protein: '', carbs: '', fat: '' });
   const bodyDraftRef = useRef<BodyMetricsDraft | null>(null);
   const [fullNameDraft, setFullNameDraft] = useState<string | null>(null);
   const [usernameDraft, setUsernameDraft] = useState<string | null>(null);
   const [usernamePassword, setUsernamePassword] = useState('');
-  const [savingBody, setSavingBody] = useState(false);
   const [savingUsername, setSavingUsername] = useState(false);
   /** True while flushGoalsTab is in flight (spinner in save slot). */
   const [flushingGoals, setFlushingGoals] = useState(false);
-  /** 10→1 nudge while dirty; tap (or leave tab) saves - no silent flush at 0. */
-  const [saveCountdown, setSaveCountdown] = useState<number | null>(null);
+  /** True while Account name/body flush is in flight. */
+  const [flushingAccount, setFlushingAccount] = useState(false);
   /** Weight soft/hard message only after blur (not mid-typing). */
   const [weightFieldConfirmed, setWeightFieldConfirmed] = useState(false);
 
@@ -221,18 +239,31 @@ export default function Settings() {
   const [exporting, setExporting] = useState(false);
 
   /*
-   * SECTION: Doelen save (Settings only)
-   * WHAT: Persist dirty drafts on leave / panel switch / tap “Opslaan in Ns”.
-   * HOW: Leave cleanup flush; countdown is a nudge only (does not auto-flush at 0).
-   * WHY: User stays in control while the leading save message counts down.
+   * SECTION: Draft save (Settings)
+   * WHAT: Persist dirty Doelen + Account drafts on leave Settings tab, or tap status.
+   * HOW: useFocusEffect cleanup flushes both; section switch flushes the panel left.
    */
   useFocusEffect(
     useCallback(() => {
       return () => {
         void flushGoalsTabRef.current({ silent: true });
+        void flushAccountTabRef.current({ silent: true });
       };
     }, [])
   );
+
+  // Restore auto-update preference from last session
+  useEffect(() => {
+    let cancelled = false;
+    void AsyncStorage.getItem(AUTO_UPDATE_KCAL_KEY).then((raw) => {
+      if (cancelled) return;
+      if (raw === '1') setAutoUpdateKcal(true);
+      else if (raw === '0') setAutoUpdateKcal(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (!profile) return <Loading />;
   // Stable non-null alias for closures (flushGoalsTab) so TS keeps the narrow
@@ -259,16 +290,40 @@ export default function Settings() {
     fat: savedProfile.goal_fat != null ? String(savedProfile.goal_fat) : '',
   };
 
+  /** Live macro % for Berekenen disclaimer (matches Macro's screen / default 50/20/30). */
+  const disclaimerMacroPercents = macroPercentsFromGoalFields(goals);
+
   const weightStr =
     weightDraft ??
-    (savedProfile.weight_kg != null && savedProfile.weight_kg > 0 ? String(savedProfile.weight_kg) : '');
+    (savedProfile.weight_kg != null && savedProfile.weight_kg > 0
+      ? formatLocaleMetric(savedProfile.weight_kg)
+      : '');
+  // Height / DOB live on Account; Doelen reads saved profile only (for Mifflin + reminder)
   const heightStr =
-    heightDraft ??
-    (savedProfile.height_cm != null && savedProfile.height_cm > 0 ? String(savedProfile.height_cm) : '');
-  const dobStr = dobDraft ?? savedProfile.date_of_birth ?? '';
+    savedProfile.height_cm != null && savedProfile.height_cm > 0
+      ? formatLocaleMetric(savedProfile.height_cm, 1)
+      : '';
+  const dobStr = savedProfile.date_of_birth ?? '';
   const lichaamWeightKg = parseNum(weightStr);
   const lichaamHeightCm = parseNum(heightStr);
-  const allergenNoneUi = noneChipListState(savedProfile.allergens.length, allergenOptionsExpanded);
+
+  const accountHeightStr =
+    heightDraft ??
+    (savedProfile.height_cm != null && savedProfile.height_cm > 0
+      ? formatLocaleMetric(savedProfile.height_cm, 1)
+      : '');
+  const accountDobStr = dobDraft ?? savedProfile.date_of_birth ?? '';
+  const accountHeightCm = parseNum(accountHeightStr);
+  const accountGender =
+    genderDraft ?? (isGender(savedProfile.gender) ? savedProfile.gender : null);
+  const accountAgeYears = isIsoDate(accountDobStr) ? ageFromDateOfBirth(accountDobStr) : null;
+  const accountHeightMsg = heightFieldMessage(accountHeightStr, accountHeightCm);
+  const accountAgeMsg = ageFieldMessage(accountAgeYears);
+  // Stable Date identities: new Date() each render resets the native DOB spinner mid-scroll
+  const accountDobMaximumDate = useMemo(() => isoToDate(todayIso()), []);
+  const accountDobMinimumDate = useMemo(() => isoToDate(DOB_PICKER_MIN_ISO), []);
+  const allergens = allergensDraft ?? savedProfile.allergens;
+  const allergenNoneUi = noneChipListState(allergens.length, allergenOptionsExpanded);
 
   /** True when the editor draft differs from what is already on the profile. */
   const goalsDirty = goalDraft
@@ -288,39 +343,8 @@ export default function Settings() {
   bodyDraftRef.current = bodyDraft;
 
   /**
-   * Auto Mifflin result: update kcal, keep current macro split, stash calc meta for flush.
-   * No scroll / no immediate save (10s / leave autosave handles DB).
-   */
-  function applyAutoCalculated(payload: { goals: { kcal: number }; body: BodyMetricsDraft }) {
-    const next = goalsFromKcalKeepingSplit(payload.goals.kcal, goalsRef.current);
-    const cur = goalsRef.current;
-    // Skip no-op drafts so autosave / effects do not thrash
-    if (
-      next.kcal === cur.kcal &&
-      next.protein === cur.protein &&
-      next.carbs === cur.carbs &&
-      next.fat === cur.fat
-    ) {
-      const prev = bodyDraftRef.current;
-      if (
-        prev &&
-        prev.date_of_birth === payload.body.date_of_birth &&
-        prev.gender === payload.body.gender &&
-        prev.activity_level === payload.body.activity_level &&
-        prev.weight_goal === payload.body.weight_goal &&
-        prev.weight_kg === payload.body.weight_kg &&
-        prev.height_cm === payload.body.height_cm
-      ) {
-        return;
-      }
-    }
-    setBodyDraft(payload.body);
-    setGoalDraft(next);
-  }
-
-  /**
    * Shared Calorieën box: always keep the current macro %.
-   * Only “Macro's resetten” / Bereken doelen snaps back to 50/20/30.
+   * Only “Macro's resetten” snaps back to 50/20/30 (Bereken keeps the split too).
    * Empty kcal → clear macros and open Berekenen so the user can recalculate.
    */
   function onSharedKcalChange(raw: string) {
@@ -347,8 +371,46 @@ export default function Settings() {
     return norm(a) === norm(b);
   }
 
+  function allergensEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    const sa = [...a].sort();
+    const sb = [...b].sort();
+    return sa.every((k, i) => k === sb[i]);
+  }
+
+  /** True when calculator body meta differs from what is already saved (Doelen-owned fields only). */
+  function bodyMetricsDifferFromProfile(body: BodyMetricsDraft): boolean {
+    // Height / DOB / gender live on Account; ignore them here so Doelen dirty stays accurate
+    if (body.activity_level !== (savedProfile.activity_level ?? null)) return true;
+    if (body.weight_goal !== (savedProfile.weight_goal ?? null)) return true;
+    if (!sameBodyMetric(body.weight_kg, savedProfile.weight_kg)) return true;
+    return false;
+  }
+
   /**
-   * Persist body + goal drafts (leave Doelen, panel switch, 10s interval on Settings).
+   * Auto Mifflin result: update drafts only when kcal/macros or body meta actually differ from profile.
+   * Avoids phantom “Tik om op te slaan” when auto-update echoes the same values.
+   */
+  function applyAutoCalculated(payload: { goals: { kcal: number }; body: BodyMetricsDraft }) {
+    const dirtyBody = bodyMetricsDifferFromProfile(payload.body);
+    // Same maintenance answer as saved → do not rewrite macro grams (rounding noise)
+    if (savedProfile.goal_kcal != null && payload.goals.kcal === savedProfile.goal_kcal && !dirtyBody) {
+      return;
+    }
+    const next = goalsFromKcalKeepingSplit(payload.goals.kcal, goalsRef.current);
+    const dirtyGoals = goalsFieldsDirty(next, {
+      goal_kcal: savedProfile.goal_kcal,
+      goal_carbs: savedProfile.goal_carbs,
+      goal_protein: savedProfile.goal_protein,
+      goal_fat: savedProfile.goal_fat,
+    });
+    if (!dirtyGoals && !dirtyBody) return;
+    if (dirtyBody) setBodyDraft(payload.body);
+    if (dirtyGoals) setGoalDraft(next);
+  }
+
+  /**
+   * Persist body + goal + allergen drafts (leave Doelen, or tap “Tik om op te slaan”).
    * silent: no alerts on network errors; incomplete goals stay visible inline (not only on leave).
    * Skips updateProfile / revisions when nothing actually differs from the profile.
    */
@@ -360,20 +422,10 @@ export default function Settings() {
     try {
       const bodyPatch: Partial<{
         weight_kg: number | null;
-        height_cm: number | null;
-        date_of_birth: string | null;
       }> = {};
       if (weightDraft !== null) {
         const next = lichaamWeightKg > 0 ? lichaamWeightKg : null;
         if (!sameBodyMetric(next, savedProfile.weight_kg)) bodyPatch.weight_kg = next;
-      }
-      if (heightDraft !== null) {
-        const next = lichaamHeightCm > 0 ? lichaamHeightCm : null;
-        if (!sameBodyMetric(next, savedProfile.height_cm)) bodyPatch.height_cm = next;
-      }
-      if (dobDraft !== null) {
-        const next = isIsoDate(dobDraft) ? dobDraft : null;
-        if (next !== (savedProfile.date_of_birth ?? null)) bodyPatch.date_of_birth = next;
       }
 
       let goalPatch = null as ReturnType<typeof goalNumbersFromFields> | typeof NULL_GOAL_NUMBERS | null;
@@ -396,8 +448,7 @@ export default function Settings() {
 
       const calcMeta = bodyDraft
         ? {
-            // DOB lives with body fields; do not let calculator meta overwrite a body draft
-            gender: bodyDraft.gender,
+            // Gender / DOB / height live on Account; Doelen only persists activity + weight goal
             activity_level: bodyDraft.activity_level,
             weight_goal: bodyDraft.weight_goal,
           }
@@ -405,12 +456,10 @@ export default function Settings() {
 
       // Only include calc meta fields that differ from the saved profile
       const calcMetaPatch: Partial<{
-        gender: typeof savedProfile.gender;
         activity_level: typeof savedProfile.activity_level;
         weight_goal: typeof savedProfile.weight_goal;
       }> = {};
       if (calcMeta) {
-        if (calcMeta.gender !== (savedProfile.gender ?? null)) calcMetaPatch.gender = calcMeta.gender;
         if (calcMeta.activity_level !== (savedProfile.activity_level ?? null)) {
           calcMetaPatch.activity_level = calcMeta.activity_level;
         }
@@ -419,10 +468,16 @@ export default function Settings() {
         }
       }
 
+      const allergensPatch =
+        allergensDraft !== null && !allergensEqual(allergensDraft, savedProfile.allergens)
+          ? { allergens: allergensDraft }
+          : null;
+
       const patch = {
         ...bodyPatch,
         ...(goalPatch ?? {}),
         ...calcMetaPatch,
+        ...(allergensPatch ?? {}),
       };
 
       const hasDbWrite = Object.keys(patch).length > 0;
@@ -430,9 +485,8 @@ export default function Settings() {
         // Clear local drafts that matched profile (no network)
         if (goalDraft && !goalsDirty && !goalsBlockedIncomplete) setGoalDraft(null);
         if (weightDraft !== null) setWeightDraft(null);
-        if (heightDraft !== null) setHeightDraft(null);
-        if (dobDraft !== null) setDobDraft(null);
         if (bodyDraft) setBodyDraft(null);
+        if (allergensDraft !== null) setAllergensDraft(null);
         return true;
       }
 
@@ -446,9 +500,8 @@ export default function Settings() {
         setGoalDraft(null);
       }
       if (weightDraft !== null) setWeightDraft(null);
-      if (heightDraft !== null) setHeightDraft(null);
-      if (dobDraft !== null) setDobDraft(null);
       setBodyDraft(null);
+      if (allergensDraft !== null) setAllergensDraft(null);
       return true;
     } finally {
       flushingRef.current = false;
@@ -458,82 +511,58 @@ export default function Settings() {
 
   flushGoalsTabRef.current = flushGoalsTab;
 
+  // Value-based dirty (typing the same saved weight should not keep “Opslaan…”)
+  const weightDirty =
+    weightDraft !== null &&
+    !sameBodyMetric(lichaamWeightKg > 0 ? lichaamWeightKg : null, savedProfile.weight_kg);
+
+  const allergensDirty =
+    allergensDraft !== null && !allergensEqual(allergensDraft, savedProfile.allergens);
+
+  const bodyDirty = bodyDraft != null && bodyMetricsDifferFromProfile(bodyDraft);
+
   const settingsGoalsDirty =
-    goalsDirty ||
-    weightDraft !== null ||
-    heightDraft !== null ||
-    dobDraft !== null ||
-    bodyDraft != null;
+    goalsDirty || weightDirty || bodyDirty || allergensDirty;
   settingsGoalsDirtyRef.current = settingsGoalsDirty;
+
+  const accountBodyDirty =
+    (heightDraft !== null &&
+      !sameBodyMetric(accountHeightCm > 0 ? accountHeightCm : null, savedProfile.height_cm)) ||
+    (dobDraft !== null &&
+      (isIsoDate(accountDobStr) ? accountDobStr : null) !== (savedProfile.date_of_birth ?? null)) ||
+    (genderDraft !== null && genderDraft !== (savedProfile.gender ?? null));
+
+  /** Name + body drafts (not username/email: those need password confirm). */
+  const accountDraftDirty = fullNameDirty || accountBodyDirty;
+
+  const needsAccountBody =
+    !(lichaamHeightCm > 0) || !isIsoDate(dobStr) || !isGender(savedProfile.gender);
 
   /** Partial goal draft (e.g. empty protein while typing) - show inline, not only on leave Alert. */
   const goalsIncomplete =
     goalDraft != null && !goalsFieldsAllEmpty(goalDraft) && !goalsFieldsComplete(goalDraft);
 
-  // Reset 10→1 countdown whenever drafts change; pause while a flush is running.
-  // Counts to 0 as a nudge only - does not call flush (tap or leave does).
-  const goalsDirtyFingerprint = [
-    goalDraft?.kcal ?? '',
-    goalDraft?.protein ?? '',
-    goalDraft?.carbs ?? '',
-    goalDraft?.fat ?? '',
-    weightDraft ?? '',
-    heightDraft ?? '',
-    dobDraft ?? '',
-    bodyDraft?.date_of_birth ?? '',
-    bodyDraft?.gender ?? '',
-    bodyDraft?.activity_level ?? '',
-    bodyDraft?.weight_goal ?? '',
-    bodyDraft?.weight_kg ?? '',
-    bodyDraft?.height_cm ?? '',
-    goalsIncomplete ? '1' : '0',
-  ].join('|');
-
-  useEffect(() => {
-    if (flushingGoals) return;
-    if (!(settingsGoalsDirty || goalsIncomplete)) {
-      setSaveCountdown(null);
-      return;
-    }
-    setSaveCountdown(GOALS_AUTOSAVE_SEC);
-    const id = setInterval(() => {
-      setSaveCountdown((c) => {
-        if (c == null || c <= 1) return 0;
-        return c - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [settingsGoalsDirty, goalsIncomplete, goalsDirtyFingerprint, flushingGoals]);
-
   /*
-   * When Berekenen is closed, still auto-recalc from Mijn lichaam + saved/calc meta.
-   * (Open Berekenen panel: GoalCalculator owns the debounced auto path.)
+   * Single auto-update path (open or closed Berekenen): shared buildGoalCalcInput + applyAutoCalculated.
+   * GoalCalculator only hides the Bereken button when autoUpdate is on.
    */
   useEffect(() => {
-    if (!autoUpdateKcal || goalsPanel === 'calc') return;
+    if (!autoUpdateKcal) return;
     const timer = setTimeout(() => {
       const draft = bodyDraftRef.current;
       const dateOfBirth = isIsoDate(dobStr)
         ? dobStr
         : draft?.date_of_birth ?? savedProfile.date_of_birth;
-      if (!isIsoDate(dateOfBirth)) return;
-      const ageYears = ageFromDateOfBirth(dateOfBirth);
-      if (ageYears == null || !(ageYears > 0)) return;
-      if (!(lichaamWeightKg > 0) || !(lichaamHeightCm > 0)) return;
-
-      const genderRaw = draft?.gender ?? savedProfile.gender;
-      const activityRaw = draft?.activity_level ?? savedProfile.activity_level;
-      const weightGoalRaw = draft?.weight_goal ?? savedProfile.weight_goal;
-      if (!isGender(genderRaw) || !isActivityLevel(activityRaw) || !isWeightGoal(weightGoalRaw)) return;
-
-      const result = calculateDailyGoals({
+      const input = buildGoalCalcInput({
         weightKg: lichaamWeightKg,
         heightCm: lichaamHeightCm,
-        ageYears,
-        gender: genderRaw,
-        activity: activityRaw,
-        weightGoal: weightGoalRaw,
+        dateOfBirth,
+        gender: draft?.gender ?? savedProfile.gender,
+        activity: draft?.activity_level ?? savedProfile.activity_level,
+        weightGoal: draft?.weight_goal ?? savedProfile.weight_goal,
       });
+      if (!input || !dateOfBirth) return;
+      const result = calculateDailyGoals(input);
       if (!result) return;
       applyAutoCalculated({
         goals: result,
@@ -541,53 +570,132 @@ export default function Settings() {
           date_of_birth: dateOfBirth,
           height_cm: lichaamHeightCm,
           weight_kg: lichaamWeightKg,
-          gender: genderRaw,
-          activity_level: activityRaw,
-          weight_goal: weightGoalRaw,
+          gender: input.gender,
+          activity_level: input.activity,
+          weight_goal: input.weightGoal,
         },
       });
     }, 350);
     return () => clearTimeout(timer);
   }, [
     autoUpdateKcal,
-    goalsPanel,
     weightStr,
     heightStr,
     dobStr,
     lichaamWeightKg,
     lichaamHeightCm,
+    bodyDraft,
     savedProfile.date_of_birth,
     savedProfile.gender,
     savedProfile.activity_level,
     savedProfile.weight_goal,
   ]);
 
+  /** Chip edits from GoalCalculator → bodyDraft so leave/tap-save cannot drop them. */
+  function onCalcMetaChange(meta: {
+    gender: Gender;
+    activity_level: NonNullable<BodyMetricsDraft['activity_level']>;
+    weight_goal: NonNullable<BodyMetricsDraft['weight_goal']>;
+  }) {
+    const next: BodyMetricsDraft = {
+      date_of_birth: isIsoDate(dobStr) ? dobStr : savedProfile.date_of_birth ?? '',
+      height_cm: lichaamHeightCm > 0 ? lichaamHeightCm : savedProfile.height_cm ?? 0,
+      weight_kg: lichaamWeightKg > 0 ? lichaamWeightKg : savedProfile.weight_kg ?? 0,
+      gender: meta.gender,
+      activity_level: meta.activity_level,
+      weight_goal: meta.weight_goal,
+    };
+    if (!bodyMetricsDifferFromProfile(next)) {
+      setBodyDraft(null);
+      return;
+    }
+    setBodyDraft(next);
+  }
+
   async function selectSection(next: SettingsSection) {
     if (section === 'goals' && next !== 'goals') {
       const ok = await flushGoalsTab();
       if (!ok) return;
     }
+    if (section === 'account' && next !== 'account') {
+      const ok = await flushAccountTab();
+      if (!ok) return;
+    }
     setSection(next);
   }
 
-  /** Switch Berekenen / Macro's; flush dirty drafts first so nothing is lost. */
-  async function selectGoalsPanel(next: 'calc' | 'macros' | null) {
-    if (settingsGoalsDirty) {
-      const ok = await flushGoalsTab();
-      if (!ok) return;
-    }
+  /** Switch Berekenen / Macro's without flushing mid-edit (leave / tap save persists). */
+  function selectGoalsPanel(next: 'calc' | 'macros' | null) {
     setGoalsPanel(next);
   }
 
-  async function saveFullName() {
-    const trimmed = fullName.trim();
-    const { error } = await updateProfile({ full_name: trimmed || null });
-    if (error) {
-      Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
-      return;
-    }
-    setFullNameDraft(null);
+  function setAutoUpdatePreference(next: boolean) {
+    setAutoUpdateKcal(next);
+    void AsyncStorage.setItem(AUTO_UPDATE_KCAL_KEY, next ? '1' : '0');
   }
+
+  /*
+   * SECTION: Account draft flush (full name + gender/height/DOB)
+   * WHAT: Same tap-save / leave pattern as Doelen (no per-field Opslaan).
+   * HOW: Username/email/password keep their own Save (password confirm).
+   */
+  const flushingAccountRef = useRef(false);
+  async function flushAccountTab(opts?: { silent?: boolean }): Promise<boolean> {
+    if (flushingAccountRef.current) return true;
+    flushingAccountRef.current = true;
+    setFlushingAccount(true);
+    const silent = opts?.silent === true;
+    try {
+      if (accountHeightMsg?.severity === 'hard') {
+        if (!silent) Alert.alert(t('common.error'), t('goalsCalc.invalid'));
+        return false;
+      }
+
+      const patch: {
+        full_name?: string | null;
+        height_cm?: number | null;
+        date_of_birth?: string | null;
+        gender?: Gender | null;
+      } = {};
+
+      if (fullNameDirty) {
+        patch.full_name = fullName.trim() || null;
+      }
+      if (accountBodyDirty) {
+        patch.height_cm = accountHeightCm > 0 ? accountHeightCm : null;
+        patch.date_of_birth = isIsoDate(accountDobStr) ? accountDobStr : null;
+        patch.gender = accountGender;
+      }
+
+      if (Object.keys(patch).length === 0) {
+        if (fullNameDraft !== null && !fullNameDirty) setFullNameDraft(null);
+        if (heightDraft !== null || dobDraft !== null || genderDraft !== null) {
+          setHeightDraft(null);
+          setDobDraft(null);
+          setGenderDraft(null);
+          setAccountHeightConfirmed(false);
+        }
+        return true;
+      }
+
+      const { error } = await updateProfile(patch);
+      if (error) {
+        if (!silent) Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
+        return false;
+      }
+      setFullNameDraft(null);
+      setHeightDraft(null);
+      setDobDraft(null);
+      setGenderDraft(null);
+      setAccountHeightConfirmed(false);
+      return true;
+    } finally {
+      flushingAccountRef.current = false;
+      setFlushingAccount(false);
+    }
+  }
+
+  flushAccountTabRef.current = flushAccountTab;
 
   async function saveUsername() {
     const clean = sanitizeUsernameInput(username);
@@ -710,20 +818,19 @@ export default function Settings() {
   }
 
   function toggleAllergen(key: string) {
-    const cur = profile!.allergens;
+    const cur = allergensDraft ?? savedProfile.allergens;
     const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key];
     setAllergenOptionsExpanded(true);
-    updateProfile({ allergens: next });
+    setAllergensDraft(next);
   }
 
   /** Niets: clear + hide EU pills. While Niets is active, use “…” to expand again. */
   function toggleAllergensNone() {
-    const { noneActive } = noneChipListState(profile!.allergens.length, allergenOptionsExpanded);
+    const { noneActive } = noneChipListState(allergens.length, allergenOptionsExpanded);
     if (noneActive) return;
     setAllergenOptionsExpanded(false);
-    if (profile!.allergens.length > 0) {
-      updateProfile({ allergens: [] });
-    }
+    // Only draft a clear when something would actually change
+    if (allergens.length > 0) setAllergensDraft([]);
   }
 
   function expandAllergenOptions() {
@@ -802,10 +909,8 @@ export default function Settings() {
     >
       {/*
        * SECTION: Settings header menu
-       * WHAT: Switch between Account / Preferences / Privacy / About panels.
+       * WHAT: Switch between Doelen / Preferences / Account / Privacy / About panels.
        * HOW: Same segmented control pattern as Reports day/week switcher.
-       * INPUT: local `section` state
-       * OUTPUT: only the matching panel renders below
        */}
       <View style={styles.switcher}>
         {SETTINGS_SECTIONS.map((s) => (
@@ -823,11 +928,24 @@ export default function Settings() {
 
       {section === 'account' ? (
         <>
+          <View style={styles.goalsSaveTopBar}>
+            {accountDraftDirty || flushingAccount ? (
+              <SettingsSavePendingButton
+                busy={flushingAccount}
+                label={t('settings.goalsTapToSave')}
+                onPress={() => {
+                  void flushAccountTab();
+                }}
+              />
+            ) : (
+              <SettingsSavedLabel label={t('settings.goalsSaved')} />
+            )}
+          </View>
           <SectionTitle>{t('settings.profile')}</SectionTitle>
           {/*
-           * SECTION: Username (inline draft + password confirm when dirty)
-           * WHAT: Edit username in-place; re-auth before profiles update.
-           * HOW: When dirty → ask current password → signInWithPassword → updateProfile
+           * SECTION: Account identity + body (one continuous layout)
+           * WHAT: Username → name → email → password → gender/height/DOB/age → sign out.
+           * HOW: Name + body drafts → tap-save / leave (same as Doelen). Username/email need password.
            */}
           <Field
             label={t('settings.username')}
@@ -867,13 +985,7 @@ export default function Settings() {
             textContentType="name"
             placeholder={t('settings.fullNameOptional')}
           />
-          {fullNameDirty && <Button title={t('common.save')} onPress={saveFullName} />}
 
-          {/*
-           * SECTION: Email (inline like username / full name)
-           * WHAT: Edit email in-place; confirm-to-new-address via Supabase deep link.
-           * HOW: When dirty → ask current password → updateUser({ email }, { emailRedirectTo })
-           */}
           <Field
             label={t('settings.email')}
             value={email}
@@ -903,13 +1015,6 @@ export default function Settings() {
             </>
           ) : null}
 
-          {/*
-           * SECTION: Change password (collapsible, same pattern as GoalCalculator)
-           * WHAT: Signed-in password update with current-password challenge.
-           * HOW: tap toggle → fields in card; signInWithPassword → updateUser({ password })
-           * INPUT: current + new + confirm password
-           * OUTPUT: auth password updated, or Alert on validation / re-auth failure
-           */}
           <View style={styles.disclosureWrap}>
             <Text style={styles.disclosureToggle} onPress={() => setPasswordOpen((v) => !v)}>
               {passwordOpen ? t('settings.hideChangePassword') : t('settings.changePassword')}
@@ -947,6 +1052,58 @@ export default function Settings() {
               </View>
             ) : null}
           </View>
+
+          <Text style={styles.prefLabel}>{t('goalsCalc.gender')}</Text>
+          <View style={styles.row}>
+            {GENDERS.map((g) => (
+              <Chip
+                key={g}
+                label={t(`goalsCalc.gender_${g}`)}
+                active={accountGender === g}
+                onPress={() => setGenderDraft(g)}
+              />
+            ))}
+          </View>
+          <Field
+            label={t('goalsCalc.height')}
+            value={accountHeightStr}
+            onChangeText={(v) => {
+              setAccountHeightConfirmed(false);
+              setHeightDraft(v);
+            }}
+            onBlur={() => setAccountHeightConfirmed(true)}
+            keyboardType="decimal-pad"
+          />
+          {/* Soft height always when unusual; hard only after blur (same honesty as Doelen). */}
+          {accountHeightMsg?.severity === 'soft' ||
+          (accountHeightConfirmed && accountHeightMsg?.severity === 'hard') ? (
+            <Text
+              style={
+                accountHeightMsg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft
+              }
+            >
+              {t(accountHeightMsg.key)}
+            </Text>
+          ) : null}
+          <NativeDatePicker
+            label={t('goalsCalc.dateOfBirth')}
+            value={isIsoDate(accountDobStr) ? accountDobStr : DOB_PICKER_FALLBACK_ISO}
+            onChange={(iso) => setDobDraft(iso)}
+            dateFormat={dateFormat}
+            maximumDate={accountDobMaximumDate}
+            minimumDate={accountDobMinimumDate}
+          />
+          <View style={styles.readOnlyField}>
+            <Text style={styles.readOnlyLabel}>{t('goalsCalc.age')}</Text>
+            <Text style={styles.readOnlyValue}>
+              {accountAgeYears != null && accountAgeYears >= 0 ? String(accountAgeYears) : ''}
+            </Text>
+          </View>
+          {accountAgeMsg ? (
+            <Text style={accountAgeMsg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft}>
+              {t(accountAgeMsg.key)}
+            </Text>
+          ) : null}
 
           <View style={{ height: spacing.xl }} />
           <Button title={t('settings.signOut')} variant="secondary" onPress={() => supabase.auth.signOut()} />
@@ -993,9 +1150,22 @@ export default function Settings() {
         <>
           {/*
            * SECTION: Mijn behoefte (weight + kcal + Berekenen/Macro's)
-           * WHAT: One section: weight, shared kcal, auto-update, then mode chips + panels.
-           * HOW: Height/DOB live inside Berekenen. Save via leading “Opslaan in Ns” tap / leave.
+           * WHAT: Save status (below menu) then weight, shared kcal, auto-update, chips + panels.
+           * HOW: Gender/height/DOB on Account. Tap save status or leave to flush (including Bereken drafts).
            */}
+          <View style={styles.goalsSaveTopBar}>
+            {settingsGoalsDirty || goalsIncomplete || flushingGoals ? (
+              <SettingsSavePendingButton
+                busy={flushingGoals}
+                label={t('settings.goalsTapToSave')}
+                onPress={() => {
+                  void flushGoalsTab();
+                }}
+              />
+            ) : (
+              <SettingsSavedLabel label={t('settings.goalsSaved')} />
+            )}
+          </View>
           <View
             collapsable={false}
             onLayout={(e) => {
@@ -1003,25 +1173,6 @@ export default function Settings() {
             }}
           >
             <Text style={styles.goalsSectionTitle}>{t('settings.goals')}</Text>
-            {/* Fixed slot: always Opgeslagen or Opslaan in Xs (no layout jump while saving) */}
-            <View style={styles.goalsSaveSlot}>
-              {settingsGoalsDirty || goalsIncomplete || flushingGoals ? (
-                <GoalsSavePendingButton
-                  busy={flushingGoals}
-                  label={t('settings.goalsSaveInSeconds', {
-                    seconds:
-                      saveCountdown != null && saveCountdown > 0
-                        ? saveCountdown
-                        : GOALS_AUTOSAVE_SEC,
-                  })}
-                  onPress={() => {
-                    void flushGoalsTab();
-                  }}
-                />
-              ) : (
-                <GoalsSavedLabel label={t('settings.goalsSaved')} />
-              )}
-            </View>
             <Text style={styles.goalsHint}>{t('settings.goalsHint')}</Text>
             {goalsIncomplete ? (
               <Text style={styles.goalsIncompleteHint}>{t('goalsCalc.goalsIncomplete')}</Text>
@@ -1036,7 +1187,7 @@ export default function Settings() {
               setWeightDraft(v);
             }}
             onBlur={() => setWeightFieldConfirmed(true)}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
           />
           {weightFieldConfirmed
             ? (() => {
@@ -1055,9 +1206,18 @@ export default function Settings() {
             onChangeText={onSharedKcalChange}
             keyboardType="numeric"
           />
+          {needsAccountBody ? (
+            <Text
+              style={styles.bodyMetricsReminder}
+              onPress={() => selectSection('account')}
+              accessibilityRole="link"
+            >
+              {t('settings.bodyMetricsReminder')}
+            </Text>
+          ) : null}
           <Pressable
             style={styles.autoUpdateRow}
-            onPress={() => setAutoUpdateKcal((v) => !v)}
+            onPress={() => setAutoUpdatePreference(!autoUpdateKcal)}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: autoUpdateKcal }}
           >
@@ -1066,9 +1226,14 @@ export default function Settings() {
             </View>
             <Text style={styles.autoUpdateLabel}>{t('settings.autoUpdateKcal')}</Text>
           </Pressable>
-          {autoUpdateKcal &&
-          (!(lichaamHeightCm > 0) || !isIsoDate(dobStr)) ? (
-            <Text style={styles.autoUpdateNeedsBody}>{t('goalsCalc.autoUpdateNeedsBody')}</Text>
+          {autoUpdateKcal && needsAccountBody ? (
+            <Text
+              style={styles.autoUpdateNeedsBody}
+              onPress={() => selectSection('account')}
+              accessibilityRole="link"
+            >
+              {t('goalsCalc.autoUpdateNeedsBody')}
+            </Text>
           ) : null}
 
           <View style={styles.goalModeRow}>
@@ -1090,53 +1255,31 @@ export default function Settings() {
               weightText={weightStr}
               heightText={heightStr}
               onWeightTextChange={setWeightDraft}
-              onHeightTextChange={setHeightDraft}
               dobText={dobStr}
-              onDobTextChange={setDobDraft}
               hideWeightField
+              hideHeightAndDob
+              macroPercents={disclaimerMacroPercents}
               showToggle={false}
               open
               hideResultKcal
               autoUpdate={autoUpdateKcal}
-              onAutoCalculated={applyAutoCalculated}
-              onCalculated={async ({ goals: calcGoals, body }) => {
-                setSavingBody(true);
-                const styled = goalsFromPercents(calcGoals.kcal);
+              onCalcMetaChange={onCalcMetaChange}
+              onCalculated={({ goals: calcGoals, body }) => {
+                // Draft only: same tap-save / leave flush as weight, macros, allergens
+                const styled = goalsFromKcalKeepingSplit(calcGoals.kcal, goalsRef.current);
                 setGoalDraft(styled);
                 setBodyDraft(body);
-                setMacroPercentResetKey((k) => k + 1);
-                const goalPatch = goalNumbersFromFields(styled);
-                // Weight lives above; calculator updates goals + height/DOB/gender/activity/goal
-                const patch = {
-                  ...goalPatch,
-                  date_of_birth: body.date_of_birth,
-                  gender: body.gender,
-                  activity_level: body.activity_level,
-                  weight_goal: body.weight_goal,
-                };
-                const { error } = await updateProfile(patch);
-                setSavingBody(false);
-                if (error) {
-                  Alert.alert(t('common.error'), profileSaveErrorMessage(error, t));
-                  return;
-                }
-                await upsertTodayGoalRevision(goalPatch);
-                setGoalDraft(null);
-                setBodyDraft(null);
-                setDobDraft(null);
+                if (body.weight_kg > 0) setWeightDraft(formatLocaleMetric(body.weight_kg));
                 scrollToNeedsSection();
               }}
             />
           ) : null}
-          {savingBody ? <Text style={styles.disclaimer}>{t('common.loading')}</Text> : null}
           {goalsPanel === 'macros' ? (
             <GoalMacroEditor
               ref={macroEditorRef}
-              key={`macro-editor-${macroPercentResetKey}`}
               value={goals}
               onChange={onGoalsChange}
               weightKg={lichaamWeightKg > 0 ? lichaamWeightKg : 0}
-              percentResetKey={macroPercentResetKey}
               hideKcalField
             />
           ) : null}
@@ -1144,8 +1287,8 @@ export default function Settings() {
           <Text style={styles.goalsHint}>{t('settings.myAllergensHint')}</Text>
           {/*
            * SECTION: Allergen chips (Niets collapse)
-           * WHAT: Niets clears + hides EU-14; “…” next to Niets expands the row again.
-           * HOW: noneChipListState(selected, expanded)
+           * WHAT: Niets clears + hides EU-14; “…” expands again. Draft until tap-save / leave.
+           * HOW: allergensDraft → flushGoalsTab; noneChipListState(selected, expanded)
            * Halal/vegan later: separate “I eat …” toggles on this row, not a second Niets.
            */}
           <View style={styles.row}>
@@ -1166,7 +1309,7 @@ export default function Settings() {
                   <Chip
                     key={key}
                     label={t(`allergens.${key}`)}
-                    active={profile.allergens.includes(key)}
+                    active={allergens.includes(key)}
                     onPress={() => toggleAllergen(key)}
                   />
                 ))
@@ -1238,6 +1381,13 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  goalsSaveTopBar: {
+    minHeight: 22,
+    marginBottom: spacing.s,
+    marginTop: spacing.xs,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   switcher: {
     flexDirection: 'row',
     backgroundColor: colors.card,
@@ -1259,12 +1409,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginTop: spacing.s,
     marginBottom: spacing.xs,
-  },
-  goalsSaveSlot: {
-    minHeight: 22,
-    marginBottom: spacing.s,
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
   },
   goalsSaveStatusRow: {
     flexDirection: 'row',
@@ -1309,6 +1453,28 @@ const styles = StyleSheet.create({
     color: colors.danger,
     lineHeight: 18,
     marginBottom: spacing.s,
+  },
+  bodyMetricsReminder: {
+    fontSize: 13,
+    color: colors.primaryDark,
+    fontWeight: '600',
+    lineHeight: 18,
+    marginTop: -spacing.s,
+    marginBottom: spacing.m,
+  },
+  // Age derived from DOB: plain text, not a fake disabled input
+  readOnlyField: { marginBottom: spacing.m },
+  readOnlyLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.muted,
+    marginBottom: spacing.xs,
+  },
+  readOnlyValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    lineHeight: 22,
   },
   fieldHard: {
     fontSize: 12,

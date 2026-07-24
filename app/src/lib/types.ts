@@ -22,9 +22,7 @@ export type Profile = {
   weight_kg: number | null;
   gender: 'male' | 'female' | 'other' | null;
   activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active' | null;
-  weight_goal: 'lose' | 'maintain' | 'gain' | null;
-  /** Legacy column from migration 019; unused by UI after unified % editor. */
-  goal_macro_mode?: string | null;
+  weight_goal: 'lose_fast' | 'lose' | 'maintain' | 'gain' | 'gain_fast' | null;
   allergens: string[];
   onboarded: boolean;
   /** Set when soft-delete requested; purge after 30 days (migration 017). */

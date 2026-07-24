@@ -79,7 +79,7 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 
 **Plan:** `[plans/v0.4.1-macro-modes.md](plans/v0.4.1-macro-modes.md)`
 
-**Status:** Shipped, then **superseded** by a unified % editor (default 50/20/30; no mode chips). `goal_macro_mode` column unused by UI. See `docs/context/protein-g-per-kg.md` for deferred g/kg calculator ideas.
+**Status:** Shipped, then **superseded** by a unified % editor (default 50/20/30; no mode chips). Column `goal_macro_mode` dropped in migration `021`. See `docs/context/protein-g-per-kg.md` for deferred g/kg calculator ideas.
 
 **Progress (historical):**
 
