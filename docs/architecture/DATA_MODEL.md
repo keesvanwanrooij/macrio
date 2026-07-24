@@ -38,7 +38,7 @@ product_versions ── allergen fields (EU-14)
 
 Email addresses are unique per account via **Supabase Auth** (`auth.users.email`).
 
-**GDPR (v0.3.0):** `delete_account()` soft-deletes (sets `deletion_requested_at`, bans auth user). Edge cron `purge-deleted-accounts` calls `purge_due_deleted_accounts()` after 30 days (hard-deletes `auth.users`; personal rows cascade; `products.created_by` / `product_versions.edited_by` become null). `export_my_data()` returns JSON for in-app download (profile, diary, goal_revisions, feedback).
+**GDPR (v0.3.0 + 022):** `delete_account()` soft-deletes (sets `deletion_requested_at`, bans auth user), **and immediately frees email + username** (scrambles `auth.users` / identities so re-register works). Edge cron `purge-deleted-accounts` calls `purge_due_deleted_accounts()` after 30 days (hard-deletes `auth.users`; personal rows cascade; `products.created_by` / `product_versions.edited_by` become null). `export_my_data()` returns JSON for in-app download (profile, diary, goal_revisions, feedback).
 
 ### goal_revisions (historical goals for reports)
 | column | type | notes |

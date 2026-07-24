@@ -99,7 +99,21 @@ export type SignInFailure =
   | 'not_found'
   | 'invalid_credentials'
   | 'email_not_confirmed'
+  | 'account_deleted'
   | 'unknown';
+
+/** Soft-delete / ban messages from Auth or ensure_own_profile (migration 022). */
+export function isAccountDeletedAuthError(message: string | null | undefined): boolean {
+  if (!message) return false;
+  const m = message.toLowerCase();
+  return (
+    m.includes('account_deleted') ||
+    m.includes('user is banned') ||
+    m.includes('user_banned') ||
+    m.includes('user has been banned') ||
+    m.includes('banned')
+  );
+}
 
 /** Map Supabase Auth sign-in errors to stable app keys. */
 export function classifySignInError(message: string): SignInFailure {
@@ -109,6 +123,9 @@ export function classifySignInError(message: string): SignInFailure {
   }
   if (m.includes('email not confirmed')) {
     return 'email_not_confirmed';
+  }
+  if (isAccountDeletedAuthError(m)) {
+    return 'account_deleted';
   }
   return 'unknown';
 }

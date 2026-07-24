@@ -1,9 +1,9 @@
 /*
  * SECTION: Diary macro summary header
  * WHAT: Overview (all 4 macros + progress) or focus (one big macro).
- * HOW: Overview: tap = show/hide goal numbers under bars (persisted);
- *      long-press → focus. Focus: tap/swipe next macro; long-press → overview;
- *      always shows "Doel: …" right-aligned on the same row as the nav dots.
+ * HOW: Overview: tap = show/hide goal numbers under bars (persisted).
+ *      Focus: double-tap = same show/hide; tap/swipe = next macro; long-press → overview.
+ *      Default: goals hidden until the user reveals them once (preference remembered).
  * INPUT: totals, profile, onToggleMode
  * OUTPUT: Card UI
  */
@@ -21,7 +21,7 @@ import { ProgressBar } from './ProgressBar'; // shared with reports day bars
 
 const MACROS = ['kcal', 'carbs', 'protein', 'fat'] as const;
 
-/** Persist overview "show goals under bars" across app restarts. */
+/** Persist show/hide of diary goal amounts (overview under bars + focus “Doel:”). */
 const SHOW_GOALS_KEY = '@macrio/diary_show_overview_goals';
 
 function goalFor(profile: Profile, key: MacroKey): number | null {
@@ -96,6 +96,7 @@ export function MacroSummary({
   const { width } = useWindowDimensions();
   const compactLabels = width < MACRO_COMPACT_WIDTH;
   const [focusIdx, setFocusIdx] = useState(0);
+  // Hidden until AsyncStorage says the user previously revealed goals
   const [showGoals, setShowGoals] = useState(false);
   const [goalsReady, setGoalsReady] = useState(false);
 
@@ -104,13 +105,13 @@ export function MacroSummary({
     onFocusMacroChange?.(MACROS[focusIdx]);
   }, [focusIdx, onFocusMacroChange]);
 
-  // Step 1: Restore last show/hide choice (survives app kill)
+  // Restore last show/hide choice (missing key = hidden for first install)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(SHOW_GOALS_KEY);
-        if (!cancelled && raw === '1') setShowGoals(true);
+        if (!cancelled) setShowGoals(raw === '1');
       } finally {
         if (!cancelled) setGoalsReady(true);
       }
@@ -152,6 +153,14 @@ export function MacroSummary({
         goNext();
       });
 
+    // Same preference as overview tap-reveal (does not steal single-tap macro cycle)
+    const doubleTap = Gesture.Tap()
+      .numberOfTaps(2)
+      .runOnJS(true)
+      .onEnd(() => {
+        if (goalsReady) toggleShowGoals();
+      });
+
     const longPress = Gesture.LongPress()
       .minDuration(400)
       .runOnJS(true)
@@ -159,8 +168,8 @@ export function MacroSummary({
         onToggleMode();
       });
 
-    return Gesture.Exclusive(longPress, pan, tap);
-  }, [goNext, goPrev, onToggleMode]);
+    return Gesture.Exclusive(longPress, pan, doubleTap, tap);
+  }, [goNext, goPrev, onToggleMode, goalsReady, toggleShowGoals]);
 
   if (profile.macro_display === 'focus') {
     const key = MACROS[focusIdx];
@@ -178,7 +187,12 @@ export function MacroSummary({
           ) : null}
           {d.goal != null ? (
             <View style={styles.focusBarWrap}>
-              <ProgressBar consumed={d.consumed} goal={d.goal} overTone="soft" />
+              <ProgressBar
+                consumed={d.consumed}
+                goal={d.goal}
+                overTone="soft"
+                showMarker={showGoals}
+              />
             </View>
           ) : null}
           <View style={styles.focusFooter}>
@@ -187,7 +201,7 @@ export function MacroSummary({
                 <View key={m} style={[styles.dot, i === focusIdx && styles.dotActive]} />
               ))}
             </View>
-            {d.goal != null ? (
+            {showGoals && d.goal != null ? (
               <Text style={styles.focusGoalFooter}>
                 {t('macros.goalWithAmount', { amount: formatGoalAmount(key, d.goal) })}
               </Text>
@@ -245,7 +259,12 @@ export function MacroSummary({
               ) : null}
               <View style={styles.cellBarSlot}>
                 {d.goal != null ? (
-                  <ProgressBar consumed={d.consumed} goal={d.goal} overTone="soft" />
+                  <ProgressBar
+                    consumed={d.consumed}
+                    goal={d.goal}
+                    overTone="soft"
+                    showMarker={showGoals}
+                  />
                 ) : (
                   <View style={styles.barSpacer} />
                 )}

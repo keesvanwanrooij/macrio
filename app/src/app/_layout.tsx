@@ -1,7 +1,6 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import '../lib/i18n';
@@ -9,17 +8,16 @@ import { Sentry } from '../lib/sentry';
 import { isPasswordRecoveryPending, setPasswordRecoveryPending } from '../lib/passwordRecovery';
 import { SessionProvider, useSession } from '../lib/session';
 import { supabase } from '../lib/supabase';
-import { colors, spacing } from '../lib/theme';
+import { colors } from '../lib/theme';
 import { useAuthDeepLinkHandler } from '../lib/useAuthDeepLinkHandler';
-import { Button, Loading } from '../components/ui';
+import { Loading } from '../components/ui';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function RootNavigator() {
-  const { session, profile, profileError, loading, refreshProfile } = useSession();
+  const { session, profile, loading } = useSession();
   const segments = useSegments();
   const router = useRouter();
   const { t } = useTranslation();
-  const [retrying, setRetrying] = useState(false);
   const [, bump] = useState(0);
 
   // Password-reset emails must work even if expo-router never mounts /auth/callback.
@@ -64,27 +62,10 @@ function RootNavigator() {
 
   if (loading) return <Loading />;
 
-  // Session exists but profile missing (orphan auth user). Offer retry / sign out.
-  // Skip during password recovery (session exists only to update password).
+  // Profile still loading/repairing after auth (should be rare with applySession order).
+  // Keep a spinner - do not bounce to welcome mid sign-up.
   if (session && !profile && !isPasswordRecoveryPending()) {
-    return (
-      <View style={styles.repair}>
-        <Text style={styles.repairTitle}>{t('auth.profileMissingTitle')}</Text>
-        <Text style={styles.repairBody}>{t('auth.profileMissingBody')}</Text>
-        {profileError ? <Text style={styles.repairDetail}>{profileError}</Text> : null}
-        <Button
-          title={t('common.retry')}
-          loading={retrying}
-          onPress={async () => {
-            setRetrying(true);
-            await refreshProfile();
-            setRetrying(false);
-          }}
-        />
-        <View style={{ height: spacing.m }} />
-        <Button title={t('settings.signOut')} variant="secondary" onPress={() => supabase.auth.signOut()} />
-      </View>
-    );
+    return <Loading />;
   }
 
   return (
@@ -124,32 +105,4 @@ export default Sentry.wrap(function RootLayout() {
       </SessionProvider>
     </GestureHandlerRootView>
   );
-});
-
-const styles = StyleSheet.create({
-  repair: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  repairTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: spacing.s,
-  },
-  repairBody: {
-    fontSize: 15,
-    color: colors.muted,
-    lineHeight: 21,
-    marginBottom: spacing.m,
-  },
-  repairDetail: {
-    fontSize: 12,
-    color: colors.faint,
-    lineHeight: 17,
-    marginBottom: spacing.xl,
-    fontFamily: 'monospace',
-  },
 });

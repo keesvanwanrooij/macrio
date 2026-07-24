@@ -30,7 +30,6 @@ import {
   bodyMetricsToProfilePatch,
   EMPTY_GOAL_FIELDS,
   NULL_GOAL_NUMBERS,
-  goalFieldsFromKcalInput,
   goalNumbersFromFields,
   goalsFieldsAllEmpty,
   goalsFieldsComplete,
@@ -124,12 +123,6 @@ export default function Onboarding() {
   }
 
   const allergenNoneUi = noneChipListState(selected.length, allergenOptionsExpanded);
-
-  function onSharedKcalChange(raw: string) {
-    const next = goalFieldsFromKcalInput(raw, goals);
-    if (!next) return;
-    setGoals(next);
-  }
 
   function goNext() {
     if (stepIndex < STEPS.length - 1) setStepIndex((i) => i + 1);
@@ -248,8 +241,8 @@ export default function Onboarding() {
               onBlur={() => setHeightConfirmed(true)}
               keyboardType="decimal-pad"
             />
-            {heightMsg?.severity === 'soft' ||
-            (heightConfirmed && heightMsg?.severity === 'hard') ? (
+            {/* Soft + hard only after blur (same as Settings Doelen weight). */}
+            {heightConfirmed && heightMsg ? (
               <Text style={heightMsg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft}>
                 {t(heightMsg.key)}
               </Text>
@@ -303,12 +296,6 @@ export default function Onboarding() {
                   );
                 })()
               : null}
-            <Field
-              label={t('settings.goalKcal')}
-              value={goals.kcal}
-              onChangeText={onSharedKcalChange}
-              keyboardType="numeric"
-            />
             <Text style={styles.hint}>{t('onboarding.needsCalcHint')}</Text>
             <GoalCalculator
               profile={calcProfile}
@@ -321,6 +308,8 @@ export default function Onboarding() {
               showToggle={false}
               open
               hideResultKcal
+              emitLiveCalculated
+              hideActivityTip
               macroPercents={disclaimerMacroPercents}
               onCalcMetaChange={(meta) => {
                 setGenderDraft(meta.gender);
@@ -334,9 +323,9 @@ export default function Onboarding() {
                 });
               }}
               onCalculated={({ goals: calcGoals, body }) => {
-                setGoals(goalsFromKcalKeepingSplit(calcGoals.kcal, goals));
+                // Keep current macro %; weight field stays parent-owned (avoid locale reformat loops)
+                setGoals((prev) => goalsFromKcalKeepingSplit(calcGoals.kcal, prev));
                 setBodyDraft(body);
-                if (body.weight_kg > 0) setWeightDraft(formatLocaleMetric(body.weight_kg));
               }}
             />
             <Button title={t('common.next')} onPress={goNext} />
@@ -353,7 +342,6 @@ export default function Onboarding() {
 
         {step === 'macros' ? (
           <>
-            <Text style={styles.hint}>{t('onboarding.macrosHint')}</Text>
             <GoalMacroEditor
               ref={macroEditorRef}
               value={goals}

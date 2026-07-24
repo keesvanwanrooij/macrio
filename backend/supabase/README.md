@@ -32,3 +32,4 @@
 - All security is enforced with Postgres Row Level Security — see
   `docs/architecture/SECURITY.md`.
 - Account deletion (v0.3.0): `delete_account()` soft-deletes + bans; Edge Function `purge-deleted-accounts` (daily cron) calls `purge_due_deleted_accounts()` after 30 days. Export: `export_my_data()`. Run migration `017_settings_identity_gdpr.sql`.
+- Account deletion reliability (022): soft-delete also frees email + username immediately (`022_auth_delete_release_identity.sql`). Login no longer auto-creates blank profiles for orphan Auth users.

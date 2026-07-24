@@ -38,7 +38,9 @@ export default function SignIn() {
             ? t('auth.invalidCredentials')
             : kind === 'email_not_confirmed'
               ? t('auth.emailNotConfirmed')
-              : error.message;
+              : kind === 'account_deleted'
+                ? t('auth.accountDeleted')
+                : error.message;
         Alert.alert(t('auth.signInFailed'), msg);
         return;
       }

@@ -23,6 +23,7 @@ Three steps, ~15 minutes total. You only do steps 1–2 once.
 16. Same way, run later migrations through `016_diary_allergens_map.sql` if you have not already (diary allergen map).
 17. Same way, run `backend/supabase/migrations/017_settings_identity_gdpr.sql` (date format preference, soft-delete + export RPCs, purge helper).
 18. Same way, run `backend/supabase/migrations/018_username_taken_rejects_signup.sql` (reject taken usernames on signup; `is_username_available` RPC).
+18b. Same way, run later goal migrations `019`–`021` if needed, then `022_auth_delete_release_identity.sql` (delete frees email/username; safer orphan repair).
 19. **Authentication → URL Configuration** (fixes broken confirm-email / reset / email-change links):
    - **Site URL:** `http://localhost:3000` (do **not** use your `*.supabase.co` project URL here)
    - **Redirect URLs:** add all of:
@@ -100,7 +101,9 @@ Run `npm install` only the first time (or after dependencies change). Off the sa
 | Sign-up succeeds but app stays on welcome | Confirm email is on — open the link in your inbox, then use **Sign in** |
 | Sign-in button finishes but nothing happens | Reload with `npm start -- --clear` from `app/`. Prefer **email + password** (not username). Email confirmation is **not** in `profiles` — check **Authentication → Users** → your user → **Confirm email** / Email Confirmed. |
 | “permission denied for table profiles” after onboarding | Run `009_grant_authenticated_table_privs.sql` in Supabase SQL Editor, then finish onboarding / save goals again. |
-| “Almost there” / profile missing after login | Run `005_auth_profile_repair.sql`, then Retry. Check Table Editor → `profiles` has a row with the same `id` as the auth user and a `username`. |
+| Profile missing / orphan Auth after login | App repairs via `ensure_own_profile` (normal). If email stays taken after a manual `profiles` delete, remove the user under **Authentication → Users**. Run `022_auth_delete_release_identity.sql` so in-app delete frees email/username. |
+| Email still “taken” after deleting account | Soft-delete used to keep `auth.users` for 30 days. Run `022_auth_delete_release_identity.sql` (releases email on delete). For orphans already in Auth with no profile: delete those users in the Auth dashboard (or SQL below). |
+| Orphan auth users (founder cleanup) | In SQL Editor: `select u.id, u.email from auth.users u left join public.profiles p on p.id = u.id where p.id is null;` then delete those users in **Authentication → Users**, or `delete from auth.users where id = '<uuid>';` |
 | Wrong password / username not found | Use your full email address. Username login needs migration `003`/`005`/`008` (`resolve_login_email`). |
 | Confirmation email not received | Check spam; wait a few minutes; in Supabase → Authentication → Users, resend or delete user and try again |
 | Confirm link shows `{"error":"requested path is invalid"}` | **Site URL** was set to `*.supabase.co` — change it to `http://localhost:3000` (step 1.5). Your email may still be confirmed: try **Sign in**. Otherwise delete the user and sign up again for a fresh email. |

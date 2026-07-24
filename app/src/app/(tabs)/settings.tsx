@@ -265,6 +265,66 @@ export default function Settings() {
     };
   }, []);
 
+  // Stable Date identities: new Date() each render resets the native DOB spinner mid-scroll
+  // Hooks must stay above any early return - logout clears profile and would crash otherwise.
+  const accountDobMaximumDate = useMemo(() => isoToDate(todayIso()), []);
+  const accountDobMinimumDate = useMemo(() => isoToDate(DOB_PICKER_MIN_ISO), []);
+  const flushingAccountRef = useRef(false);
+  // Latest auto-calc applicator (defined after profile narrow); effect below stays hook-stable on logout
+  const applyAutoCalculatedRef = useRef<
+    (payload: { goals: { kcal: number }; body: BodyMetricsDraft }) => void
+  >(() => {});
+
+  /*
+   * Single auto-update path (open or closed Berekenen): shared buildGoalCalcInput + applyAutoCalculated.
+   * GoalCalculator only hides the Bereken button when autoUpdate is on.
+   * Runs before the !profile early return so logout does not change hook count.
+   */
+  useEffect(() => {
+    if (!profile || !autoUpdateKcal) return;
+    const timer = setTimeout(() => {
+      const draft = bodyDraftRef.current;
+      const weightStrLive =
+        weightDraft ??
+        (profile.weight_kg != null && profile.weight_kg > 0
+          ? formatLocaleMetric(profile.weight_kg)
+          : '');
+      const heightStrLive =
+        profile.height_cm != null && profile.height_cm > 0
+          ? formatLocaleMetric(profile.height_cm, 1)
+          : '';
+      const dobStrLive = profile.date_of_birth ?? '';
+      const weightKg = parseNum(weightStrLive);
+      const heightCm = parseNum(heightStrLive);
+      const dateOfBirth = isIsoDate(dobStrLive)
+        ? dobStrLive
+        : draft?.date_of_birth ?? profile.date_of_birth;
+      const input = buildGoalCalcInput({
+        weightKg,
+        heightCm,
+        dateOfBirth,
+        gender: draft?.gender ?? profile.gender,
+        activity: draft?.activity_level ?? profile.activity_level,
+        weightGoal: draft?.weight_goal ?? profile.weight_goal,
+      });
+      if (!input || !dateOfBirth) return;
+      const result = calculateDailyGoals(input);
+      if (!result) return;
+      applyAutoCalculatedRef.current({
+        goals: result,
+        body: {
+          date_of_birth: dateOfBirth,
+          height_cm: heightCm,
+          weight_kg: weightKg,
+          gender: input.gender,
+          activity_level: input.activity,
+          weight_goal: input.weightGoal,
+        },
+      });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [profile, autoUpdateKcal, weightDraft, bodyDraft]);
+
   if (!profile) return <Loading />;
   // Stable non-null alias for closures (flushGoalsTab) so TS keeps the narrow
   const savedProfile = profile;
@@ -319,9 +379,6 @@ export default function Settings() {
   const accountAgeYears = isIsoDate(accountDobStr) ? ageFromDateOfBirth(accountDobStr) : null;
   const accountHeightMsg = heightFieldMessage(accountHeightStr, accountHeightCm);
   const accountAgeMsg = ageFieldMessage(accountAgeYears);
-  // Stable Date identities: new Date() each render resets the native DOB spinner mid-scroll
-  const accountDobMaximumDate = useMemo(() => isoToDate(todayIso()), []);
-  const accountDobMinimumDate = useMemo(() => isoToDate(DOB_PICKER_MIN_ISO), []);
   const allergens = allergensDraft ?? savedProfile.allergens;
   const allergenNoneUi = noneChipListState(allergens.length, allergenOptionsExpanded);
 
@@ -408,6 +465,7 @@ export default function Settings() {
     if (dirtyBody) setBodyDraft(payload.body);
     if (dirtyGoals) setGoalDraft(next);
   }
+  applyAutoCalculatedRef.current = applyAutoCalculated;
 
   /**
    * Persist body + goal + allergen drafts (leave Doelen, or tap “Tik om op te slaan”).
@@ -542,55 +600,6 @@ export default function Settings() {
   const goalsIncomplete =
     goalDraft != null && !goalsFieldsAllEmpty(goalDraft) && !goalsFieldsComplete(goalDraft);
 
-  /*
-   * Single auto-update path (open or closed Berekenen): shared buildGoalCalcInput + applyAutoCalculated.
-   * GoalCalculator only hides the Bereken button when autoUpdate is on.
-   */
-  useEffect(() => {
-    if (!autoUpdateKcal) return;
-    const timer = setTimeout(() => {
-      const draft = bodyDraftRef.current;
-      const dateOfBirth = isIsoDate(dobStr)
-        ? dobStr
-        : draft?.date_of_birth ?? savedProfile.date_of_birth;
-      const input = buildGoalCalcInput({
-        weightKg: lichaamWeightKg,
-        heightCm: lichaamHeightCm,
-        dateOfBirth,
-        gender: draft?.gender ?? savedProfile.gender,
-        activity: draft?.activity_level ?? savedProfile.activity_level,
-        weightGoal: draft?.weight_goal ?? savedProfile.weight_goal,
-      });
-      if (!input || !dateOfBirth) return;
-      const result = calculateDailyGoals(input);
-      if (!result) return;
-      applyAutoCalculated({
-        goals: result,
-        body: {
-          date_of_birth: dateOfBirth,
-          height_cm: lichaamHeightCm,
-          weight_kg: lichaamWeightKg,
-          gender: input.gender,
-          activity_level: input.activity,
-          weight_goal: input.weightGoal,
-        },
-      });
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [
-    autoUpdateKcal,
-    weightStr,
-    heightStr,
-    dobStr,
-    lichaamWeightKg,
-    lichaamHeightCm,
-    bodyDraft,
-    savedProfile.date_of_birth,
-    savedProfile.gender,
-    savedProfile.activity_level,
-    savedProfile.weight_goal,
-  ]);
-
   /** Chip edits from GoalCalculator → bodyDraft so leave/tap-save cannot drop them. */
   function onCalcMetaChange(meta: {
     gender: Gender;
@@ -639,7 +648,6 @@ export default function Settings() {
    * WHAT: Same tap-save / leave pattern as Doelen (no per-field Opslaan).
    * HOW: Username/email/password keep their own Save (password confirm).
    */
-  const flushingAccountRef = useRef(false);
   async function flushAccountTab(opts?: { silent?: boolean }): Promise<boolean> {
     if (flushingAccountRef.current) return true;
     flushingAccountRef.current = true;
@@ -1074,9 +1082,8 @@ export default function Settings() {
             onBlur={() => setAccountHeightConfirmed(true)}
             keyboardType="decimal-pad"
           />
-          {/* Soft height always when unusual; hard only after blur (same honesty as Doelen). */}
-          {accountHeightMsg?.severity === 'soft' ||
-          (accountHeightConfirmed && accountHeightMsg?.severity === 'hard') ? (
+          {/* Soft + hard only after blur (same as Doelen weight / GoalCalculator). */}
+          {accountHeightConfirmed && accountHeightMsg ? (
             <Text
               style={
                 accountHeightMsg.severity === 'hard' ? styles.fieldHard : styles.fieldSoft

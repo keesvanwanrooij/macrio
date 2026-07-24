@@ -2,11 +2,12 @@
  * SECTION: Body-based daily goal calculator
  * WHAT: Mifflin form; fills kcal (keeps current macro % on calculate / auto-update).
  * HOW: Hard ≤0 under fields; soft unusual height/weight after blur; soft age <16 always (still calculates)
- *      → age from DOB → calculateDailyGoals → onCalculated (Settings owns auto-update)
+ *      → age from DOB → calculateDailyGoals → onCalculated (Settings owns auto-update;
+ *      onboarding uses emitLiveCalculated for live push without Bereken)
  * INPUT: profile; controlled weight/height/DOB from parent (Settings/onboarding); onCalculated
  * OUTPUT: { goals: GoalCalcResult, body: BodyMetricsDraft } (caller keeps % or seeds defaults)
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -81,6 +82,13 @@ type Props = {
    */
   autoUpdate?: boolean;
   /**
+   * When true, debounce-push live Mifflin into onCalculated (onboarding: no manual Bereken).
+   * Settings keeps false and owns its own auto-update path.
+   */
+  emitLiveCalculated?: boolean;
+  /** Onboarding: hide activity tip under the chips (less clutter; Settings keeps it). */
+  hideActivityTip?: boolean;
+  /**
    * Fired when activity / weight-goal (/ gender when shown) chips change.
    * Parent drafts into bodyDraft so leave/tap-save cannot lose chip edits.
    */
@@ -110,11 +118,15 @@ export function GoalCalculator({
   open: openProp,
   hideResultKcal = false,
   autoUpdate = false,
+  emitLiveCalculated = false,
+  hideActivityTip = false,
   onCalcMetaChange,
   onResultKcalChange,
   onCalculated,
 }: Props) {
   const { t } = useTranslation();
+  const onCalculatedRef = useRef(onCalculated);
+  onCalculatedRef.current = onCalculated;
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const open = showToggle ? internalOpen : (openProp ?? true);
   const [gender, setGender] = useState<Gender>('male');
@@ -271,9 +283,22 @@ export function GoalCalculator({
   }
 
   /*
-   * Auto-update lives in Settings only (one debounce for open + closed panel).
-   * Keep local kcalDraft in sync when parent goals change via profile.
+   * Onboarding (emitLiveCalculated): push live Mifflin into parent; also hides Bereken.
+   * Settings (autoUpdate): hides Bereken only; parent owns debounce so closed panel still updates.
    */
+  useEffect(() => {
+    if (!emitLiveCalculated) return;
+    const timer = setTimeout(() => {
+      const built = tryBuildResult();
+      if (!built) return;
+      setFormError(null);
+      setKcalDraft(String(built.goals.kcal));
+      onCalculatedRef.current(built);
+    }, 350);
+    return () => clearTimeout(timer);
+    // tryBuildResult reads weight/height/dob/gender/activity/weightGoal from this render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emitLiveCalculated, weight, height, dob, effectiveGender, activity, weightGoal]);
 
   function onKcalDraftChange(raw: string) {
     setKcalDraft(raw);
@@ -362,9 +387,11 @@ export function GoalCalculator({
             ))}
           </View>
           <Text style={styles.fieldHint}>{t(`goalsCalc.activityHint_${activity}`)}</Text>
-          <Text style={styles.fieldTip}>
-            {t(`goalsCalc.activityTip_${activityTipKind(weightGoal)}`)}
-          </Text>
+          {!hideActivityTip ? (
+            <Text style={styles.fieldTip}>
+              {t(`goalsCalc.activityTip_${activityTipKind(weightGoal)}`)}
+            </Text>
+          ) : null}
 
           {!hideHeightAndDob ? (
             <>
@@ -447,7 +474,7 @@ export function GoalCalculator({
           ) : null}
 
           {formError ? <Text style={styles.fieldHard}>{formError}</Text> : null}
-          {!formError && autoUpdate && needsBodyForCalc ? (
+          {!formError && (autoUpdate || emitLiveCalculated) && needsBodyForCalc ? (
             <Text style={styles.needsBodyHint}>{t('goalsCalc.autoUpdateNeedsBody')}</Text>
           ) : null}
           {liveEnergy != null && liveGoals != null ? (
@@ -496,7 +523,7 @@ export function GoalCalculator({
               fat: Math.round((macroPercents ?? DEFAULT_MACRO_PERCENTS).fat),
             })}
           </Text>
-          {!autoUpdate ? (
+          {!autoUpdate && !emitLiveCalculated ? (
             <Button title={t('goalsCalc.calculate')} onPress={runCalculate} variant="secondary" />
           ) : null}
           {!hideResultKcal ? (

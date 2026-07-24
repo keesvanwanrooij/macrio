@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
+import { isAccountDeletedAuthError } from './auth';
 import i18n from './i18n';
 import { supabase } from './supabase';
 import type { Profile } from './types';
@@ -8,8 +9,6 @@ import type { Profile } from './types';
 type SessionContextValue = {
   session: Session | null;
   profile: Profile | null;
-  /** Last profile load/repair error (shown on the orphan-profile screen). */
-  profileError: string | null;
   loading: boolean;
   refreshProfile: () => Promise<void>;
   /** Apply a session from signIn/signUp response (avoids relying only on the auth listener). */
@@ -21,7 +20,6 @@ type SessionContextValue = {
 const SessionContext = createContext<SessionContextValue>({
   session: null,
   profile: null,
-  profileError: null,
   loading: true,
   refreshProfile: async () => {},
   applySession: async () => {},
@@ -41,7 +39,7 @@ type ProfileLoadResult = { profile: Profile | null; error: string | null };
  * WHAT: Fetches the caller's profiles row; creates one if the auth user has none.
  * HOW: 1) select by id 2) ensure_own_profile RPC 3) direct insert fallback
  * INPUT: auth user id (+ optional email for username fallback)
- * OUTPUT: Profile or null, plus optional error message
+ * OUTPUT: Profile or null, plus optional error (account_deleted when soft-deleted / banned)
  */
 async function fetchOrRepairProfile(userId: string, email?: string | null): Promise<ProfileLoadResult> {
   const { data, error: selectError } = await supabase
@@ -50,7 +48,14 @@ async function fetchOrRepairProfile(userId: string, email?: string | null): Prom
     .eq('id', userId)
     .maybeSingle();
 
-  if (data) return { profile: data as Profile, error: null };
+  if (data) {
+    const row = data as Profile;
+    // Soft-deleted account: do not treat as a live profile
+    if (row.deletion_requested_at) {
+      return { profile: null, error: 'account_deleted' };
+    }
+    return { profile: row, error: null };
+  }
 
   if (selectError) {
     console.warn('[session] profiles select failed:', selectError.message);
@@ -58,9 +63,18 @@ async function fetchOrRepairProfile(userId: string, email?: string | null): Prom
 
   // Orphan auth user: trigger failed earlier (e.g. username CHECK). Repair.
   const { data: ensured, error: ensureError } = await supabase.rpc('ensure_own_profile');
-  if (ensured) return { profile: ensured as Profile, error: null };
+  if (ensured) {
+    const row = ensured as Profile;
+    if (row.deletion_requested_at) {
+      return { profile: null, error: 'account_deleted' };
+    }
+    return { profile: row, error: null };
+  }
   if (ensureError) {
     console.warn('[session] ensure_own_profile failed:', ensureError.message);
+    if (isAccountDeletedAuthError(ensureError.message)) {
+      return { profile: null, error: 'account_deleted' };
+    }
   }
 
   const username = fallbackUsername(userId, email);
@@ -85,38 +99,53 @@ async function fetchOrRepairProfile(userId: string, email?: string | null): Prom
     insertError?.message ||
     retryError?.message ||
     'profile_unavailable';
+  if (isAccountDeletedAuthError(message)) {
+    return { profile: null, error: 'account_deleted' };
+  }
   return { profile: null, error: message };
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [profileError, setProfileError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadProfile = useCallback(async (userId: string, email?: string | null) => {
-    const { profile: row, error } = await fetchOrRepairProfile(userId, email);
-    if (row) {
-      setProfile(row);
-      setProfileError(null);
-      if (row.language && row.language !== i18n.language) {
-        i18n.changeLanguage(row.language);
+  const loadProfile = useCallback(
+    async (userId: string, email?: string | null): Promise<'ok' | 'deleted' | 'missing'> => {
+      const { profile: row, error } = await fetchOrRepairProfile(userId, email);
+
+      if (error === 'account_deleted') {
+        setProfile(null);
+        await supabase.auth.signOut();
+        setSession(null);
+        return 'deleted';
       }
-    } else {
+
+      if (row) {
+        setProfile(row);
+        if (row.language && row.language !== i18n.language) {
+          i18n.changeLanguage(row.language);
+        }
+        return 'ok';
+      }
+
       setProfile(null);
-      setProfileError(error);
-    }
-  }, []);
+      return 'missing';
+    },
+    []
+  );
 
   const applySession = useCallback(
     async (next: Session | null) => {
-      setSession(next);
       if (!next) {
+        setSession(null);
         setProfile(null);
-        setProfileError(null);
         return;
       }
-      await loadProfile(next.user.id, next.user.email);
+      // Load/repair profile before exposing the session so navigation never sees
+      // “signed in, no profile” mid sign-up / sign-in (welcome flash).
+      const status = await loadProfile(next.user.id, next.user.email);
+      if (status !== 'deleted') setSession(next);
     },
     [loadProfile]
   );
@@ -126,9 +155,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(async ({ data }) => {
       if (cancelled) return;
-      setSession(data.session);
       if (data.session) {
-        await loadProfile(data.session.user.id, data.session.user.email);
+        const status = await loadProfile(data.session.user.id, data.session.user.email);
+        if (!cancelled && status !== 'deleted') setSession(data.session);
       }
       if (!cancelled) setLoading(false);
     });
@@ -139,16 +168,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
      * signInWithPassword and leaves the UI stuck on the sign-in screen.
      */
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
       if (!newSession) {
+        setSession(null);
         setProfile(null);
-        setProfileError(null);
         return;
       }
       const userId = newSession.user.id;
       const email = newSession.user.email;
       setTimeout(() => {
-        if (!cancelled) void loadProfile(userId, email);
+        if (cancelled) return;
+        void (async () => {
+          const status = await loadProfile(userId, email);
+          if (!cancelled && status !== 'deleted') setSession(newSession);
+        })();
       }, 0);
     });
 
@@ -170,13 +202,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       let base = profile;
       if (!base) {
         const repaired = await fetchOrRepairProfile(session.user.id, session.user.email);
+        if (repaired.error === 'account_deleted') {
+          await supabase.auth.signOut();
+          setSession(null);
+          setProfile(null);
+          return { error: 'account_deleted' };
+        }
         if (!repaired.profile) {
-          setProfileError(repaired.error);
           return { error: repaired.error ?? 'profile_unavailable' };
         }
         base = repaired.profile;
         setProfile(base);
-        setProfileError(null);
       }
 
       // Optimistic UI, then write. Revert if Postgres/PostgREST rejects the patch
@@ -189,11 +225,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.warn('[session] profile update failed:', error.message);
         setProfile(previous);
-        setProfileError(error.message);
         return { error: error.message };
       }
 
-      setProfileError(null);
       // Re-read so we match what Postgres actually stored.
       await loadProfile(session.user.id, session.user.email);
       return { error: null };
@@ -203,7 +237,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ session, profile, profileError, loading, refreshProfile, applySession, updateProfile }}
+      value={{ session, profile, loading, refreshProfile, applySession, updateProfile }}
     >
       {children}
     </SessionContext.Provider>
