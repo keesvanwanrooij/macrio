@@ -98,19 +98,22 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 
 ## Group C — Diary & reports
 
-### v0.5.0 — diary meal totals & daily progress
+### v0.5.0 — diary meal totals & day footer
 
-**Plan:** `[plans/v0.5.0-diary-progress.md](plans/v0.5.0-diary-progress.md)`
+**Plan:** `[plans/v0.5.0-diary-progress.md](plans/v0.5.0-diary-progress.md)`  
+*(Legacy plan title once said “v1.0.5”; ship identity is **v0.5.0**. **Design locked**.)*
 
 **Progress:**
 
-- [ ] Macro totals per meal
-- [ ] Progress toward daily kcal/macros on diary (meal-level remaining)
-- [x] Diary header progress bars + stronger totals; focus swipe L/R; long-press → overview; overview does not tap-toggle — early founder testing
+- [ ] **Meal totals:** receipt **kcal right-aligned** + muted **`C / P / F`** (slash-separated, not dominant) + tiny **Σ g**
+- [ ] **Diary day footer** (order locked): kcal vs goal → ignore-day-in-stats → allergen hits (if selected) → macro pie + legend → micro **placeholders**
+- [ ] Empty day: coach one-liner + ignore checkbox only (no pie chrome)
+- [ ] Migration + Reports respect **ignore day in statistics**
+- [x] Diary header progress bars + stronger totals; focus swipe L/R; long-press → overview; overview tap reveals goals - early founder testing
 - [x] Reports: selectable macros (tap), ghost bars, historical goals, swipe/‹ › for day·week, tap bar → diary (migration `014`)
 - [x] Reports day: selected-macro progress bars; snacks deducted then ÷3; over = total + goal marker
-- [ ] **Reports meal order:** show snack meals in **chronological diary order** (e.g. snack between breakfast and lunch stays between those mains). Do not dump all snacks at the end of the day report
-- [ ] Reports: pie chart for macro distribution (carbs / protein / fat of the day or week)
+- [ ] **Reports meal order:** snacks in **chronological diary order** (between mains; not dumped at end)
+- [ ] *(Moved)* Reports pie → **diary footer** only; no diary meal progress bars
 
 ### v0.6.0 — rule-based report coaching texts
 
@@ -208,7 +211,7 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 
 - [ ] Visible quality badge on versions, e.g. ★★★★★ Verified → ★ Incomplete (nl/en)
 - [ ] Score from: macros filled, allergens complete, barcode present, likes, users, age, reports, confirmations (likes as confirm), etc.
-- [ ] Product/version open: **Help dit product verbeteren** checklist (ingredients, allergens, portions, cook state, photo, …) - Wikipedia-style community fill-in
+- [ ] Product/version open: **Help dit product verbeteren** checklist (ingredients, allergens, portions, cook state, …) - Wikipedia-style community fill-in. **Photo upload deferred** (storage); see `docs/context/storage-photos.md`
 - [ ] Align with completeness ranking helper where possible
 
 ### v0.13.0 — create product UX (allergens, names, macro sliders)
@@ -346,12 +349,12 @@ Patches are **grouped** below. Some plan filenames still use older `v1.0.x` name
 | Quick-log % macro sliders (restaurant)                                                               | `ROADMAP.md` v1.3                                                                       |
 | Personal reorder of add-food tabs                                                                    | `ROADMAP.md` v1.3                                                                       |
 | Water tracker / daily diary notes / meal reminders / home widgets                                    | `ROADMAP.md` v1.3 (post-public)                                                         |
-| Food-logging streaks, freezers, coins, avatar store, community badges                                | `ROADMAP.md` v1.4                                                                       |
+| Food-logging streaks, freezers, coins, **pet avatar** store, community badges                        | `ROADMAP.md` v1.4                                                                       |
 | Themed seasonal events (Christmas, Halloween, etc.)                                                  | `ROADMAP.md` v1.4                                                                       |
 | Auto-trim low-like product versions (beyond per-owner cap)                                           | `ROADMAP.md` v1.2                                                                       |
 | 30-day version edit fork / profile visibility slider / duplicate-from-version / multi-admin merge UI | `ROADMAP.md` v1.2                                                                       |
 | Recipes, community duplicate meals                                                                   | `ROADMAP.md` v1.4                                                                       |
-| Personal meal templates + meal planner + meal/ingredient photos                                      | `ROADMAP.md` v1.3                                                                       |
+| Personal meal templates + meal planner (meal/ingredient **photos deferred** - storage)               | `ROADMAP.md` v1.3; `docs/context/storage-photos.md`                                     |
 | Salt / fiber / micros (old v1.4 line)                                                                | **Moved** to pre-public **v0.14.0**                                                     |
 | Analytics / success metrics + forgot-password abuse (limits, CAPTCHA, ops)                           | **Moved** to pre-public **v0.15.0**                                                     |
 | Crash reporting                                                                                      | **Moved** to pre-public **v0.1.0**                                                      |

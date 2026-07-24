@@ -64,7 +64,7 @@ Email addresses are unique per account via **Supabase Auth** (`auth.users.email`
 | version_number | int | per product |
 | name_nl / name_en | text | at least one required |
 | brand | text null | |
-| photo_url | text null | Supabase Storage |
+| photo_url | text null | Optional remote URL (e.g. OFF). **Community upload to Storage deferred** (capacity); feedback bucket still used for one screenshot per report. |
 | kcal_100g / carbs_100g / protein_100g / fat_100g | numeric | required |
 | allergens | jsonb | EU-14 keys → `contains` \| `may_contain` \| `free` \| `unknown` |
 | portions | jsonb | `[{ "name": "1 glas", "grams": 250, "unit": "ml" }]` — v1.0: `unit` omitted (defaults to g). **v1.0.1:** add `unit: 'g' \| 'ml'`. Future: per-100ml nutrition for liquids (`ROADMAP.md`). |

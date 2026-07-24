@@ -22,8 +22,10 @@ Diary (home)
 ├── Day header: date picker, macro summary (focus ⇄ overview toggle)
 ├── Meal sections: Breakfast / snacks / Lunch / snacks / Dinner / snacks
 │   ├── [+ Add food] → Add Food screen
-│   └── Entry row → Edit portion / Delete
-└── [+ Snack] between meals
+│   ├── Entry row → Edit portion / Delete
+│   └── Meal totals (v0.5.0): muted C / P / F · Σ g · kcal right (receipt)
+├── [+ Snack] between meals
+└── Day footer (v0.5.0): kcal vs goal → ignore-in-stats → allergen hits → pie → micro placeholders
 
 Add Food (modal, tabs)
 ├── Scan (camera) → Portion sheet → done
@@ -33,10 +35,11 @@ Add Food (modal, tabs)
 └── Quick add (raw macros)
 
 Create Product
-└── Form: name*, macros/100g*, portion (prefilled editable), brand, photo, allergens, barcode
+└── Form: name*, macros/100g*, portion (prefilled editable), brand, allergens, barcode
+    (community photo upload deferred - storage)
 
 Product Page
-├── Header: photo, name, brand, source
+├── Header: optional remote photo (e.g. OFF), name, brand, source
 ├── Macro table (per 100 g + per portion)
 ├── Allergen table (user's allergens pinned)
 ├── Versions (list by likes → version detail → like)

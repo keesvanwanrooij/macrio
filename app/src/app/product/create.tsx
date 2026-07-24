@@ -1,16 +1,16 @@
 /*
  * SECTION: Create product or suggest new version
  * WHAT: New product (+ optional barcode) or new version of an existing product.
- * HOW: form → photo upload → create_product_full | create_product_version
+ * HOW: form → create_product_full | create_product_version
  *      (+ set_product_barcode when attaching a code to a product that had none)
  * INPUT: route barcode?, editProductId?, slot?, date?; session
  * OUTPUT: version id → log-entry (new) or back (edit)
+ * NOTE: Community photo upload is deferred (Supabase storage budget). OFF may still
+ *       set photo_url on import; feedback keeps one screenshot in the feedback bucket.
  */
-import { decode } from 'base64-arraybuffer';
-import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AllergenStateChip } from '../../components/AllergenBadges';
@@ -46,7 +46,6 @@ export default function CreateProduct() {
   const [portionName, setPortionName] = useState('1 portie');
   const [portionGrams, setPortionGrams] = useState('100');
   const [allergens, setAllergens] = useState<Record<string, AllergenState>>({});
-  const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
   const [busy, setBusy] = useState(false);
   /** Keep local = private; default public (shared with community). */
   const [keepPrivate, setKeepPrivate] = useState(false);
@@ -107,31 +106,9 @@ export default function CreateProduct() {
     });
   }
 
-  async function pickPhoto() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.5,
-      base64: true,
-    });
-    if (!result.canceled && result.assets[0]?.base64) {
-      setPhoto({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
-    }
-  }
-
   async function save() {
     setBusy(true);
     try {
-      let photoUrl: string | null = null;
-      if (photo) {
-        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
-        const { error: upErr } = await supabase.storage
-          .from('product-photos')
-          .upload(path, decode(photo.base64), { contentType: 'image/jpeg' });
-        if (!upErr) {
-          photoUrl = supabase.storage.from('product-photos').getPublicUrl(path).data.publicUrl;
-        }
-      }
-
       const portions =
         parseNum(portionGrams) > 0 && portionName.trim()
           ? [{ name: portionName.trim(), grams: parseNum(portionGrams) }]
@@ -141,7 +118,8 @@ export default function CreateProduct() {
         p_name_nl: i18n.language === 'nl' ? name.trim() : name.trim(),
         p_name_en: name.trim(),
         p_brand: brand.trim() || null,
-        p_photo_url: photoUrl,
+        // No community upload for now (storage budget). OFF imports may still have remote URLs.
+        p_photo_url: null as string | null,
         p_kcal: parseNum(kcal),
         p_carbs: parseNum(carbs),
         p_protein: parseNum(protein),
@@ -281,17 +259,6 @@ export default function CreateProduct() {
         </View>
       </View>
 
-      <Text style={styles.section}>{t('product.photo')}</Text>
-      {photo ? (
-        <Pressable onPress={pickPhoto}>
-          <Image source={{ uri: photo.uri }} style={styles.photo} />
-        </Pressable>
-      ) : (
-        <Pressable style={styles.photoPlaceholder} onPress={pickPhoto}>
-          <Text style={{ color: colors.primaryDark, fontWeight: '700' }}>{t('product.addPhoto')}</Text>
-        </Pressable>
-      )}
-
       <Text style={styles.section}>{t('product.allergensLabel')}</Text>
       <Text style={styles.hint}>{t('allergens.legend')}</Text>
       <View style={styles.allergenWrap}>
@@ -383,17 +350,6 @@ const styles = StyleSheet.create({
     color: colors.faint,
     textAlign: 'center',
     lineHeight: 18,
-  },
-  photo: { width: 120, height: 120, borderRadius: radius.m },
-  photoPlaceholder: {
-    height: 80,
-    borderRadius: radius.m,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
   },
   allergenWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.s },
 });

@@ -87,7 +87,7 @@ _Note: catalog visibility on **versions** and mother/barcode model ship in **0.x
 
 - [ ] Meal planning
 - [ ] Save / load / modify **personal** complete meals (templates; planner integration); meals **public or private** (same idea as ingredient/version visibility)
-- [ ] **Photos** on saved meals and on ingredient lines within a meal
+- [ ] ~~**Photos** on saved meals and on ingredient lines~~ → **deferred** (Supabase storage budget). Scratchpad: `docs/context/storage-photos.md`. Product create no longer uploads community photos; OFF remote URLs may still display. Feedback keeps **one** screenshot.
 - [ ] **Water tracker** (daily intake vs goal)
 - [ ] **Daily diary text notes** (free text on the day, e.g. energy / training feel; one notes field per diary day for self-insight and retention)
 - [ ] **Meal reminder notifications** (local/push; user-configurable meal times)
@@ -109,11 +109,11 @@ Big retention / fun / monetization step.
 
 - [ ] **Refer a friend:** share invite / referral from Settings or profile (link or code); light reward TBD (coins in v1.4 economy, or simple thank-you). Keep core free; no dark patterns
 - [ ] Posts, groups, chat, moderation
-- [ ] **Digital profile display:** short bio/text, social links; **avatar** (not a real-life selfie). Start with a **small set of avatar options**; expand cosmetics / variations with the store below
+- [ ] **Digital profile display:** short bio/text, social links; **pet avatar** (not a selfie). The avatar is the user’s **pet**: customize with **coins**; **body / mood** reflects how they eat (good logging / balanced food → healthier happier pet; poor patterns → unhappy / out-of-shape look). Start with a small set of pets + cosmetics; expand via the store below. Scratchpad: `docs/context/pet-avatar.md`
 - [ ] Community **badges** (achievements, contribution, milestones) on profiles
 - [ ] Reputation for good product/version contributions
 - [ ] **Food-logging streaks:** streak counts days the user **logged food** (not mere login). Milestone celebrations + badges. **Streak freezers** (e.g. 1D, 7D) earned from streak progress
-- [ ] **Gamification economy:** earn **coins** mainly by logging food, adding to the DB, social posts/chats, liking versions to confirm quality, etc. **In-game store** for avatar items. Optional **buy coins with real money** to support the app (alongside v1.5 Supporter)
+- [ ] **Gamification economy:** earn **coins** mainly by logging food, adding to the DB, social posts/chats, liking versions to confirm quality, etc. **In-game store** for **pet** cosmetics / outfits. Optional **buy coins with real money** to support the app (alongside v1.5 Supporter)
 - [ ] Life-wheel / XP as fits the above
 - [ ] **Recipes** (community): likes and profile popularity; creators visible on version / recipe lists
 - [ ] **Duplicate / share meals** in the community (copy into diary or templates)

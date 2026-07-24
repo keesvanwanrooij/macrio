@@ -20,10 +20,10 @@
 - User setting: count up (consumed) or count down (remaining vs target).
 
 ### Products & allergens
-- Product database seeded from Open Food Facts (name nl/en, brand, barcode, macros per 100 g, portion definitions, allergen tags, photo URL).
+- Product database seeded from Open Food Facts (name nl/en, brand, barcode, macros per 100 g, portion definitions, allergen tags, optional remote photo URL from OFF).
 - Every product shows allergen status per EU-14 allergen: contains / free / unknown.
 - User's selected allergens produce a clear warning badge on search results and product pages.
-- Barcode not found → one tap to "Create product": name, macros per 100 g, portion name + weight (default sensible, NOT 1 gram), optional photo, optional allergen tags.
+- Barcode not found → one tap to "Create product": name, macros per 100 g, portion name + weight (default sensible, NOT 1 gram), optional allergen tags. **Community photo upload deferred** (storage); see `docs/context/storage-photos.md`.
 - Community layer (simple): products are public once created; each edit creates a new version; users can like a version and browse versions; the most-liked version is shown by default; report button flags an entry (queue stored for later moderation — full voting in v1.2).
 
 ### Reports
@@ -33,7 +33,7 @@
 - Language (nl/en), count up/down, macro display mode, allergen selection, goals, sign out, account deletion (GDPR).
 
 ### Feedback
-- In-app feedback form: text + optional screenshot attachment + automatic metadata (app version, session time, time since install). Stored in Supabase; drives roadmap.
+- In-app feedback form: text + **optional one screenshot** + automatic metadata (app version, session time, time since install). Stored in Supabase; drives roadmap.
 
 ## Explicitly out (v1.0)
 

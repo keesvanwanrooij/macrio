@@ -1344,6 +1344,8 @@ export default function Settings() {
           />
           <View style={{ height: spacing.s }} />
           <Button title={t('settings.deleteAccount')} variant="danger" onPress={confirmDelete} />
+          <View style={{ height: spacing.s }} />
+          <Button title={t('settings.signOut')} variant="secondary" onPress={() => supabase.auth.signOut()} />
         </>
       ) : null}
 

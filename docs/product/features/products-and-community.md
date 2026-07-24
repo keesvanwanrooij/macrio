@@ -4,7 +4,7 @@
 
 ## Product model
 
-- Identity: barcode (nullable for generic foods) + name (nl/en) + brand (nullable) + photo.
+- Identity: barcode (nullable for generic foods) + name (nl/en) + brand (nullable) + optional photo URL (OFF remote OK; **community photo upload deferred** for storage).
 - Nutrition: kcal, carbs, protein, fat per 100 g (v1.0 keeps only these four; micros later).
 - Portions: named portions with gram weight.
 - Allergens: per EU-14 allergen, one of `contains` / `free` / `unknown` (default unknown).
@@ -20,8 +20,8 @@
 ## Creation flow (barcode not found or manual)
 
 Required: name, 4 macros per 100 g.
-Prefilled: one portion "1 portie – 100 g" (name and grams editable — never a 1-gram default).
-Optional: brand, photo (camera/gallery, stored in Supabase Storage), allergen tags, barcode.
+Prefilled: one portion "1 portie – 100 g" (name and grams editable - never a 1-gram default).
+Optional: brand, allergen tags, barcode. **No community photo upload for now** (storage budget; feedback still allows one screenshot).
 On save: product is public immediately and logged for the creator in one action.
 
 ## Reporting
